@@ -63,8 +63,8 @@ const seed = () => ({
   shopping: [{ t: "", done: false }],
   intention: "Steady",
   blocks: [
-    { id: uid(), type: "checklist", title: "Errands", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }] },
-    { id: uid(), type: "mood", title: "Mood", monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} },
+    { id: uid(), type: "checklist", category: "plan", title: "Errands", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }] },
+    { id: uid(), type: "mood", category: "health", title: "Mood", monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} },
   ],
 });
 
@@ -106,28 +106,33 @@ function App() {
   const closeMenu = () => setMenuOpen(false);
   const navGo = (t, p = null) => { go(t, p); closeMenu(); };
   const moodBlock = d.blocks.find((b) => b.type === "mood");
+  const blocksFor = (c) => d.blocks.filter((b) => (b.category || "plan") === c).map((b) => ({ icon: GridIcon, color: MIST, title: b.title || "Untitled space", onClick: () => navGo("plan", "block:" + b.id) }));
+  const builtin = ["money", "health", "plan", "more"];
+  const customCats = [...new Set(d.blocks.map((b) => b.category || "plan").filter((c) => !builtin.includes(c)))];
 
   const MENU_GROUPS = [
     { label: "", items: [{ icon: HomeIcon, color: SAGE, title: "Home", onClick: () => navGo("home") }] },
     { label: "Money", items: [
-      { icon: WalletIcon, color: AMBER, title: "Paycheck Budget", onClick: () => navGo("money", "budget") },
-      { icon: TrendIcon, color: BLUE, title: "Debt Payoff", onClick: () => navGo("money", "budget") },
-      { icon: PiggyIcon, color: SAGE, title: "Sinking Funds", onClick: () => navGo("money", "budget") },
+      { icon: WalletIcon, color: AMBER, title: "Budget", onClick: () => navGo("money", "budget") },
+      ...blocksFor("money"),
     ]},
     { label: "Health", items: [
       { icon: PillIcon, color: PLUM, title: "Medications", onClick: () => navGo("health", "meds") },
       { icon: DumbbellIcon, color: BLUE, title: "Workouts", onClick: () => navGo("health", "workouts") },
       { icon: PlateIcon, color: SAGE, title: "Meal Plan", onClick: () => navGo("health", "meals") },
       { icon: HeartIcon, color: PLUM, title: "Mood", onClick: () => navGo("plan", moodBlock ? "block:" + moodBlock.id : null) },
+      ...blocksFor("health").filter((it) => !moodBlock || it.title !== moodBlock.title),
     ]},
     { label: "Plan", items: [
       { icon: LeafIcon, color: SAGE, title: "Habits", onClick: () => navGo("plan", "habits") },
       { icon: StarIcon, color: AMBER, title: "Monthly Goals", onClick: () => navGo("plan", "goals") },
-      ...d.blocks.map((b) => ({ icon: GridIcon, color: MIST, title: b.title || "Untitled space", onClick: () => navGo("plan", "block:" + b.id) })),
+      ...blocksFor("plan"),
     ]},
     { label: "More", items: [
       { icon: GridIcon, color: SAGE, title: "Add a space", onClick: () => navGo("plan") },
+      ...blocksFor("more"),
     ]},
+    ...customCats.map((c) => ({ label: c.charAt(0).toUpperCase() + c.slice(1), items: blocksFor(c) })),
   ];
 
   return (
@@ -287,10 +292,8 @@ function MoneyHub({ d, go }) {
   const left = (Number(d.pay) || 0) - budgetSpent(d);
   return (
     <Hub title="Money" sub="Spend with intention">
-      <ToolRow icon={WalletIcon} color={AMBER} title="Paycheck Budget" sub="Give every dollar a job" stat={d.pay ? `$${money(left)}` : ""} onClick={() => go("money", "budget")} />
-      <ToolRow icon={TrendIcon} color={BLUE} title="Debt Payoff" sub="Snowball or avalanche" onClick={() => go("money", "budget")} />
-      <ToolRow icon={PiggyIcon} color={SAGE} title="Sinking Funds" sub="Save for what's coming" onClick={() => go("money", "budget")} />
-      <Note>Debt and sinking funds open the budget for now — full tools coming next.</Note>
+      <ToolRow icon={WalletIcon} color={AMBER} title="Budget" sub="Paycheck, savings, debt — all in one" stat={d.pay ? `$${money(left)}` : ""} onClick={() => go("money", "budget")} />
+
     </Hub>
   );
 }
@@ -305,7 +308,7 @@ function HealthHub({ d, now, go }) {
     </Hub>
   );
 }
-function PlanHub({ d, go }) {
+function PlanHub({ d, setD, go }) {
   const goalsSet = d.goals.filter((g) => g.n.trim()).length;
   return (
     <Hub title="Plan" sub="Shape your days">
@@ -313,7 +316,7 @@ function PlanHub({ d, go }) {
       <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
       <SectionMini text="Your spaces" />
       {d.blocks.map((b) => <BlockPreview key={b.id} block={b} onClick={() => go("plan", "block:" + b.id)} now={new Date()} />)}
-      <AddBlockMenu onAdd={(type) => { /* handled in PlanHub wrapper below */ }} d={d} go={go} />
+      <AddBlockMenu d={d} setD={setD} go={go} />
     </Hub>
   );
 }
@@ -433,18 +436,39 @@ function Workouts({ d, setD, go, back }) {
   );
 }
 function WorkoutEditor({ workout, d, setD, now, back }) {
-  const [logMode, setLogMode] = useState(false);
-  const todayKey = dayKey(now);
-  const log = (d.workoutDone[todayKey] || {})[workout.id] || {};
+  const [mode, setMode] = useState("overview"); // overview | log | build
+  const [calView, setCalView] = useState("month"); // for overview calendar
+  const [sel, setSel] = useState(new Date(now));
+  const selKey = dayKey(sel);
+  const log = (d.workoutDone[selKey] || {})[workout.id] || {};
 
   const update = (patch) => setD({ ...d, workouts: d.workouts.map((w) => w.id === workout.id ? { ...w, ...patch } : w) });
   const del = () => { setD({ ...d, workouts: d.workouts.filter((w) => w.id !== workout.id) }); back(); };
   const setEx = (id, f, v) => update({ ex: workout.ex.map((e) => e.id === id ? { ...e, [f]: v } : e) });
   const addEx = () => update({ ex: [...workout.ex, { id: uid(), n: "", sets: "", reps: "", w: "" }] });
   const delEx = (id) => update({ ex: workout.ex.filter((e) => e.id !== id) });
-  const toggleEx = (id) => { const day = { ...(d.workoutDone[todayKey] || {}) }; const wl = { ...(day[workout.id] || {}) }; wl[id] = !wl[id]; day[workout.id] = wl; setD({ ...d, workoutDone: { ...d.workoutDone, [todayKey]: day } }); };
+  const toggleEx = (id) => { const day = { ...(d.workoutDone[selKey] || {}) }; const wl = { ...(day[workout.id] || {}) }; wl[id] = !wl[id]; day[workout.id] = wl; setD({ ...d, workoutDone: { ...d.workoutDone, [selKey]: day } }); };
 
+  const exTotal = workout.ex.length;
+  const doneOn = (dt) => { const l = (d.workoutDone[dayKey(dt)] || {})[workout.id] || {}; return workout.ex.filter((e) => l[e.id]).length; };
+  const fullDays = (() => {
+    const dim = daysInMonth(now); let n = 0;
+    for (let i = 1; i <= dim; i++) { const dt = new Date(now.getFullYear(), now.getMonth(), i); if (exTotal && doneOn(dt) === exTotal) n++; } return n;
+  })();
+  const anyDays = (() => {
+    const dim = daysInMonth(now); let n = 0;
+    for (let i = 1; i <= dim; i++) { const dt = new Date(now.getFullYear(), now.getMonth(), i); if (doneOn(dt) > 0) n++; } return n;
+  })();
+  const streak = (() => {
+    let s = 0; const cursor = new Date(now);
+    if (!(exTotal && doneOn(cursor) === exTotal)) cursor.setDate(cursor.getDate() - 1);
+    for (let i = 0; i < 366; i++) { if (exTotal && doneOn(cursor) === exTotal) { s++; cursor.setDate(cursor.getDate() - 1); } else break; } return s;
+  })();
   const doneCount = workout.ex.filter((e) => log[e.id]).length;
+  const weekStart = new Date(sel); weekStart.setDate(sel.getDate() - sel.getDay());
+  const weekDays = Array.from({ length: 7 }, (_, i) => { const dt = new Date(weekStart); dt.setDate(weekStart.getDate() + i); return dt; });
+  const selLabel = sel.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const fillFor = (dt) => { const done = doneOn(dt); if (!exTotal) return null; return done === exTotal ? BLUE : done ? BLUE + "33" : null; };
 
   return (
     <div className="fade">
@@ -458,17 +482,70 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
       </div>
 
       <div style={{ padding: "18px 18px 50px" }}>
-        {/* mode toggle: build vs log today */}
         <div style={{ display: "flex", gap: 6, background: "#EAE6DB", borderRadius: 4, padding: 4, marginBottom: 16 }}>
-          {[["build", "Build"], ["log", "Log today"]].map(([v, lbl]) => (
-            <div key={v} className="pop" onClick={() => setLogMode(v === "log")} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 3, fontSize: 13, fontWeight: 700, background: (logMode ? "log" : "build") === v ? CARD : "transparent", color: (logMode ? "log" : "build") === v ? INK : MUTED }}>{lbl}</div>
+          {[["overview", "Overview"], ["log", "Log"], ["build", "Build"]].map(([v, lbl]) => (
+            <div key={v} className="pop" onClick={() => setMode(v)} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 3, fontSize: 13, fontWeight: 700, background: mode === v ? CARD : "transparent", color: mode === v ? INK : MUTED }}>{lbl}</div>
           ))}
         </div>
 
-        {logMode ? (
+        {mode === "overview" && (
           <>
+            <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 20px", marginBottom: 14 }}>
+              <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>This workout</div>
+              <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, marginTop: 2 }}>{exTotal} exercise{exTotal === 1 ? "" : "s"}</div>
+              {exTotal > 0 && (
+                <div style={{ marginTop: 10, display: "grid", gap: 4 }}>
+                  {workout.ex.slice(0, 5).map((e) => (
+                    <div key={e.id} style={{ fontSize: 13, color: MIST, display: "flex", justifyContent: "space-between", gap: 10 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.n || "Untitled"}</span>
+                      <span style={{ color: SAGEHI, fontWeight: 700, flexShrink: 0 }}>{[e.sets && `${e.sets}×${e.reps || "?"}`, e.w].filter(Boolean).join(" · ")}</span>
+                    </div>
+                  ))}
+                  {exTotal > 5 && <div style={{ fontSize: 12, color: MIST, opacity: .7 }}>+ {exTotal - 5} more</div>}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+              {[
+                { lbl: "Streak", val: streak, sub: "in a row" },
+                { lbl: "Full days", val: fullDays, sub: "this month" },
+                { lbl: "Any work", val: anyDays, sub: "this month" },
+              ].map((s) => (
+                <div key={s.lbl} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "12px 10px", textAlign: "center" }}>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 26, fontWeight: 600, color: BLUE, lineHeight: 1 }}>{s.val}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginTop: 6 }}>{s.lbl}</div>
+                  <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            <DayViewToggle view={calView} setView={setCalView} />
+            {calView === "week"
+              ? <WeekStrip weekDays={weekDays} sel={sel} setSel={setSel} now={now} doneFor={(dt) => doneOn(dt)} totalFor={() => exTotal} />
+              : <MonthGrid sel={sel} setSel={setSel} now={now} fillFor={fillFor} />}
+
+            <div style={{ fontSize: 13, fontWeight: 700, color: INK, fontFamily: "'Fraunces',serif", margin: "4px 0 10px" }}>{selLabel}</div>
+            <div className="pop" onClick={() => setMode("log")} style={{ background: BLUE, color: PAPER, borderRadius: 4, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+              <div>
+                <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 700, opacity: .8 }}>Open log</div>
+                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 600 }}>{doneCount}/{exTotal} done</div>
+              </div>
+              <ChevIcon c={PAPER} />
+            </div>
+            <p style={tip}>Solid days mean every exercise was checked off. Light fill means you got partial work in. Tracking resets monthly.</p>
+          </>
+        )}
+
+        {mode === "log" && (
+          <>
+            <DayViewToggle view={calView} setView={setCalView} />
+            {calView === "week"
+              ? <WeekStrip weekDays={weekDays} sel={sel} setSel={setSel} now={now} doneFor={(dt) => doneOn(dt)} totalFor={() => exTotal} />
+              : <MonthGrid sel={sel} setSel={setSel} now={now} fillFor={fillFor} />}
+
             <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div><div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>Today</div><div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600 }}>{doneCount}/{workout.ex.length} sets done</div></div>
+              <div><div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{selLabel}</div><div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600 }}>{doneCount}/{exTotal} done</div></div>
               <DumbbellIcon c={SAGEHI} s={30} />
             </div>
             <div style={{ display: "grid", gap: 9 }}>
@@ -485,9 +562,11 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
                 );
               })}
             </div>
-            <p style={tip}>Check off each exercise as you finish it. Logs reset monthly.</p>
+            <p style={tip}>Pick a day on the calendar, then check off each exercise as you finish it. Logs reset monthly.</p>
           </>
-        ) : (
+        )}
+
+        {mode === "build" && (
           <>
             <div style={{ display: "grid", gap: 11 }}>
               {workout.ex.map((e) => (
@@ -508,7 +587,7 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
               ))}
             </div>
             <button onClick={addEx} style={{ ...addBtn, marginTop: 12 }}>+ Add an exercise</button>
-            <p style={tip}>Add each exercise with its sets, reps and weight. Switch to "Log today" on a training day to check them off.</p>
+            <p style={tip}>Add each exercise with its sets, reps and weight. Switch to "Log" on a training day to check them off.</p>
           </>
         )}
       </div>
@@ -710,15 +789,66 @@ function BlockPreview({ block, onClick, now }) {
     </div>
   );
 }
-function AddBlockMenu({ d, go }) {
+const BUILTIN_CATEGORIES = ["money", "health", "plan", "more"];
+const CATEGORY_LABEL = { money: "Money", health: "Health", plan: "Plan", more: "More" };
+function getCategories(d) {
+  const custom = [...new Set(d.blocks.map((b) => b.category || "plan").filter((c) => !BUILTIN_CATEGORIES.includes(c)))];
+  return [...BUILTIN_CATEGORIES, ...custom];
+}
+function makeBlock(type, category, title) {
+  const t = (title || "").trim() || ({ checklist: "New checklist", list: "New list", schedule: "New schedule", notes: "New note", mood: "New mood tracker" }[type]);
+  const base = { id: uid(), type, category, title: t };
+  if (type === "mood") return { ...base, monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} };
+  if (type === "notes") return { ...base, items: "" };
+  if (type === "schedule") return { ...base, items: [{ time: "", t: "" }] };
+  return { ...base, items: [{ t: "", done: false }] };
+}
+function AddBlockMenu({ d, setD, go }) {
   const [open, setOpen] = useState(false);
-  // we need setD; AddBlockMenu is used inside PlanHub which has d+go; lift add via window event not ideal.
-  return <AddBlockInner d={d} go={go} open={open} setOpen={setOpen} />;
+  const [type, setType] = useState("checklist");
+  const [title, setTitle] = useState("");
+  const [cat, setCat] = useState("plan");
+  const [customCat, setCustomCat] = useState("");
+  const cats = getCategories(d);
+  const reset = () => { setOpen(false); setType("checklist"); setTitle(""); setCat("plan"); setCustomCat(""); };
+  const create = () => {
+    const finalCat = (cat === "__new" ? customCat.trim().toLowerCase() : cat) || "plan";
+    const b = makeBlock(type, finalCat, title);
+    setD({ ...d, blocks: [...d.blocks, b] });
+    reset();
+    go("plan", "block:" + b.id);
+  };
+  if (!open) return <button onClick={() => setOpen(true)} style={{ ...addBtn, marginTop: 12 }}>+ Add a space</button>;
+  return (
+    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", marginTop: 12 }}>
+      <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>New space</div>
+      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "10px 12px", fontSize: 14, fontWeight: 600, marginBottom: 10 }} />
+      <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>TYPE</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+        {Object.entries(BLOCK_META).map(([k, m]) => (
+          <div key={k} className="pop" onClick={() => setType(k)} style={{ border: `1.5px solid ${type === k ? m.color : LINE}`, background: type === k ? m.color + "1A" : "transparent", borderRadius: 4, padding: "9px 11px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+            <m.icon c={m.color} s={16} />
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{m.label}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>CATEGORY (where it appears in the menu)</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+        {cats.map((c) => (
+          <div key={c} className="pop" onClick={() => setCat(c)} style={{ border: `1.5px solid ${cat === c ? INK : LINE}`, background: cat === c ? INK : "transparent", color: cat === c ? PAPER : INK, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, textTransform: "capitalize" }}>{CATEGORY_LABEL[c] || c}</div>
+        ))}
+        <div className="pop" onClick={() => setCat("__new")} style={{ border: `1.5px dashed ${cat === "__new" ? INK : LINE}`, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: cat === "__new" ? INK : MUTED }}>+ New</div>
+      </div>
+      {cat === "__new" && <input value={customCat} onChange={(e) => setCustomCat(e.target.value)} placeholder="Category name" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13, fontWeight: 600, marginBottom: 10 }} />}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={reset} style={{ flex: 1, background: "none", border: `1.5px solid ${LINE}`, color: MUTED, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer" }}>Cancel</button>
+        <button onClick={create} disabled={cat === "__new" && !customCat.trim()} style={{ flex: 1, background: INK, border: "none", color: PAPER, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer", opacity: cat === "__new" && !customCat.trim() ? .4 : 1 }}>Create</button>
+      </div>
+    </div>
+  );
 }
-function AddBlockInner({ d, go, open, setOpen }) {
-  // This component is given setD through context-like prop drilling workaround:
-  return null; // replaced by PlanHubReal below
-}
+
+
 
 // Because AddBlockMenu needs setD, we implement Plan hub's add inline:
 function MoodEditor({ block, d, setD, now, back }) {
