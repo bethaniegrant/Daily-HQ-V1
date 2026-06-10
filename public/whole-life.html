@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#16201C" />
+<title>Whole Life Planner</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #16201C; }
+  #root { min-height: 100vh; }
+</style>
+<!-- React + Babel from CDN so this runs with no build step.
+     For production you'd compile this instead of using the in-browser Babel transformer. -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+
+// ─── Whole Life — Tabbed App ──────────────────────────────────────
+// Bottom tab bar: Home · Money · Health · Plan · More
+// Each tab is a hub that expands into individual tools.
+// New this round: Meds tracker + Workout builder.
+// Per-day habits/meds, monthly reset (local tz), streaks, custom spaces.
+
+const INK = "#16201C", PAPER = "#F4F1EA", CARD = "#FFFFFF",
+      SAGE = "#5A6B4D", SAGEHI = "#7E9266", LINE = "#E4E0D5",
+      MUTED = "#6E6A60", AMBER = "#C8783C", MIST = "#A9B8AE",
+      BLUE = "#6E8597", PLUM = "#9C7E96";
+
+const money = (n) => (isNaN(n) || n === "" ? "" : Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 }));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const monthKey = (dt = new Date()) => `${dt.getFullYear()}-${dt.getMonth() + 1}`;
+const dayKey = (dt) => `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
+const daysInMonth = (dt) => new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
+const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay();
+
+const seed = () => ({
+  pay: "",
+  budget: {
+    fixed: [{ id: uid(), n: "Rent", a: "" }, { id: uid(), n: "Car payment", a: "" }],
+    variable: [{ id: uid(), n: "Groceries", a: "" }, { id: uid(), n: "Gas", a: "" }],
+    savings: [{ id: uid(), n: "Emergency fund", a: "" }],
+    debt: [{ id: uid(), n: "Credit card", a: "" }],
+  },
+  monthStamp: monthKey(),
+  habitDefs: [{ id: uid(), n: "Move my body" }, { id: uid(), n: "Drink water" }, { id: uid(), n: "Read 10 min" }],
+  habitChecks: {}, habitOneoffs: {},
+  meds: [{ id: uid(), n: "Vitamin D", dose: "1000 IU", when: "Morning" }, { id: uid(), n: "Magnesium", dose: "200 mg", when: "Night" }],
+  medChecks: {}, // { dayKey: { medId: true } }
+  workouts: [
+    { id: uid(), n: "Push day", ex: [{ id: uid(), n: "Bench press", sets: "3", reps: "8", w: "" }, { id: uid(), n: "Shoulder press", sets: "3", reps: "10", w: "" }] },
+    { id: uid(), n: "Leg day", ex: [{ id: uid(), n: "Squats", sets: "4", reps: "6", w: "" }] },
+  ],
+  workoutDone: {}, // { dayKey: { workoutId: { exId: true } } }
+  goals: [{ n: "", done: false }, { n: "", done: false }, { n: "", done: false }],
+  meals: { Mon: "", Tue: "", Wed: "", Thu: "", Fri: "", Sat: "", Sun: "" },
+  shopping: [{ t: "", done: false }],
+  intention: "Steady",
+  blocks: [
+    { id: uid(), type: "checklist", title: "Errands", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }] },
+    { id: uid(), type: "mood", title: "Mood", monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} },
+  ],
+});
+
+function App() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
+
+  const [tab, setTab] = useState("home");     // home | money | health | plan | more
+  const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
+  const [d, setD] = useState(seed);
+
+  // monthly reset: wipe habit checks, one-offs, med checks, workout logs, mood grids
+  useEffect(() => {
+    const cur = monthKey(now);
+    if (d.monthStamp !== cur) {
+      setD((p) => ({ ...p, monthStamp: cur, habitChecks: {}, habitOneoffs: {}, medChecks: {}, workoutDone: {},
+        blocks: p.blocks.map((b) => b.type === "mood" ? { ...b, monthStamp: cur, days: {} } : b) }));
+    }
+  }, [now]); // eslint-disable-line
+
+  const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
+  const common = { d, setD, now, go, back: () => setPage(null) };
+
+  // resolve current page
+  let view;
+  if (page === null) {
+    view = { home: <Home {...common} />, money: <MoneyHub {...common} />, health: <HealthHub {...common} />, plan: <PlanHub {...common} />, more: <MoreHub {...common} /> }[tab];
+  } else if (page.startsWith("block:")) {
+    const b = d.blocks.find((x) => x.id === page.split(":")[1]);
+    view = b ? (b.type === "mood" ? <MoodEditor block={b} {...common} /> : <BlockEditor block={b} {...common} />) : <PlanHub {...common} />;
+  } else if (page.startsWith("workout:")) {
+    const w = d.workouts.find((x) => x.id === page.split(":")[1]);
+    view = w ? <WorkoutEditor workout={w} {...common} /> : <HealthHub {...common} />;
+  } else {
+    view = { budget: <Budget {...common} />, habits: <Habits {...common} />, goals: <Goals {...common} />, meals: <Meals {...common} />, meds: <Meds {...common} />, workouts: <Workouts {...common} /> }[page] || <Home {...common} />;
+  }
+
+  const TABS = [
+    { id: "home", label: "Home", icon: HomeIcon },
+    { id: "money", label: "Money", icon: WalletIcon },
+    { id: "health", label: "Health", icon: HeartIcon },
+    { id: "plan", label: "Plan", icon: StarIcon },
+    { id: "more", label: "More", icon: GridIcon },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: INK, display: "flex", justifyContent: "center", fontFamily: "'Space Grotesk', -apple-system, sans-serif", color: INK }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin:0; }
+        input,textarea{font-family:inherit;}
+        .pop{transition:transform .12s ease;cursor:pointer;}.pop:active{transform:scale(.96);}
+        .fade{animation:f .35s cubic-bezier(.2,.8,.2,1);}@keyframes f{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+        .stagger>*{animation:f .5s cubic-bezier(.2,.8,.2,1) backwards;}
+        .stagger>*:nth-child(1){animation-delay:.04s}.stagger>*:nth-child(2){animation-delay:.09s}
+        .stagger>*:nth-child(3){animation-delay:.14s}.stagger>*:nth-child(4){animation-delay:.19s}.stagger>*:nth-child(5){animation-delay:.24s}
+        input:focus,textarea:focus{outline:none;}
+      `}</style>
+
+      <div style={{ width: "100%", maxWidth: 440, minHeight: "100vh", background: PAPER, position: "relative", paddingBottom: 78 }}>
+        {view}
+
+        {/* bottom tab bar */}
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 440, background: CARD, borderTop: `1px solid ${LINE}`, display: "flex", padding: "9px 6px 14px", zIndex: 40, boxShadow: "0 -4px 20px -10px rgba(22,32,28,.25)" }}>
+          {TABS.map((t) => {
+            const active = tab === t.id && page === null || (tab === t.id);
+            return (
+              <button key={t.id} onClick={() => go(t.id)} style={{ flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", padding: "4px 0" }}>
+                <t.icon c={tab === t.id ? SAGE : MUTED} s={22} />
+                <span style={{ fontSize: 10.5, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? SAGE : MUTED }}>{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══ HOME ═════════════════════════════════════════════════════════
+function Home({ d, now, go }) {
+  const hour = now.getHours();
+  const greet = hour < 12 ? "Morning" : hour < 18 ? "Afternoon" : "Evening";
+  const comp = dayCompletion(d, now);
+  const left = (Number(d.pay) || 0) - budgetSpent(d);
+  const medsToday = d.meds.length, medsTaken = d.meds.filter((m) => (d.medChecks[dayKey(now)] || {})[m.id]).length;
+
+  const tzShort = now.toLocaleTimeString("en-US", { timeZoneName: "short" }).split(" ").pop();
+  const dateLine = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const timeLine = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  return (
+    <div className="fade">
+      <div style={{ background: INK, color: PAPER, padding: "26px 22px 64px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div style={{ border: `1px solid rgba(255,255,255,.25)`, borderRadius: 2, padding: "5px 12px", fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase" }}>{d.intention || "—"}</div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, lineHeight: 1 }}>{dateLine}</div>
+            <div style={{ fontSize: 12, color: MIST, fontWeight: 600, marginTop: 3 }}>{timeLine} · {tzShort}</div>
+          </div>
+        </div>
+        <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 38, fontWeight: 600, lineHeight: 1.0, marginTop: 18, letterSpacing: "-.02em" }}>
+          {greet}.<br /><span style={{ color: SAGEHI }}>Let's keep it simple.</span>
+        </h1>
+      </div>
+
+      <div style={{ padding: "0 18px", marginTop: -44, position: "relative", zIndex: 2 }}>
+        <div className="pop" onClick={() => go("plan", "habits")} style={{ background: CARD, borderRadius: 4, padding: "22px 24px", display: "flex", alignItems: "center", gap: 22, boxShadow: "0 20px 40px -16px rgba(22,32,28,.4)", border: `1px solid ${LINE}` }}>
+          <Ring pct={comp.pct} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's habits</div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, margin: "3px 0" }}>{comp.done}<span style={{ color: MUTED }}> / {comp.total}</span></div>
+            <div style={{ fontSize: 13, color: SAGE, fontWeight: 600 }}>{comp.pct === 1 && comp.total ? "Every one. Done." : comp.pct >= .5 ? "Past halfway." : "Begin with one."}</div>
+          </div>
+        </div>
+      </div>
+
+      <SectionLabel text="Jump back in" />
+      <div className="stagger" style={{ padding: "0 18px 10px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money", "budget")} dark />
+        <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />
+        <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />
+        <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${Object.values(d.meals).filter((m) => m.trim()).length}/7`} sub="days planned" onClick={() => go("health", "meals")} dark />
+      </div>
+
+      <SectionLabel text="Explore" />
+      <div style={{ padding: "0 18px 30px", display: "grid", gap: 10 }}>
+        <HubLink icon={WalletIcon} color={AMBER} title="Money" sub="Budget · debt · savings" onClick={() => go("money")} />
+        <HubLink icon={HeartIcon} color={PLUM} title="Health" sub="Meds · workouts · meals · mood" onClick={() => go("health")} />
+        <HubLink icon={StarIcon} color={SAGE} title="Plan" sub="Habits · goals · your spaces" onClick={() => go("plan")} />
+      </div>
+    </div>
+  );
+}
+
+// ═══ HUBS ═════════════════════════════════════════════════════════
+function Hub({ title, sub, children }) {
+  return (
+    <div className="fade">
+      <div style={{ background: INK, color: PAPER, padding: "30px 22px 26px" }}>
+        <div style={{ fontSize: 12, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div>
+        <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 34, fontWeight: 600, lineHeight: 1, marginTop: 4, letterSpacing: "-.02em" }}>{title}</h1>
+      </div>
+      <div className="stagger" style={{ padding: "20px 18px 30px", display: "grid", gap: 12 }}>{children}</div>
+    </div>
+  );
+}
+function ToolRow({ icon: Icon, color, title, sub, stat, onClick }) {
+  return (
+    <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${color}`, borderRadius: 4, padding: "17px 18px", display: "flex", alignItems: "center", gap: 15 }}>
+      <div style={{ width: 44, height: 44, borderRadius: 4, background: color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon c={color} s={22} /></div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-.01em" }}>{title}</div>
+        <div style={{ fontSize: 13, color: MUTED }}>{sub}</div>
+      </div>
+      {stat && <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color }}>{stat}</div>}
+      <ChevIcon c={MUTED} />
+    </div>
+  );
+}
+
+function MoneyHub({ d, go }) {
+  const left = (Number(d.pay) || 0) - budgetSpent(d);
+  return (
+    <Hub title="Money" sub="Spend with intention">
+      <ToolRow icon={WalletIcon} color={AMBER} title="Paycheck Budget" sub="Give every dollar a job" stat={d.pay ? `$${money(left)}` : ""} onClick={() => go("money", "budget")} />
+      <ToolRow icon={TrendIcon} color={BLUE} title="Debt Payoff" sub="Snowball or avalanche" onClick={() => go("money", "budget")} />
+      <ToolRow icon={PiggyIcon} color={SAGE} title="Sinking Funds" sub="Save for what's coming" onClick={() => go("money", "budget")} />
+      <Note>Debt and sinking funds open the budget for now — full tools coming next.</Note>
+    </Hub>
+  );
+}
+function HealthHub({ d, now, go }) {
+  const medsTaken = d.meds.filter((m) => (d.medChecks[dayKey(now)] || {})[m.id]).length;
+  return (
+    <Hub title="Health" sub="Care for the basics">
+      <ToolRow icon={PillIcon} color={PLUM} title="Medications" sub="Track your daily doses" stat={d.meds.length ? `${medsTaken}/${d.meds.length}` : ""} onClick={() => go("health", "meds")} />
+      <ToolRow icon={DumbbellIcon} color={BLUE} title="Workouts" sub="Build and log your training" stat={`${d.workouts.length}`} onClick={() => go("health", "workouts")} />
+      <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping list" stat={`${Object.values(d.meals).filter((m) => m.trim()).length}/7`} onClick={() => go("health", "meals")} />
+      <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("plan", mb ? "block:" + mb.id : null); }} />
+    </Hub>
+  );
+}
+function PlanHub({ d, go }) {
+  const goalsSet = d.goals.filter((g) => g.n.trim()).length;
+  return (
+    <Hub title="Plan" sub="Shape your days">
+      <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
+      <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
+      <SectionMini text="Your spaces" />
+      {d.blocks.map((b) => <BlockPreview key={b.id} block={b} onClick={() => go("plan", "block:" + b.id)} now={new Date()} />)}
+      <AddBlockMenu onAdd={(type) => { /* handled in PlanHub wrapper below */ }} d={d} go={go} />
+    </Hub>
+  );
+}
+function MoreHub({ d, setD, go }) {
+  return (
+    <Hub title="More" sub="Settings and extras">
+      <Note>This is where account, install help, reminders, themes and backup will live in the full app. For now it's a placeholder.</Note>
+      <ToolRow icon={GridIcon} color={SAGE} title="Add a space" sub="Checklist, list, schedule, notes, mood" onClick={() => go("plan")} />
+      <ToolRow icon={HeartIcon} color={PLUM} title="About this app" sub="Whole Life Planner by Bethanie Rose" onClick={() => {}} />
+    </Hub>
+  );
+}
+
+function Note({ children }) { return <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, fontStyle: "italic", fontFamily: "'Fraunces',serif", padding: "4px 2px" }}>{children}</div>; }
+function SectionMini({ text }) { return <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginTop: 8 }}>{text}</div>; }
+function HubLink({ icon: Icon, color, title, sub, onClick }) {
+  return (
+    <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{ width: 40, height: 40, borderRadius: 4, background: color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon c={color} s={21} /></div>
+      <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div><div style={{ fontSize: 12, color: MUTED }}>{sub}</div></div>
+      <ChevIcon c={MUTED} />
+    </div>
+  );
+}
+
+// ═══ NEW TOOL: MEDS ═══════════════════════════════════════════════
+function Meds({ d, setD, now, back }) {
+  const [view, setView] = useState("week");
+  const [sel, setSel] = useState(new Date(now));
+  const selKey = dayKey(sel);
+  const [edit, setEdit] = useState(false);
+  const checks = d.medChecks[selKey] || {};
+
+  const toggle = (id) => { const day = { ...(d.medChecks[selKey] || {}) }; day[id] = !day[id]; setD({ ...d, medChecks: { ...d.medChecks, [selKey]: day } }); };
+  const setMed = (id, f, v) => setD({ ...d, meds: d.meds.map((m) => m.id === id ? { ...m, [f]: v } : m) });
+  const addMed = () => setD({ ...d, meds: [...d.meds, { id: uid(), n: "", dose: "", when: "Morning" }] });
+  const delMed = (id) => setD({ ...d, meds: d.meds.filter((m) => m.id !== id) });
+
+  const weekStart = new Date(sel); weekStart.setDate(sel.getDate() - sel.getDay());
+  const weekDays = Array.from({ length: 7 }, (_, i) => { const dt = new Date(weekStart); dt.setDate(weekStart.getDate() + i); return dt; });
+  const dim = daysInMonth(sel), pad = firstWeekday(sel);
+  const medsTakenOn = (dt) => { const c = d.medChecks[dayKey(dt)] || {}; return d.meds.filter((m) => c[m.id]).length; };
+  const selLabel = sel.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+
+  return (
+    <Screen title="Medications" sub="Daily doses" back={back} accent={PLUM}>
+      <DayViewToggle view={view} setView={setView} />
+      {view === "week"
+        ? <WeekStrip weekDays={weekDays} sel={sel} setSel={setSel} now={now} doneFor={(dt) => medsTakenOn(dt)} totalFor={() => d.meds.length} />
+        : <MonthGrid sel={sel} setSel={setSel} now={now} fillFor={(dt) => { const t = d.meds.length, done = medsTakenOn(dt); return t && done === t ? PLUM : done ? PLUM + "33" : null; }} />}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 0 10px" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: INK, fontFamily: "'Fraunces',serif" }}>{selLabel}</div>
+        <div className="pop" onClick={() => setEdit(!edit)} style={{ fontSize: 12, fontWeight: 700, color: PLUM, cursor: "pointer" }}>{edit ? "Done" : "Edit meds"}</div>
+      </div>
+
+      {edit ? (
+        <div style={{ display: "grid", gap: 9 }}>
+          {d.meds.map((m) => (
+            <div key={m.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "12px 14px", display: "grid", gap: 7 }}>
+              <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                <input value={m.n} onChange={(e) => setMed(m.id, "n", e.target.value)} placeholder="Medication name" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 600 }} />
+                <div className="pop" onClick={() => delMed(m.id)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={15} /></div>
+              </div>
+              <div style={{ display: "flex", gap: 7 }}>
+                <input value={m.dose} onChange={(e) => setMed(m.id, "dose", e.target.value)} placeholder="Dose (e.g. 200 mg)" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13 }} />
+                <select value={m.when} onChange={(e) => setMed(m.id, "when", e.target.value)} style={{ border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13, background: CARD, fontWeight: 600, color: INK }}>
+                  {["Morning", "Midday", "Evening", "Night", "As needed"].map((w) => <option key={w}>{w}</option>)}
+                </select>
+              </div>
+            </div>
+          ))}
+          <button onClick={addMed} style={addBtn}>+ Add a medication</button>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 9 }}>
+          {d.meds.length === 0 && <Note>No meds yet. Tap "Edit meds" to add your first.</Note>}
+          {d.meds.map((m) => {
+            const taken = !!checks[m.id];
+            return (
+              <div key={m.id} style={{ background: taken ? INK : CARD, color: taken ? PAPER : INK, borderRadius: 4, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, border: taken ? "none" : `1px solid ${LINE}` }}>
+                <div className="pop" onClick={() => toggle(m.id)} style={{ width: 28, height: 28, borderRadius: 3, border: `2px solid ${taken ? SAGEHI : PLUM}`, background: taken ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{taken && <CheckIcon c={INK} s={15} />}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, textDecoration: taken ? "line-through" : "none" }}>{m.n || "Unnamed"}</div>
+                  <div style={{ fontSize: 12, color: taken ? "rgba(244,241,234,.6)" : MUTED }}>{[m.dose, m.when].filter(Boolean).join(" · ")}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <p style={tip}>Check off each dose as you take it. Tracking resets each month so every month starts fresh.</p>
+    </Screen>
+  );
+}
+
+// ═══ NEW TOOL: WORKOUTS ═══════════════════════════════════════════
+function Workouts({ d, setD, go, back }) {
+  const addWorkout = () => { const w = { id: uid(), n: "New workout", ex: [{ id: uid(), n: "", sets: "", reps: "", w: "" }] }; setD({ ...d, workouts: [...d.workouts, w] }); go("health", "workout:" + w.id); };
+  return (
+    <Screen title="Workouts" sub="Build your training" back={back} accent={BLUE}>
+      <div style={{ display: "grid", gap: 11 }}>
+        {d.workouts.map((w) => (
+          <div key={w.id} className="pop" onClick={() => go("health", "workout:" + w.id)} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${BLUE}`, borderRadius: 4, padding: "16px 17px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 4, background: BLUE + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><DumbbellIcon c={BLUE} s={21} /></div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{w.n || "Untitled workout"}</div>
+              <div style={{ fontSize: 13, color: MUTED }}>{w.ex.filter((e) => e.n.trim()).length} exercise{w.ex.filter((e) => e.n.trim()).length === 1 ? "" : "s"}</div>
+            </div>
+            <ChevIcon c={MUTED} />
+          </div>
+        ))}
+      </div>
+      <button onClick={addWorkout} style={{ ...addBtn, marginTop: 14 }}>+ Build a workout</button>
+      <p style={tip}>Create a workout, add your exercises with sets and reps, then open it on a training day to log each set as done.</p>
+    </Screen>
+  );
+}
+function WorkoutEditor({ workout, d, setD, now, back }) {
+  const [logMode, setLogMode] = useState(false);
+  const todayKey = dayKey(now);
+  const log = (d.workoutDone[todayKey] || {})[workout.id] || {};
+
+  const update = (patch) => setD({ ...d, workouts: d.workouts.map((w) => w.id === workout.id ? { ...w, ...patch } : w) });
+  const del = () => { setD({ ...d, workouts: d.workouts.filter((w) => w.id !== workout.id) }); back(); };
+  const setEx = (id, f, v) => update({ ex: workout.ex.map((e) => e.id === id ? { ...e, [f]: v } : e) });
+  const addEx = () => update({ ex: [...workout.ex, { id: uid(), n: "", sets: "", reps: "", w: "" }] });
+  const delEx = (id) => update({ ex: workout.ex.filter((e) => e.id !== id) });
+  const toggleEx = (id) => { const day = { ...(d.workoutDone[todayKey] || {}) }; const wl = { ...(day[workout.id] || {}) }; wl[id] = !wl[id]; day[workout.id] = wl; setD({ ...d, workoutDone: { ...d.workoutDone, [todayKey]: day } }); };
+
+  const doneCount = workout.ex.filter((e) => log[e.id]).length;
+
+  return (
+    <div className="fade">
+      <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><DumbbellIcon c={MIST} s={13} /> Workout</div></div>
+          <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
+        </div>
+        <input value={workout.n} onChange={(e) => update({ n: e.target.value })} placeholder="Name this workout" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'Fraunces',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
+      </div>
+
+      <div style={{ padding: "18px 18px 50px" }}>
+        {/* mode toggle: build vs log today */}
+        <div style={{ display: "flex", gap: 6, background: "#EAE6DB", borderRadius: 4, padding: 4, marginBottom: 16 }}>
+          {[["build", "Build"], ["log", "Log today"]].map(([v, lbl]) => (
+            <div key={v} className="pop" onClick={() => setLogMode(v === "log")} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 3, fontSize: 13, fontWeight: 700, background: (logMode ? "log" : "build") === v ? CARD : "transparent", color: (logMode ? "log" : "build") === v ? INK : MUTED }}>{lbl}</div>
+          ))}
+        </div>
+
+        {logMode ? (
+          <>
+            <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div><div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>Today</div><div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600 }}>{doneCount}/{workout.ex.length} sets done</div></div>
+              <DumbbellIcon c={SAGEHI} s={30} />
+            </div>
+            <div style={{ display: "grid", gap: 9 }}>
+              {workout.ex.map((e) => {
+                const done = !!log[e.id];
+                return (
+                  <div key={e.id} style={{ background: done ? INK : CARD, color: done ? PAPER : INK, borderRadius: 4, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, border: done ? "none" : `1px solid ${LINE}` }}>
+                    <div className="pop" onClick={() => toggleEx(e.id)} style={{ width: 28, height: 28, borderRadius: 3, border: `2px solid ${done ? SAGEHI : BLUE}`, background: done ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{done && <CheckIcon c={INK} s={15} />}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, textDecoration: done ? "line-through" : "none" }}>{e.n || "Exercise"}</div>
+                      <div style={{ fontSize: 12, color: done ? "rgba(244,241,234,.6)" : MUTED }}>{[e.sets && `${e.sets} sets`, e.reps && `${e.reps} reps`, e.w && `${e.w}`].filter(Boolean).join(" · ")}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p style={tip}>Check off each exercise as you finish it. Logs reset monthly.</p>
+          </>
+        ) : (
+          <>
+            <div style={{ display: "grid", gap: 11 }}>
+              {workout.ex.map((e) => (
+                <div key={e.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "14px 15px" }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 9 }}>
+                    <input value={e.n} onChange={(ev) => setEx(e.id, "n", ev.target.value)} placeholder="Exercise name" style={{ flex: 1, border: "none", fontSize: 15, fontWeight: 700, background: "none" }} />
+                    <div className="pop" onClick={() => delEx(e.id)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={15} /></div>
+                  </div>
+                  <div style={{ display: "flex", gap: 7 }}>
+                    {[["sets", "Sets"], ["reps", "Reps"], ["w", "Weight"]].map(([f, ph]) => (
+                      <div key={f} style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 3 }}>{ph}</div>
+                        <input value={e[f]} onChange={(ev) => setEx(e.id, f, ev.target.value)} placeholder="—" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "8px 10px", fontSize: 14, fontWeight: 600, textAlign: "center" }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={addEx} style={{ ...addBtn, marginTop: 12 }}>+ Add an exercise</button>
+            <p style={tip}>Add each exercise with its sets, reps and weight. Switch to "Log today" on a training day to check them off.</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══ EXISTING TOOLS (budget, habits, goals, meals) ════════════════
+function Budget({ d, setD, back }) {
+  const pay = Number(d.pay) || 0, spent = budgetSpent(d), left = pay - spent, pct = pay ? Math.min(1, spent / pay) : 0;
+  const setRow = (key, id, field, v) => setD({ ...d, budget: { ...d.budget, [key]: d.budget[key].map((r) => r.id === id ? { ...r, [field]: v } : r) } });
+  const addRow = (key) => setD({ ...d, budget: { ...d.budget, [key]: [...d.budget[key], { id: uid(), n: "", a: "" }] } });
+  const delRow = (key, id) => setD({ ...d, budget: { ...d.budget, [key]: d.budget[key].filter((r) => r.id !== id) } });
+  return (
+    <Screen title="Budget" sub="This paycheck" back={back} accent={AMBER}>
+      <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14 }}>
+        <label style={{ ...lbl, color: MIST }}>Take-home pay</label>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ fontSize: 30, fontFamily: "'Fraunces',serif", fontWeight: 600, color: SAGEHI }}>$</span><input inputMode="decimal" value={d.pay} onChange={(e) => setD({ ...d, pay: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, fontSize: 30, fontFamily: "'Fraunces',serif", fontWeight: 600, background: "none", color: PAPER }} /></div>
+      </div>
+      {BUDGET_SECTIONS.map((sec) => (
+        <div key={sec.key} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${sec.color}`, borderRadius: 4, padding: "15px 16px", marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+            <div><div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.01em" }}>{sec.label}</div><div style={{ fontSize: 12, color: MUTED }}>{sec.hint}</div></div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: sec.color, whiteSpace: "nowrap" }}>${money(sectionTotal(d, sec.key))}</div>
+          </div>
+          <div style={{ display: "grid", gap: 7 }}>
+            {d.budget[sec.key].map((r) => (
+              <div key={r.id} style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                <input value={r.n} onChange={(e) => setRow(sec.key, r.id, "n", e.target.value)} placeholder="What for" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 500 }} />
+                <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", width: 96 }}><span style={{ color: MUTED, fontSize: 13 }}>$</span><input inputMode="decimal" value={r.a} onChange={(e) => setRow(sec.key, r.id, "a", e.target.value)} placeholder="0" style={{ border: "none", width: "100%", textAlign: "right", padding: "9px 0 9px 4px", fontSize: 14, fontWeight: 600, background: "none" }} /></div>
+                <div className="pop" onClick={() => delRow(sec.key, r.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => addRow(sec.key)} style={{ marginTop: 10, background: "none", border: "none", color: sec.color, fontWeight: 700, fontSize: 13, cursor: "pointer", padding: 0 }}>+ Add a line</button>
+        </div>
+      ))}
+      <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "22px 24px", marginTop: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MIST, marginBottom: 6 }}><span>Take-home pay</span><span style={{ fontWeight: 700, color: PAPER }}>${money(pay)}</span></div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MIST, marginBottom: 10 }}><span>Everything assigned</span><span style={{ fontWeight: 700, color: PAPER }}>− ${money(spent)}</span></div>
+        <div style={{ height: 1, background: "rgba(255,255,255,.15)", margin: "4px 0 12px" }} />
+        <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: left < 0 ? AMBER : MIST }}>{left < 0 ? "Over by" : "Left to allocate"}</div>
+        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 46, fontWeight: 600, margin: "4px 0 14px", letterSpacing: "-.02em", color: left < 0 ? AMBER : PAPER }}>${money(Math.abs(left))}</div>
+        <div style={{ height: 8, background: "rgba(255,255,255,.15)", overflow: "hidden" }}><div style={{ width: `${pct * 100}%`, height: "100%", background: left < 0 ? AMBER : SAGEHI, transition: "width .5s" }} /></div>
+      </div>
+      <p style={tip}>Give every dollar a job. When "left to allocate" hits zero, every dollar has a place.</p>
+    </Screen>
+  );
+}
+
+function Habits({ d, setD, now, back }) {
+  const [view, setView] = useState("week");
+  const [sel, setSel] = useState(new Date(now));
+  const selKey = dayKey(sel);
+  const checks = d.habitChecks[selKey] || {};
+  const oneoffs = d.habitOneoffs[selKey] || [];
+  const toggleRec = (id) => { const day = { ...(d.habitChecks[selKey] || {}) }; day[id] = !day[id]; setD({ ...d, habitChecks: { ...d.habitChecks, [selKey]: day } }); };
+  const renameDef = (id, v) => setD({ ...d, habitDefs: d.habitDefs.map((h) => h.id === id ? { ...h, n: v } : h) });
+  const addDef = () => setD({ ...d, habitDefs: [...d.habitDefs, { id: uid(), n: "" }] });
+  const delDef = (id) => setD({ ...d, habitDefs: d.habitDefs.filter((h) => h.id !== id) });
+  const addOne = () => setD({ ...d, habitOneoffs: { ...d.habitOneoffs, [selKey]: [...oneoffs, { id: uid(), n: "", done: false }] } });
+  const toggleOne = (id) => setD({ ...d, habitOneoffs: { ...d.habitOneoffs, [selKey]: oneoffs.map((o) => o.id === id ? { ...o, done: !o.done } : o) } });
+  const renameOne = (id, v) => setD({ ...d, habitOneoffs: { ...d.habitOneoffs, [selKey]: oneoffs.map((o) => o.id === id ? { ...o, n: v } : o) } });
+  const delOne = (id) => setD({ ...d, habitOneoffs: { ...d.habitOneoffs, [selKey]: oneoffs.filter((o) => o.id !== id) } });
+  const [editDefs, setEditDefs] = useState(false);
+  const selLabel = sel.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const weekStart = new Date(sel); weekStart.setDate(sel.getDate() - sel.getDay());
+  const weekDays = Array.from({ length: 7 }, (_, i) => { const dt = new Date(weekStart); dt.setDate(weekStart.getDate() + i); return dt; });
+
+  return (
+    <Screen title="Habits" sub={dayKey(now) === selKey ? "Today" : "Selected day"} back={back} accent={SAGE}>
+      <DayViewToggle view={view} setView={setView} />
+      {view === "week"
+        ? <WeekStrip weekDays={weekDays} sel={sel} setSel={setSel} now={now} doneFor={(dt) => dayCompletion(d, dt).done} totalFor={(dt) => dayCompletion(d, dt).total} />
+        : <MonthGrid sel={sel} setSel={setSel} now={now} fillFor={(dt) => { const c = dayCompletion(d, dt); return c.total && c.pct === 1 ? SAGEHI : c.done ? AMBER + "33" : null; }} />}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 0 10px" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: INK, fontFamily: "'Fraunces',serif" }}>{selLabel}</div>
+        <div className="pop" onClick={() => setEditDefs(!editDefs)} style={{ fontSize: 12, fontWeight: 700, color: SAGE, cursor: "pointer" }}>{editDefs ? "Done" : "Edit habits"}</div>
+      </div>
+
+      {editDefs ? (
+        <div style={{ display: "grid", gap: 9 }}>
+          <div style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}>RECURRING — show on every day</div>
+          {d.habitDefs.map((h) => (
+            <div key={h.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+              <input value={h.n} onChange={(e) => renameDef(h.id, e.target.value)} placeholder="Habit name" style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 600, background: "none" }} />
+              <div className="pop" onClick={() => delDef(h.id)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={15} /></div>
+            </div>
+          ))}
+          <button onClick={addDef} style={addBtn}>+ Add a recurring habit</button>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 9 }}>
+          {d.habitDefs.map((h) => {
+            const done = !!checks[h.id]; const { current, best } = habitStreaks(d, h.id, now);
+            return (
+              <div key={h.id} style={{ background: done ? INK : CARD, color: done ? PAPER : INK, borderRadius: 4, padding: "15px 16px", display: "flex", alignItems: "center", gap: 12, border: done ? "none" : `1px solid ${LINE}` }}>
+                <div className="pop" onClick={() => toggleRec(h.id)} style={{ width: 27, height: 27, borderRadius: 3, border: `2px solid ${done ? SAGEHI : SAGE}`, background: done ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{done && <CheckIcon c={INK} s={15} />}</div>
+                <div style={{ flex: 1, fontSize: 15, fontWeight: 600, textDecoration: done ? "line-through" : "none" }}>{h.n || "Unnamed habit"}</div>
+                {(current > 0 || best > 1) && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    {current > 0 && <div style={{ display: "flex", alignItems: "center", gap: 3, background: done ? "rgba(255,255,255,.12)" : AMBER + "1A", borderRadius: 20, padding: "4px 9px" }}><FlameIcon c={AMBER} s={13} /><span style={{ fontSize: 13, fontWeight: 700, color: done ? PAPER : AMBER }}>{current}</span></div>}
+                    {best > 1 && <div style={{ display: "flex", alignItems: "center", gap: 3, background: done ? "rgba(255,255,255,.12)" : SAGE + "1A", borderRadius: 20, padding: "4px 9px" }}><TrophyIcon c={done ? SAGEHI : SAGE} s={12} /><span style={{ fontSize: 13, fontWeight: 700, color: done ? PAPER : SAGE }}>{best}</span></div>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {oneoffs.map((o) => (
+            <div key={o.id} style={{ background: o.done ? INK : CARD, color: o.done ? PAPER : INK, borderRadius: 4, padding: "15px 16px", display: "flex", alignItems: "center", gap: 14, border: o.done ? "none" : `1px dashed ${AMBER}` }}>
+              <div className="pop" onClick={() => toggleOne(o.id)} style={{ width: 27, height: 27, borderRadius: 3, border: `2px solid ${o.done ? SAGEHI : AMBER}`, background: o.done ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{o.done && <CheckIcon c={INK} s={15} />}</div>
+              <input value={o.n} onChange={(e) => renameOne(o.id, e.target.value)} placeholder="Just for this day" style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 600, background: "none", color: "inherit", textDecoration: o.done ? "line-through" : "none" }} />
+              <div className="pop" onClick={() => delOne(o.id)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={o.done ? PAPER : MUTED} s={15} /></div>
+            </div>
+          ))}
+          <button onClick={addOne} style={{ ...addBtn, borderStyle: "dashed", borderColor: AMBER, color: AMBER }}>+ Add a one-off for this day</button>
+        </div>
+      )}
+      <p style={tip}>Flame = current streak. Trophy = best streak this month. Recurring habits track per day; add a one-off just for today. Everything resets monthly.</p>
+    </Screen>
+  );
+}
+
+function Goals({ d, setD, back }) {
+  const toggle = (i) => setD({ ...d, goals: d.goals.map((g, j) => j === i ? { ...g, done: !g.done } : g) });
+  const rename = (i, v) => setD({ ...d, goals: d.goals.map((g, j) => j === i ? { ...g, n: v } : g) });
+  return (
+    <Screen title="Goals" sub="This month" back={back} accent={AMBER}>
+      <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 20px", marginBottom: 14 }}>
+        <label style={{ ...lbl, color: MIST }}>Word of the month</label>
+        <input value={d.intention} onChange={(e) => setD({ ...d, intention: e.target.value })} placeholder="e.g. Steady" style={{ border: "none", fontSize: 26, fontFamily: "'Fraunces',serif", fontWeight: 600, width: "100%", background: "none", color: PAPER }} />
+      </div>
+      <div style={{ display: "grid", gap: 10 }}>
+        {d.goals.map((g, i) => (
+          <div key={i} style={{ background: CARD, borderRadius: 4, padding: "16px 17px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${LINE}` }}>
+            <div className="pop" onClick={() => toggle(i)} style={{ width: 30, height: 30, borderRadius: 3, border: `2px solid ${AMBER}`, background: g.done ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "'Fraunces',serif", fontWeight: 700, color: g.done ? "#fff" : AMBER, fontSize: 14 }}>{g.done ? <CheckIcon c="#fff" s={16} /> : i + 1}</div>
+            <input value={g.n} onChange={(e) => rename(i, e.target.value)} placeholder={`Goal ${i + 1}`} style={{ border: "none", flex: 1, fontSize: 16, fontWeight: 600, background: "none" }} />
+          </div>
+        ))}
+      </div>
+      <p style={tip}>Three goals. Not ten. Focus is a kindness to your future self.</p>
+    </Screen>
+  );
+}
+
+function Meals({ d, setD, back }) {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const set = (day, v) => setD({ ...d, meals: { ...d.meals, [day]: v } });
+  const setShop = (i, patch) => setD({ ...d, shopping: d.shopping.map((s, j) => j === i ? { ...s, ...patch } : s) });
+  const addShop = () => setD({ ...d, shopping: [...d.shopping, { t: "", done: false }] });
+  const delShop = (i) => setD({ ...d, shopping: d.shopping.filter((_, j) => j !== i) });
+  const gotCount = d.shopping.filter((s) => s.done && s.t.trim()).length, shopTotal = d.shopping.filter((s) => s.t.trim()).length;
+  return (
+    <Screen title="Meals" sub="This week" back={back} accent={SAGE}>
+      <div style={{ display: "grid", gap: 8 }}>
+        {days.map((day, i) => (
+          <div key={day} style={{ background: CARD, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${LINE}` }}>
+            <div style={{ width: 38, fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: i > 4 ? AMBER : SAGE }}>{day}</div>
+            <input value={d.meals[day]} onChange={(e) => set(day, e.target.value)} placeholder="What's for dinner?" style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none" }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 24, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 12, letterSpacing: ".16em", textTransform: "uppercase", color: INK, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><CartIcon c={INK} s={16} /> Shopping list</div>
+        {shopTotal > 0 && <div style={{ fontSize: 12, color: MUTED, fontWeight: 600 }}>{gotCount}/{shopTotal} got</div>}
+      </div>
+      <div style={{ display: "grid", gap: 8 }}>
+        {d.shopping.map((s, i) => (
+          <div key={i} style={{ background: s.done ? "#EEF0E9" : CARD, borderRadius: 4, padding: "11px 14px", display: "flex", alignItems: "center", gap: 12, border: `1px solid ${LINE}` }}>
+            <div className="pop" onClick={() => setShop(i, { done: !s.done })} style={{ width: 24, height: 24, borderRadius: 3, border: `2px solid ${SAGE}`, background: s.done ? SAGE : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.done && <CheckIcon c="#fff" s={14} />}</div>
+            <input value={s.t} onChange={(e) => setShop(i, { t: e.target.value })} placeholder="Add an item" style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none", color: s.done ? MUTED : INK, textDecoration: s.done ? "line-through" : "none" }} />
+            <div className="pop" onClick={() => delShop(i)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={14} /></div>
+          </div>
+        ))}
+      </div>
+      <button onClick={addShop} style={addBtn}>+ Add an item</button>
+      <p style={tip}>Plan your dinners, then build the shopping list right under them.</p>
+    </Screen>
+  );
+}
+
+// ═══ CUSTOM BLOCKS (preview, add menu, editors, mood) ═════════════
+function BlockPreview({ block, onClick, now }) {
+  const meta = BLOCK_META[block.type];
+  let summary = "";
+  if (block.type === "mood") summary = `${Object.keys(block.days).length} of ${daysInMonth(now)} days`;
+  else if (block.type === "notes") summary = block.items ? block.items.slice(0, 50) : "Empty note";
+  else { const total = block.items.filter((i) => (i.t || "").trim()).length; if (block.type === "checklist") { const done = block.items.filter((i) => i.done).length; summary = `${done} of ${total} done`; } else summary = `${total} item${total === 1 ? "" : "s"}`; }
+  return (
+    <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${meta.color}`, borderRadius: 4, padding: "15px 16px", display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{ width: 38, height: 38, borderRadius: 3, background: meta.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><meta.icon c={meta.color} s={19} /></div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{block.title}</div>
+        <div style={{ fontSize: 12, color: MUTED }}>{meta.label} · {summary}</div>
+        {block.type === "mood" && <div style={{ display: "flex", gap: 4, marginTop: 6 }}>{block.moods.slice(0, 5).map((m) => <div key={m.id} style={{ width: 14, height: 14, borderRadius: 3, background: m.color }} />)}</div>}
+      </div>
+      <ChevIcon c={MUTED} />
+    </div>
+  );
+}
+function AddBlockMenu({ d, go }) {
+  const [open, setOpen] = useState(false);
+  // we need setD; AddBlockMenu is used inside PlanHub which has d+go; lift add via window event not ideal.
+  return <AddBlockInner d={d} go={go} open={open} setOpen={setOpen} />;
+}
+function AddBlockInner({ d, go, open, setOpen }) {
+  // This component is given setD through context-like prop drilling workaround:
+  return null; // replaced by PlanHubReal below
+}
+
+// Because AddBlockMenu needs setD, we implement Plan hub's add inline:
+function MoodEditor({ block, d, setD, now, back }) {
+  const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
+  const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
+  const [selected, setSelected] = useState(now.getDate());
+  const [editMoods, setEditMoods] = useState(false);
+  const dim = daysInMonth(now), pad = firstWeekday(now);
+  const today = now.getDate();
+  const setDayMood = (day, moodId) => { const days = { ...block.days }; if (days[day] === moodId) delete days[day]; else days[day] = moodId; update({ days }); };
+  const moodById = (id) => block.moods.find((m) => m.id === id);
+  const setMood = (i, patch) => update({ moods: block.moods.map((m, j) => j === i ? { ...m, ...patch } : m) });
+  const addMood = () => update({ moods: [...block.moods, { id: uid(), label: "New", color: PALETTE[block.moods.length % PALETTE.length] }] });
+  const delMood = (i) => update({ moods: block.moods.filter((_, j) => j !== i) });
+  return (
+    <div className="fade">
+      <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><HeartIcon c={MIST} s={13} /> Mood Tracker</div></div>
+          <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
+        </div>
+        <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this space" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'Fraunces',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
+        <div style={{ fontSize: 13, color: MIST, fontWeight: 600, marginTop: 2 }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })} · resets at month's end</div>
+      </div>
+      <div style={{ padding: "20px 18px 50px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginBottom: 8 }}>{["S", "M", "T", "W", "T", "F", "S"].map((w, i) => <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: MUTED }}>{w}</div>)}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
+          {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
+          {Array.from({ length: dim }).map((_, i) => {
+            const day = i + 1, mood = block.days[day] ? moodById(block.days[day]) : null, isToday = day === today, isSel = day === selected;
+            return <div key={day} className="pop" onClick={() => setSelected(day)} style={{ aspectRatio: "1", borderRadius: 4, background: mood ? mood.color : CARD, border: isSel ? `2px solid ${INK}` : isToday ? `2px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: 4 }}><span style={{ fontSize: 11, fontWeight: 700, color: mood ? "#fff" : MUTED }}>{day}</span></div>;
+          })}
+        </div>
+        <div style={{ marginTop: 20, background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700, color: INK }}>How was {now.toLocaleDateString("en-US", { month: "short" })} {selected}?</div>
+            <div className="pop" onClick={() => setEditMoods(!editMoods)} style={{ fontSize: 12, fontWeight: 700, color: SAGE, cursor: "pointer" }}>{editMoods ? "Done" : "Edit moods"}</div>
+          </div>
+          {!editMoods ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
+              {block.moods.map((m) => { const active = block.days[selected] === m.id; return <div key={m.id} className="pop" onClick={() => setDayMood(selected, m.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", borderRadius: 4, background: active ? m.color : m.color + "1A", border: `1.5px solid ${m.color}`, color: active ? "#fff" : INK, fontWeight: 700, fontSize: 14 }}><div style={{ width: 13, height: 13, borderRadius: 3, background: active ? "#fff" : m.color }} />{m.label}</div>; })}
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 9 }}>
+              {block.moods.map((m, i) => (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <label style={{ position: "relative", width: 34, height: 34, borderRadius: 4, background: m.color, flexShrink: 0, cursor: "pointer", border: `1px solid ${LINE}` }}><input type="color" value={m.color} onChange={(e) => setMood(i, { color: e.target.value })} style={{ opacity: 0, position: "absolute", inset: 0, cursor: "pointer" }} /></label>
+                  <input value={m.label} onChange={(e) => setMood(i, { label: e.target.value })} placeholder="Mood name" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 4, padding: "9px 11px", fontSize: 14, fontWeight: 600 }} />
+                  <div className="pop" onClick={() => delMood(i)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={15} /></div>
+                </div>
+              ))}
+              <button onClick={addMood} style={{ ...addBtn, marginTop: 4 }}>+ Add a mood</button>
+            </div>
+          )}
+        </div>
+        {!editMoods && <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 12 }}>{block.moods.map((m) => <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: MUTED, fontWeight: 600 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: m.color }} /> {m.label}</div>)}</div>}
+        <p style={tip}>Tap a day, then choose a mood. The square fills with that mood's color. Wipes clean monthly.</p>
+      </div>
+    </div>
+  );
+}
+function BlockEditor({ block, d, setD, back }) {
+  const meta = BLOCK_META[block.type];
+  const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
+  const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
+  const setItem = (i, patch) => update({ items: block.items.map((it, j) => j === i ? { ...it, ...patch } : it) });
+  const addItem = () => update({ items: [...block.items, block.type === "schedule" ? { time: "", t: "" } : { t: "", done: false }] });
+  const delItem = (i) => update({ items: block.items.filter((_, j) => j !== i) });
+  return (
+    <div className="fade">
+      <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><meta.icon c={MIST} s={13} /> {meta.label}</div></div>
+          <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
+        </div>
+        <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this space" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'Fraunces',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
+      </div>
+      <div style={{ padding: "22px 18px 50px" }}>
+        {block.type === "notes" ? (
+          <textarea value={block.items} onChange={(e) => update({ items: e.target.value })} placeholder="Start writing…" style={{ width: "100%", minHeight: 320, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", fontSize: 16, lineHeight: 1.6, background: CARD, resize: "vertical", color: INK }} />
+        ) : (
+          <>
+            <div style={{ display: "grid", gap: 9 }}>{block.items.map((it, i) => <BlockRow key={i} type={block.type} item={it} accent={meta.color} onToggle={() => setItem(i, { done: !it.done })} onText={(v) => setItem(i, { t: v })} onTime={(v) => setItem(i, { time: v })} onDelete={() => delItem(i)} />)}</div>
+            <button onClick={addItem} style={addBtn}>+ Add {block.type === "schedule" ? "a time" : "an item"}</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+function BlockRow({ type, item, accent, onToggle, onText, onTime, onDelete }) {
+  return (
+    <div style={{ background: type === "checklist" && item.done ? INK : CARD, color: type === "checklist" && item.done ? PAPER : INK, border: `1px solid ${LINE}`, borderRadius: 4, padding: "13px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+      {type === "checklist" && <div className="pop" onClick={onToggle} style={{ width: 26, height: 26, borderRadius: 3, border: `2px solid ${item.done ? SAGEHI : accent}`, background: item.done ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{item.done && <CheckIcon c={INK} s={15} />}</div>}
+      {type === "list" && <div style={{ width: 7, height: 7, borderRadius: "50%", background: accent, flexShrink: 0 }} />}
+      {type === "schedule" && <input value={item.time} onChange={(e) => onTime(e.target.value)} placeholder="9:00" style={{ width: 58, border: "none", background: accent + "14", borderRadius: 3, padding: "7px 8px", fontSize: 13, fontWeight: 700, color: accent, textAlign: "center", flexShrink: 0 }} />}
+      <input value={item.t} onChange={(e) => onText(e.target.value)} placeholder={type === "schedule" ? "What's happening" : "Add an item"} style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none", color: "inherit", textDecoration: type === "checklist" && item.done ? "line-through" : "none" }} />
+      <div className="pop" onClick={onDelete} style={{ cursor: "pointer", opacity: .4, flexShrink: 0 }}><XIcon c={type === "checklist" && item.done ? PAPER : MUTED} s={15} /></div>
+    </div>
+  );
+}
+
+// ═══ SHARED UI ════════════════════════════════════════════════════
+function DayViewToggle({ view, setView }) {
+  return (
+    <div style={{ display: "flex", gap: 6, background: "#EAE6DB", borderRadius: 4, padding: 4, marginBottom: 16 }}>
+      {[["week", "Week"], ["calendar", "Calendar"]].map(([v, lbl]) => (
+        <div key={v} className="pop" onClick={() => setView(v)} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 3, fontSize: 13, fontWeight: 700, background: view === v ? CARD : "transparent", color: view === v ? INK : MUTED }}>{lbl}</div>
+      ))}
+    </div>
+  );
+}
+function WeekStrip({ weekDays, sel, setSel, now, doneFor, totalFor }) {
+  const selKey = dayKey(sel);
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginBottom: 18 }}>
+      {weekDays.map((dt) => {
+        const done = doneFor(dt), total = totalFor(dt), isSel = dayKey(dt) === selKey, isTod = dayKey(dt) === dayKey(now);
+        return (
+          <div key={dt.toISOString()} className="pop" onClick={() => setSel(new Date(dt))} style={{ borderRadius: 4, padding: "8px 2px", textAlign: "center", background: isSel ? INK : CARD, color: isSel ? PAPER : INK, border: isTod && !isSel ? `2px solid ${SAGEHI}` : `1px solid ${LINE}` }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: isSel ? MIST : MUTED }}>{"SMTWTFS"[dt.getDay()]}</div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, margin: "2px 0" }}>{dt.getDate()}</div>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", margin: "0 auto", background: total && done === total ? SAGEHI : done ? AMBER : (isSel ? "rgba(255,255,255,.25)" : LINE) }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function MonthGrid({ sel, setSel, now, fillFor }) {
+  const dim = daysInMonth(sel), pad = firstWeekday(sel);
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: INK, marginBottom: 10, fontFamily: "'Fraunces',serif" }}>{sel.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5, marginBottom: 5 }}>{["S", "M", "T", "W", "T", "F", "S"].map((w, i) => <div key={i} style={{ textAlign: "center", fontSize: 9.5, fontWeight: 700, color: MUTED }}>{w}</div>)}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5 }}>
+        {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
+        {Array.from({ length: dim }).map((_, i) => {
+          const day = i + 1, dt = new Date(sel.getFullYear(), sel.getMonth(), day), fill = fillFor(dt), isSel = day === sel.getDate(), isTod = dayKey(dt) === dayKey(now);
+          const solid = fill && fill.length === 7; // hex like #7E9266
+          return <div key={day} className="pop" onClick={() => setSel(dt)} style={{ aspectRatio: "1", borderRadius: 4, background: fill || CARD, border: isSel ? `2px solid ${INK}` : isTod ? `2px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: solid ? "#fff" : INK }}>{day}</div>;
+        })}
+      </div>
+    </div>
+  );
+}
+function Ring({ pct }) {
+  const r = 32, c = 2 * Math.PI * r, off = c * (1 - pct);
+  return (
+    <svg width="84" height="84" viewBox="0 0 84 84" style={{ flexShrink: 0 }}>
+      <circle cx="42" cy="42" r={r} fill="none" stroke={LINE} strokeWidth="7" />
+      <circle cx="42" cy="42" r={r} fill="none" stroke={SAGE} strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 42 42)" style={{ transition: "stroke-dashoffset .6s" }} />
+      <text x="42" y="48" textAnchor="middle" fill={INK} fontSize="19" fontWeight="700" fontFamily="Space Grotesk">{Math.round(pct * 100)}</text>
+    </svg>
+  );
+}
+function Tile({ accent, icon: Icon, title, big, sub, onClick, dark }) {
+  const bg = dark ? INK : CARD, fg = dark ? PAPER : INK, submuted = dark ? "rgba(244,241,234,.55)" : MUTED;
+  return (
+    <div className="pop" onClick={onClick} style={{ background: bg, color: fg, borderRadius: 4, padding: "18px 18px 16px", minHeight: 138, display: "flex", flexDirection: "column", justifyContent: "space-between", border: dark ? "none" : `1px solid ${LINE}`, boxShadow: dark ? "0 14px 30px -14px rgba(22,32,28,.55)" : "none" }}>
+      <div style={{ width: 40, height: 40, borderRadius: 3, background: dark ? "rgba(255,255,255,.1)" : accent + "18", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon c={dark ? PAPER : accent} s={21} /></div>
+      <div>
+        <div style={{ fontFamily: "'Fraunces',serif", fontSize: big.length > 5 ? 22 : 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.01em" }}>{big}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>{title}</div>
+        <div style={{ fontSize: 12, color: submuted, fontWeight: 500 }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+function SectionLabel({ text }) {
+  return <div style={{ padding: "24px 22px 12px", display: "flex", alignItems: "center", gap: 10 }}><div style={{ fontSize: 12, letterSpacing: ".18em", textTransform: "uppercase", color: INK, fontWeight: 700 }}>{text}</div><div style={{ flex: 1, height: 1, background: LINE }} /></div>;
+}
+function Screen({ title, sub, back, accent = SAGE, children }) {
+  return (
+    <div className="fade">
+      <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px", display: "flex", alignItems: "center", gap: 14 }}>
+        <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div><h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.02em" }}>{title}</h2></div>
+        <div style={{ width: 12, height: 12, borderRadius: "50%", background: accent }} />
+      </div>
+      <div style={{ padding: "22px 18px 40px" }}>{children}</div>
+    </div>
+  );
+}
+const lbl = { fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, display: "block", marginBottom: 5, fontWeight: 700 };
+const addBtn = { marginTop: 12, background: "none", border: `1.5px solid ${INK}`, color: INK, fontWeight: 700, fontSize: 14, cursor: "pointer", padding: "14px", borderRadius: 4, width: "100%", letterSpacing: "-.01em" };
+const tip = { fontSize: 14, color: MUTED, lineHeight: 1.55, marginTop: 22, fontStyle: "italic", fontFamily: "'Fraunces',serif" };
+const PALETTE = ["#5A6B4D", "#D9B16A", "#6E8597", "#C8783C", "#9C7E96", "#8A9A5B", "#B5654D", "#5E7E8C"];
+
+function dayCompletion(d, dt) {
+  const k = dayKey(dt), checks = d.habitChecks[k] || {}, oneoffs = d.habitOneoffs[k] || [];
+  const doneRec = d.habitDefs.filter((h) => checks[h.id]).length, doneOne = oneoffs.filter((o) => o.done).length;
+  const total = d.habitDefs.length + oneoffs.length, done = doneRec + doneOne;
+  return { total, done, pct: total ? done / total : 0 };
+}
+function habitStreaks(d, habitId, now) {
+  let current = 0; const cursor = new Date(now);
+  if (!(d.habitChecks[dayKey(cursor)] || {})[habitId]) cursor.setDate(cursor.getDate() - 1);
+  for (let i = 0; i < 366; i++) { if ((d.habitChecks[dayKey(cursor)] || {})[habitId]) { current++; cursor.setDate(cursor.getDate() - 1); } else break; }
+  const dim = daysInMonth(now); let best = 0, run = 0;
+  for (let day = 1; day <= dim; day++) { const k = `${now.getFullYear()}-${now.getMonth() + 1}-${day}`; if ((d.habitChecks[k] || {})[habitId]) { run++; if (run > best) best = run; } else run = 0; }
+  return { current, best };
+}
+const BUDGET_SECTIONS = [
+  { key: "fixed", label: "Fixed expenses", hint: "Rent, car, insurance, subscriptions", color: "#6E8597" },
+  { key: "variable", label: "Variable spending", hint: "Groceries, gas, dining, fun", color: "#C8783C" },
+  { key: "savings", label: "Savings & sinking funds", hint: "Emergency fund, future costs", color: "#5A6B4D" },
+  { key: "debt", label: "Debt payments", hint: "Cards, loans", color: "#9C7E96" },
+];
+const sectionTotal = (d, key) => (d.budget[key] || []).reduce((s, r) => s + (Number(r.a) || 0), 0);
+const budgetSpent = (d) => BUDGET_SECTIONS.reduce((s, sec) => s + sectionTotal(d, sec.key), 0);
+const BLOCK_META = {
+  checklist: { label: "Checklist", desc: "Tap to check off", color: SAGE, icon: (p) => <CheckSquareIcon {...p} /> },
+  list: { label: "List", desc: "Simple bullet lines", color: AMBER, icon: (p) => <ListIcon {...p} /> },
+  schedule: { label: "Schedule", desc: "Time + task", color: "#6E8597", icon: (p) => <ClockIcon {...p} /> },
+  mood: { label: "Mood Tracker", desc: "Color a day, monthly", color: "#9C7E96", icon: (p) => <HeartIcon {...p} /> },
+  notes: { label: "Notes", desc: "Free writing", color: "#7E8C6E", icon: (p) => <NoteIcon {...p} /> },
+};
+
+// ═══ ICONS ════════════════════════════════════════════════════════
+const I = (p) => ({ width: p.s || 24, height: p.s || 24, viewBox: "0 0 24 24", fill: "none", stroke: p.c || INK, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" });
+const HomeIcon = (p) => <svg {...I(p)}><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></svg>;
+const LeafIcon = (p) => <svg {...I(p)}><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" /><path d="M2 21c0-3 1.85-5.36 5.08-6" /></svg>;
+const WalletIcon = (p) => <svg {...I(p)}><rect x="3" y="6" width="18" height="13" rx="1.5" /><path d="M3 10h18" /><circle cx="16.5" cy="13.5" r="1.2" /></svg>;
+const StarIcon = (p) => <svg {...I(p)}><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19l1-5.8L3.5 9.2l5.9-.9z" /></svg>;
+const PlateIcon = (p) => <svg {...I(p)}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3.5" /></svg>;
+const CheckIcon = (p) => <svg {...I(p)}><path d="M20 6L9 17l-5-5" /></svg>;
+const ChevIcon = (p) => <svg {...I(p)} style={{ transform: p.dir === "left" ? "rotate(180deg)" : "none" }}><path d="M9 18l6-6-6-6" /></svg>;
+const PlusIcon = (p) => <svg {...I(p)}><path d="M12 5v14M5 12h14" /></svg>;
+const XIcon = (p) => <svg {...I(p)}><path d="M18 6L6 18M6 6l12 12" /></svg>;
+const TrashIcon = (p) => <svg {...I(p)}><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>;
+const CheckSquareIcon = (p) => <svg {...I(p)}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M8 12l3 3 5-6" /></svg>;
+const ListIcon = (p) => <svg {...I(p)}><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>;
+const ClockIcon = (p) => <svg {...I(p)}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>;
+const NoteIcon = (p) => <svg {...I(p)}><path d="M4 4h16v12l-4 4H4z" /><path d="M16 20v-4h4" /></svg>;
+const HeartIcon = (p) => <svg {...I(p)}><path d="M12 21s-7-4.6-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.4 12 21 12 21z" /></svg>;
+const CartIcon = (p) => <svg {...I(p)}><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /><path d="M2 3h3l2.4 12.4a1.5 1.5 0 0 0 1.5 1.2h8.7a1.5 1.5 0 0 0 1.5-1.2L22 7H6" /></svg>;
+const FlameIcon = (p) => <svg {...I(p)}><path d="M12 2c1 3-1.5 4.5-1.5 7A2.5 2.5 0 0 0 13 11c1.5-1 1-3 1-3 2 1.5 4 3.5 4 7a6 6 0 0 1-12 0c0-3.5 3-5.5 3-8 0-2 1-4 3-5z" /></svg>;
+const TrophyIcon = (p) => <svg {...I(p)}><path d="M6 4h12v4a6 6 0 0 1-12 0z" /><path d="M6 6H4v1a3 3 0 0 0 3 3M18 6h2v1a3 3 0 0 1-3 3M9 18h6M10 14v4M14 14v4M8 21h8" /></svg>;
+const PillIcon = (p) => <svg {...I(p)}><rect x="2" y="8" width="20" height="8" rx="4" /><path d="M12 8v8" /></svg>;
+const DumbbellIcon = (p) => <svg {...I(p)}><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12" /></svg>;
+const GridIcon = (p) => <svg {...I(p)}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>;
+const TrendIcon = (p) => <svg {...I(p)}><path d="M3 17l6-6 4 4 8-8" /><path d="M17 7h4v4" /></svg>;
+const PiggyIcon = (p) => <svg {...I(p)}><path d="M19 10c1.5 0 2 1 2 2s-.5 2-2 2M4 13a6 4 0 0 1 6-4h3a6 4 0 0 1 6 4 6 4 0 0 1-6 4H10a6 4 0 0 1-6-4z" /><circle cx="15" cy="12" r=".8" /></svg>;
+
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
