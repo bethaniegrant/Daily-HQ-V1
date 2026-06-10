@@ -436,18 +436,39 @@ function Workouts({ d, setD, go, back }) {
   );
 }
 function WorkoutEditor({ workout, d, setD, now, back }) {
-  const [logMode, setLogMode] = useState(false);
-  const todayKey = dayKey(now);
-  const log = (d.workoutDone[todayKey] || {})[workout.id] || {};
+  const [mode, setMode] = useState("overview"); // overview | log | build
+  const [calView, setCalView] = useState("month"); // for overview calendar
+  const [sel, setSel] = useState(new Date(now));
+  const selKey = dayKey(sel);
+  const log = (d.workoutDone[selKey] || {})[workout.id] || {};
 
   const update = (patch) => setD({ ...d, workouts: d.workouts.map((w) => w.id === workout.id ? { ...w, ...patch } : w) });
   const del = () => { setD({ ...d, workouts: d.workouts.filter((w) => w.id !== workout.id) }); back(); };
   const setEx = (id, f, v) => update({ ex: workout.ex.map((e) => e.id === id ? { ...e, [f]: v } : e) });
   const addEx = () => update({ ex: [...workout.ex, { id: uid(), n: "", sets: "", reps: "", w: "" }] });
   const delEx = (id) => update({ ex: workout.ex.filter((e) => e.id !== id) });
-  const toggleEx = (id) => { const day = { ...(d.workoutDone[todayKey] || {}) }; const wl = { ...(day[workout.id] || {}) }; wl[id] = !wl[id]; day[workout.id] = wl; setD({ ...d, workoutDone: { ...d.workoutDone, [todayKey]: day } }); };
+  const toggleEx = (id) => { const day = { ...(d.workoutDone[selKey] || {}) }; const wl = { ...(day[workout.id] || {}) }; wl[id] = !wl[id]; day[workout.id] = wl; setD({ ...d, workoutDone: { ...d.workoutDone, [selKey]: day } }); };
 
+  const exTotal = workout.ex.length;
+  const doneOn = (dt) => { const l = (d.workoutDone[dayKey(dt)] || {})[workout.id] || {}; return workout.ex.filter((e) => l[e.id]).length; };
+  const fullDays = (() => {
+    const dim = daysInMonth(now); let n = 0;
+    for (let i = 1; i <= dim; i++) { const dt = new Date(now.getFullYear(), now.getMonth(), i); if (exTotal && doneOn(dt) === exTotal) n++; } return n;
+  })();
+  const anyDays = (() => {
+    const dim = daysInMonth(now); let n = 0;
+    for (let i = 1; i <= dim; i++) { const dt = new Date(now.getFullYear(), now.getMonth(), i); if (doneOn(dt) > 0) n++; } return n;
+  })();
+  const streak = (() => {
+    let s = 0; const cursor = new Date(now);
+    if (!(exTotal && doneOn(cursor) === exTotal)) cursor.setDate(cursor.getDate() - 1);
+    for (let i = 0; i < 366; i++) { if (exTotal && doneOn(cursor) === exTotal) { s++; cursor.setDate(cursor.getDate() - 1); } else break; } return s;
+  })();
   const doneCount = workout.ex.filter((e) => log[e.id]).length;
+  const weekStart = new Date(sel); weekStart.setDate(sel.getDate() - sel.getDay());
+  const weekDays = Array.from({ length: 7 }, (_, i) => { const dt = new Date(weekStart); dt.setDate(weekStart.getDate() + i); return dt; });
+  const selLabel = sel.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const fillFor = (dt) => { const done = doneOn(dt); if (!exTotal) return null; return done === exTotal ? BLUE : done ? BLUE + "33" : null; };
 
   return (
     <div className="fade">
@@ -461,17 +482,70 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
       </div>
 
       <div style={{ padding: "18px 18px 50px" }}>
-        {/* mode toggle: build vs log today */}
         <div style={{ display: "flex", gap: 6, background: "#EAE6DB", borderRadius: 4, padding: 4, marginBottom: 16 }}>
-          {[["build", "Build"], ["log", "Log today"]].map(([v, lbl]) => (
-            <div key={v} className="pop" onClick={() => setLogMode(v === "log")} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 3, fontSize: 13, fontWeight: 700, background: (logMode ? "log" : "build") === v ? CARD : "transparent", color: (logMode ? "log" : "build") === v ? INK : MUTED }}>{lbl}</div>
+          {[["overview", "Overview"], ["log", "Log"], ["build", "Build"]].map(([v, lbl]) => (
+            <div key={v} className="pop" onClick={() => setMode(v)} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 3, fontSize: 13, fontWeight: 700, background: mode === v ? CARD : "transparent", color: mode === v ? INK : MUTED }}>{lbl}</div>
           ))}
         </div>
 
-        {logMode ? (
+        {mode === "overview" && (
           <>
+            <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 20px", marginBottom: 14 }}>
+              <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>This workout</div>
+              <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, marginTop: 2 }}>{exTotal} exercise{exTotal === 1 ? "" : "s"}</div>
+              {exTotal > 0 && (
+                <div style={{ marginTop: 10, display: "grid", gap: 4 }}>
+                  {workout.ex.slice(0, 5).map((e) => (
+                    <div key={e.id} style={{ fontSize: 13, color: MIST, display: "flex", justifyContent: "space-between", gap: 10 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.n || "Untitled"}</span>
+                      <span style={{ color: SAGEHI, fontWeight: 700, flexShrink: 0 }}>{[e.sets && `${e.sets}×${e.reps || "?"}`, e.w].filter(Boolean).join(" · ")}</span>
+                    </div>
+                  ))}
+                  {exTotal > 5 && <div style={{ fontSize: 12, color: MIST, opacity: .7 }}>+ {exTotal - 5} more</div>}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+              {[
+                { lbl: "Streak", val: streak, sub: "in a row" },
+                { lbl: "Full days", val: fullDays, sub: "this month" },
+                { lbl: "Any work", val: anyDays, sub: "this month" },
+              ].map((s) => (
+                <div key={s.lbl} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "12px 10px", textAlign: "center" }}>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 26, fontWeight: 600, color: BLUE, lineHeight: 1 }}>{s.val}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginTop: 6 }}>{s.lbl}</div>
+                  <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            <DayViewToggle view={calView} setView={setCalView} />
+            {calView === "week"
+              ? <WeekStrip weekDays={weekDays} sel={sel} setSel={setSel} now={now} doneFor={(dt) => doneOn(dt)} totalFor={() => exTotal} />
+              : <MonthGrid sel={sel} setSel={setSel} now={now} fillFor={fillFor} />}
+
+            <div style={{ fontSize: 13, fontWeight: 700, color: INK, fontFamily: "'Fraunces',serif", margin: "4px 0 10px" }}>{selLabel}</div>
+            <div className="pop" onClick={() => setMode("log")} style={{ background: BLUE, color: PAPER, borderRadius: 4, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+              <div>
+                <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 700, opacity: .8 }}>Open log</div>
+                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 600 }}>{doneCount}/{exTotal} done</div>
+              </div>
+              <ChevIcon c={PAPER} />
+            </div>
+            <p style={tip}>Solid days mean every exercise was checked off. Light fill means you got partial work in. Tracking resets monthly.</p>
+          </>
+        )}
+
+        {mode === "log" && (
+          <>
+            <DayViewToggle view={calView} setView={setCalView} />
+            {calView === "week"
+              ? <WeekStrip weekDays={weekDays} sel={sel} setSel={setSel} now={now} doneFor={(dt) => doneOn(dt)} totalFor={() => exTotal} />
+              : <MonthGrid sel={sel} setSel={setSel} now={now} fillFor={fillFor} />}
+
             <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div><div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>Today</div><div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600 }}>{doneCount}/{workout.ex.length} sets done</div></div>
+              <div><div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{selLabel}</div><div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600 }}>{doneCount}/{exTotal} done</div></div>
               <DumbbellIcon c={SAGEHI} s={30} />
             </div>
             <div style={{ display: "grid", gap: 9 }}>
@@ -488,9 +562,11 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
                 );
               })}
             </div>
-            <p style={tip}>Check off each exercise as you finish it. Logs reset monthly.</p>
+            <p style={tip}>Pick a day on the calendar, then check off each exercise as you finish it. Logs reset monthly.</p>
           </>
-        ) : (
+        )}
+
+        {mode === "build" && (
           <>
             <div style={{ display: "grid", gap: 11 }}>
               {workout.ex.map((e) => (
@@ -511,7 +587,7 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
               ))}
             </div>
             <button onClick={addEx} style={{ ...addBtn, marginTop: 12 }}>+ Add an exercise</button>
-            <p style={tip}>Add each exercise with its sets, reps and weight. Switch to "Log today" on a training day to check them off.</p>
+            <p style={tip}>Add each exercise with its sets, reps and weight. Switch to "Log" on a training day to check them off.</p>
           </>
         )}
       </div>
