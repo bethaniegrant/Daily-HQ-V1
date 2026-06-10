@@ -64,8 +64,11 @@ const seed = () => ({
   meds: [{ id: uid(), n: "Vitamin D", dose: "1000 IU", when: "Morning" }, { id: uid(), n: "Magnesium", dose: "200 mg", when: "Night" }],
   medChecks: {}, // { dayKey: { medId: true } }
   workouts: [
-    { id: uid(), n: "Push day", ex: [{ id: uid(), n: "Bench press", sets: "3", reps: "8", w: "" }, { id: uid(), n: "Shoulder press", sets: "3", reps: "10", w: "" }] },
-    { id: uid(), n: "Leg day", ex: [{ id: uid(), n: "Squats", sets: "4", reps: "6", w: "" }] },
+    { id: uid(), n: "Push day", cat: "push",   ex: [{ id: uid(), n: "Bench press",    sets: "3", reps: "8",  w: "" }, { id: uid(), n: "Shoulder press", sets: "3", reps: "10", w: "" }] },
+    { id: uid(), n: "Pull day", cat: "pull",   ex: [{ id: uid(), n: "Pull-ups",       sets: "3", reps: "8",  w: "" }, { id: uid(), n: "Bent-over row",  sets: "3", reps: "10", w: "" }] },
+    { id: uid(), n: "Leg day",  cat: "leg",    ex: [{ id: uid(), n: "Squats",         sets: "4", reps: "6",  w: "" }] },
+    { id: uid(), n: "Core",     cat: "core",   ex: [{ id: uid(), n: "Plank",          sets: "3", reps: "45s", w: "" }] },
+    { id: uid(), n: "Cardio",   cat: "cardio", ex: [{ id: uid(), n: "Run / bike",     sets: "1", reps: "20m", w: "" }] },
   ],
   workoutDone: {}, // { dayKey: { workoutId: { exId: true } } }
   goals: [{ n: "", done: false }, { n: "", done: false }, { n: "", done: false }],
