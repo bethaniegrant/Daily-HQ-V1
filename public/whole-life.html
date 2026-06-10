@@ -103,12 +103,31 @@ function App() {
     view = { budget: <Budget {...common} />, habits: <Habits {...common} />, goals: <Goals {...common} />, meals: <Meals {...common} />, meds: <Meds {...common} />, workouts: <Workouts {...common} /> }[page] || <Home {...common} />;
   }
 
-  const TABS = [
-    { id: "home", label: "Home", icon: HomeIcon },
-    { id: "money", label: "Money", icon: WalletIcon },
-    { id: "health", label: "Health", icon: HeartIcon },
-    { id: "plan", label: "Plan", icon: StarIcon },
-    { id: "more", label: "More", icon: GridIcon },
+  const closeMenu = () => setMenuOpen(false);
+  const navGo = (t, p = null) => { go(t, p); closeMenu(); };
+  const moodBlock = d.blocks.find((b) => b.type === "mood");
+
+  const MENU_GROUPS = [
+    { label: "", items: [{ icon: HomeIcon, color: SAGE, title: "Home", onClick: () => navGo("home") }] },
+    { label: "Money", items: [
+      { icon: WalletIcon, color: AMBER, title: "Paycheck Budget", onClick: () => navGo("money", "budget") },
+      { icon: TrendIcon, color: BLUE, title: "Debt Payoff", onClick: () => navGo("money", "budget") },
+      { icon: PiggyIcon, color: SAGE, title: "Sinking Funds", onClick: () => navGo("money", "budget") },
+    ]},
+    { label: "Health", items: [
+      { icon: PillIcon, color: PLUM, title: "Medications", onClick: () => navGo("health", "meds") },
+      { icon: DumbbellIcon, color: BLUE, title: "Workouts", onClick: () => navGo("health", "workouts") },
+      { icon: PlateIcon, color: SAGE, title: "Meal Plan", onClick: () => navGo("health", "meals") },
+      { icon: HeartIcon, color: PLUM, title: "Mood", onClick: () => navGo("plan", moodBlock ? "block:" + moodBlock.id : null) },
+    ]},
+    { label: "Plan", items: [
+      { icon: LeafIcon, color: SAGE, title: "Habits", onClick: () => navGo("plan", "habits") },
+      { icon: StarIcon, color: AMBER, title: "Monthly Goals", onClick: () => navGo("plan", "goals") },
+      ...d.blocks.map((b) => ({ icon: GridIcon, color: MIST, title: b.title || "Untitled space", onClick: () => navGo("plan", "block:" + b.id) })),
+    ]},
+    { label: "More", items: [
+      { icon: GridIcon, color: SAGE, title: "Add a space", onClick: () => navGo("plan") },
+    ]},
   ];
 
   return (
@@ -122,22 +141,60 @@ function App() {
         .stagger>*:nth-child(1){animation-delay:.04s}.stagger>*:nth-child(2){animation-delay:.09s}
         .stagger>*:nth-child(3){animation-delay:.14s}.stagger>*:nth-child(4){animation-delay:.19s}.stagger>*:nth-child(5){animation-delay:.24s}
         input:focus,textarea:focus{outline:none;}
+        .drawer{transition:transform .28s cubic-bezier(.2,.8,.2,1);}
+        .backdrop{transition:opacity .28s ease;}
       `}</style>
 
-      <div style={{ width: "100%", maxWidth: 440, minHeight: "100vh", background: PAPER, position: "relative", paddingBottom: 78 }}>
+      <div style={{ width: "100%", maxWidth: 440, minHeight: "100vh", background: PAPER, position: "relative" }}>
         {view}
 
-        {/* bottom tab bar */}
-        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 440, background: CARD, borderTop: `1px solid ${LINE}`, display: "flex", padding: "9px 6px 14px", zIndex: 40, boxShadow: "0 -4px 20px -10px rgba(22,32,28,.25)" }}>
-          {TABS.map((t) => {
-            const active = tab === t.id && page === null || (tab === t.id);
-            return (
-              <button key={t.id} onClick={() => go(t.id)} style={{ flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", padding: "4px 0" }}>
-                <t.icon c={tab === t.id ? SAGE : MUTED} s={22} />
-                <span style={{ fontSize: 10.5, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? SAGE : MUTED }}>{t.label}</span>
-              </button>
-            );
-          })}
+        {/* hamburger button (top-left, fixed) */}
+        <button
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open menu"
+          style={{ position: "fixed", top: "max(14px, env(safe-area-inset-top))", left: 14, zIndex: 60, width: 44, height: 44, borderRadius: 999, background: "rgba(244,241,234,.12)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(244,241,234,.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round">
+            <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" />
+          </svg>
+        </button>
+
+        {/* backdrop */}
+        <div
+          className="backdrop"
+          onClick={closeMenu}
+          style={{ position: "fixed", inset: 0, background: "rgba(22,32,28,.5)", zIndex: 70, opacity: menuOpen ? 1 : 0, pointerEvents: menuOpen ? "auto" : "none" }}
+        />
+
+        {/* drawer */}
+        <div
+          className="drawer"
+          style={{ position: "fixed", top: 0, left: 0, height: "100vh", width: "min(86vw, 320px)", background: PAPER, zIndex: 80, transform: menuOpen ? "translateX(0)" : "translateX(-100%)", boxShadow: menuOpen ? "10px 0 40px -10px rgba(22,32,28,.4)" : "none", display: "flex", flexDirection: "column", overflowY: "auto" }}
+        >
+          <div style={{ background: INK, color: PAPER, padding: "max(22px, env(safe-area-inset-top)) 22px 22px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, lineHeight: 1 }}>Whole Life</div>
+              <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MIST, fontWeight: 700, marginTop: 6 }}>Menu</div>
+            </div>
+            <button onClick={closeMenu} aria-label="Close menu" style={{ width: 36, height: 36, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.25)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+            </button>
+          </div>
+          <div style={{ padding: "10px 10px 24px" }}>
+            {MENU_GROUPS.map((g, gi) => (
+              <div key={gi} style={{ marginTop: g.label ? 14 : 4 }}>
+                {g.label && <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 12px 6px" }}>{g.label}</div>}
+                {g.items.map((it, ii) => (
+                  <button key={ii} onClick={it.onClick} className="pop" style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "none", border: "none", textAlign: "left", borderRadius: 6, color: INK, fontSize: 15, fontWeight: 600 }}>
+                    <span style={{ width: 32, height: 32, borderRadius: 6, background: it.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <it.icon c={PAPER} s={16} />
+                    </span>
+                    <span>{it.title}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
