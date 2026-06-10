@@ -303,7 +303,7 @@ function HealthHub({ d, now, go }) {
     </Hub>
   );
 }
-function PlanHub({ d, go }) {
+function PlanHub({ d, setD, go }) {
   const goalsSet = d.goals.filter((g) => g.n.trim()).length;
   return (
     <Hub title="Plan" sub="Shape your days">
@@ -311,7 +311,7 @@ function PlanHub({ d, go }) {
       <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
       <SectionMini text="Your spaces" />
       {d.blocks.map((b) => <BlockPreview key={b.id} block={b} onClick={() => go("plan", "block:" + b.id)} now={new Date()} />)}
-      <AddBlockMenu onAdd={(type) => { /* handled in PlanHub wrapper below */ }} d={d} go={go} />
+      <AddBlockMenu d={d} setD={setD} go={go} />
     </Hub>
   );
 }
