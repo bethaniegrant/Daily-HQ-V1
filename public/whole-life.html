@@ -106,28 +106,33 @@ function App() {
   const closeMenu = () => setMenuOpen(false);
   const navGo = (t, p = null) => { go(t, p); closeMenu(); };
   const moodBlock = d.blocks.find((b) => b.type === "mood");
+  const blocksFor = (c) => d.blocks.filter((b) => (b.category || "plan") === c).map((b) => ({ icon: GridIcon, color: MIST, title: b.title || "Untitled space", onClick: () => navGo("plan", "block:" + b.id) }));
+  const builtin = ["money", "health", "plan", "more"];
+  const customCats = [...new Set(d.blocks.map((b) => b.category || "plan").filter((c) => !builtin.includes(c)))];
 
   const MENU_GROUPS = [
     { label: "", items: [{ icon: HomeIcon, color: SAGE, title: "Home", onClick: () => navGo("home") }] },
     { label: "Money", items: [
-      { icon: WalletIcon, color: AMBER, title: "Paycheck Budget", onClick: () => navGo("money", "budget") },
-      { icon: TrendIcon, color: BLUE, title: "Debt Payoff", onClick: () => navGo("money", "budget") },
-      { icon: PiggyIcon, color: SAGE, title: "Sinking Funds", onClick: () => navGo("money", "budget") },
+      { icon: WalletIcon, color: AMBER, title: "Budget", onClick: () => navGo("money", "budget") },
+      ...blocksFor("money"),
     ]},
     { label: "Health", items: [
       { icon: PillIcon, color: PLUM, title: "Medications", onClick: () => navGo("health", "meds") },
       { icon: DumbbellIcon, color: BLUE, title: "Workouts", onClick: () => navGo("health", "workouts") },
       { icon: PlateIcon, color: SAGE, title: "Meal Plan", onClick: () => navGo("health", "meals") },
       { icon: HeartIcon, color: PLUM, title: "Mood", onClick: () => navGo("plan", moodBlock ? "block:" + moodBlock.id : null) },
+      ...blocksFor("health").filter((it) => !moodBlock || it.title !== moodBlock.title),
     ]},
     { label: "Plan", items: [
       { icon: LeafIcon, color: SAGE, title: "Habits", onClick: () => navGo("plan", "habits") },
       { icon: StarIcon, color: AMBER, title: "Monthly Goals", onClick: () => navGo("plan", "goals") },
-      ...d.blocks.map((b) => ({ icon: GridIcon, color: MIST, title: b.title || "Untitled space", onClick: () => navGo("plan", "block:" + b.id) })),
+      ...blocksFor("plan"),
     ]},
     { label: "More", items: [
       { icon: GridIcon, color: SAGE, title: "Add a space", onClick: () => navGo("plan") },
+      ...blocksFor("more"),
     ]},
+    ...customCats.map((c) => ({ label: c.charAt(0).toUpperCase() + c.slice(1), items: blocksFor(c) })),
   ];
 
   return (
