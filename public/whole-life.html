@@ -708,15 +708,66 @@ function BlockPreview({ block, onClick, now }) {
     </div>
   );
 }
-function AddBlockMenu({ d, go }) {
+const BUILTIN_CATEGORIES = ["money", "health", "plan", "more"];
+const CATEGORY_LABEL = { money: "Money", health: "Health", plan: "Plan", more: "More" };
+function getCategories(d) {
+  const custom = [...new Set(d.blocks.map((b) => b.category || "plan").filter((c) => !BUILTIN_CATEGORIES.includes(c)))];
+  return [...BUILTIN_CATEGORIES, ...custom];
+}
+function makeBlock(type, category, title) {
+  const t = (title || "").trim() || ({ checklist: "New checklist", list: "New list", schedule: "New schedule", notes: "New note", mood: "New mood tracker" }[type]);
+  const base = { id: uid(), type, category, title: t };
+  if (type === "mood") return { ...base, monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} };
+  if (type === "notes") return { ...base, items: "" };
+  if (type === "schedule") return { ...base, items: [{ time: "", t: "" }] };
+  return { ...base, items: [{ t: "", done: false }] };
+}
+function AddBlockMenu({ d, setD, go }) {
   const [open, setOpen] = useState(false);
-  // we need setD; AddBlockMenu is used inside PlanHub which has d+go; lift add via window event not ideal.
-  return <AddBlockInner d={d} go={go} open={open} setOpen={setOpen} />;
+  const [type, setType] = useState("checklist");
+  const [title, setTitle] = useState("");
+  const [cat, setCat] = useState("plan");
+  const [customCat, setCustomCat] = useState("");
+  const cats = getCategories(d);
+  const reset = () => { setOpen(false); setType("checklist"); setTitle(""); setCat("plan"); setCustomCat(""); };
+  const create = () => {
+    const finalCat = (cat === "__new" ? customCat.trim().toLowerCase() : cat) || "plan";
+    const b = makeBlock(type, finalCat, title);
+    setD({ ...d, blocks: [...d.blocks, b] });
+    reset();
+    go("plan", "block:" + b.id);
+  };
+  if (!open) return <button onClick={() => setOpen(true)} style={{ ...addBtn, marginTop: 12 }}>+ Add a space</button>;
+  return (
+    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", marginTop: 12 }}>
+      <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>New space</div>
+      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "10px 12px", fontSize: 14, fontWeight: 600, marginBottom: 10 }} />
+      <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>TYPE</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+        {Object.entries(BLOCK_META).map(([k, m]) => (
+          <div key={k} className="pop" onClick={() => setType(k)} style={{ border: `1.5px solid ${type === k ? m.color : LINE}`, background: type === k ? m.color + "1A" : "transparent", borderRadius: 4, padding: "9px 11px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+            <m.icon c={m.color} s={16} />
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{m.label}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>CATEGORY (where it appears in the menu)</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+        {cats.map((c) => (
+          <div key={c} className="pop" onClick={() => setCat(c)} style={{ border: `1.5px solid ${cat === c ? INK : LINE}`, background: cat === c ? INK : "transparent", color: cat === c ? PAPER : INK, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, textTransform: "capitalize" }}>{CATEGORY_LABEL[c] || c}</div>
+        ))}
+        <div className="pop" onClick={() => setCat("__new")} style={{ border: `1.5px dashed ${cat === "__new" ? INK : LINE}`, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: cat === "__new" ? INK : MUTED }}>+ New</div>
+      </div>
+      {cat === "__new" && <input value={customCat} onChange={(e) => setCustomCat(e.target.value)} placeholder="Category name" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13, fontWeight: 600, marginBottom: 10 }} />}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={reset} style={{ flex: 1, background: "none", border: `1.5px solid ${LINE}`, color: MUTED, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer" }}>Cancel</button>
+        <button onClick={create} disabled={cat === "__new" && !customCat.trim()} style={{ flex: 1, background: INK, border: "none", color: PAPER, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer", opacity: cat === "__new" && !customCat.trim() ? .4 : 1 }}>Create</button>
+      </div>
+    </div>
+  );
 }
-function AddBlockInner({ d, go, open, setOpen }) {
-  // This component is given setD through context-like prop drilling workaround:
-  return null; // replaced by PlanHubReal below
-}
+
+
 
 // Because AddBlockMenu needs setD, we implement Plan hub's add inline:
 function MoodEditor({ block, d, setD, now, back }) {
