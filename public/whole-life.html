@@ -33,6 +33,16 @@ const INK = "#16201C", PAPER = "#F4F1EA", CARD = "#FFFFFF",
       MUTED = "#6E6A60", AMBER = "#C8783C", MIST = "#A9B8AE",
       BLUE = "#6E8597", PLUM = "#9C7E96";
 
+const WORKOUT_CATS = [
+  { id: "push",   label: "Push day", color: "#C8783C" },
+  { id: "pull",   label: "Pull day", color: "#6E8597" },
+  { id: "leg",    label: "Leg day",  color: "#9C7E96" },
+  { id: "core",   label: "Core",     color: "#7E9266" },
+  { id: "cardio", label: "Cardio",   color: "#B5564E" },
+  { id: "other",  label: "Other",    color: "#6E6A60" },
+];
+const catOf = (id) => WORKOUT_CATS.find((c) => c.id === id) || WORKOUT_CATS[5];
+
 const money = (n) => (isNaN(n) || n === "" ? "" : Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 }));
 const uid = () => Math.random().toString(36).slice(2, 9);
 const monthKey = (dt = new Date()) => `${dt.getFullYear()}-${dt.getMonth() + 1}`;
