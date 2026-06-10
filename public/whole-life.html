@@ -74,6 +74,7 @@ function App() {
 
   const [tab, setTab] = useState("home");     // home | money | health | plan | more
   const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
+  const [menuOpen, setMenuOpen] = useState(false);
   const [d, setD] = useState(seed);
 
   // monthly reset: wipe habit checks, one-offs, med checks, workout logs, mood grids
