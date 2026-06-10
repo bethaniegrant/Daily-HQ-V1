@@ -287,10 +287,8 @@ function MoneyHub({ d, go }) {
   const left = (Number(d.pay) || 0) - budgetSpent(d);
   return (
     <Hub title="Money" sub="Spend with intention">
-      <ToolRow icon={WalletIcon} color={AMBER} title="Paycheck Budget" sub="Give every dollar a job" stat={d.pay ? `$${money(left)}` : ""} onClick={() => go("money", "budget")} />
-      <ToolRow icon={TrendIcon} color={BLUE} title="Debt Payoff" sub="Snowball or avalanche" onClick={() => go("money", "budget")} />
-      <ToolRow icon={PiggyIcon} color={SAGE} title="Sinking Funds" sub="Save for what's coming" onClick={() => go("money", "budget")} />
-      <Note>Debt and sinking funds open the budget for now — full tools coming next.</Note>
+      <ToolRow icon={WalletIcon} color={AMBER} title="Budget" sub="Paycheck, savings, debt — all in one" stat={d.pay ? `$${money(left)}` : ""} onClick={() => go("money", "budget")} />
+
     </Hub>
   );
 }
