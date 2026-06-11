@@ -79,6 +79,31 @@ function AuthPage() {
           <CardDescription>Sign in to save your data across devices.</CardDescription>
         </CardHeader>
         <CardContent>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            className="w-full mb-3"
+            onClick={async () => {
+              setLoading(true);
+              const result = await lovable.auth.signInWithOAuth("google", {
+                redirect_uri: window.location.origin,
+              });
+              if (result.error) {
+                setLoading(false);
+                toast.error(result.error.message || "Google sign-in failed");
+                return;
+              }
+              if (result.redirected) return;
+              navigate({ to: "/" });
+            }}
+          >
+            Continue with Google
+          </Button>
+          <div className="relative my-3 text-center text-xs text-muted-foreground">
+            <span className="bg-card px-2 relative z-10">or use email</span>
+            <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
+          </div>
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="signin">Sign in</TabsTrigger>
