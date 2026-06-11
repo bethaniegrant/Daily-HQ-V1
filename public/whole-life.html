@@ -199,12 +199,13 @@ function App() {
 
   // monthly reset: wipe habit checks, one-offs, med checks, workout logs, mood grids
   useEffect(() => {
+    if (!synced) return;
     const cur = monthKey(now);
     if (d.monthStamp !== cur) {
       setD((p) => ({ ...p, monthStamp: cur, habitChecks: {}, habitOneoffs: {}, medChecks: {}, workoutDone: {},
         blocks: p.blocks.map((b) => b.type === "mood" ? { ...b, monthStamp: cur, days: {} } : b) }));
     }
-  }, [now]); // eslint-disable-line
+  }, [now, synced]); // eslint-disable-line
 
   const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
   const common = { d, setD, now, go, back: () => setPage(null) };
