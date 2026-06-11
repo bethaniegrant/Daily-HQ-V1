@@ -13,13 +13,119 @@
      For production you'd compile this instead of using the in-browser Babel transformer. -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
+
+// ─── Cloud sync (Supabase) ────────────────────────────────────────
+// Offline-tolerant: writes to localStorage immediately, debounced upload to cloud.
+// On first sign-in, any pre-existing local doc is auto-imported.
+const SUPABASE_URL = "https://xfocdxswghrvpflbjcos.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhmb2NkeHN3Z2hydnBmbGJqY29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMDk0MDgsImV4cCI6MjA5NjY4NTQwOH0.L9FW9JHRtVEOmQw8ceAHkWTzcJPD6lpIihOwF3kXoV8";
+const LEGACY_KEY = "wlp_doc";
+
+function useCloudSync(d, setD) {
+  const [ready, setReady] = useState(false);
+  const ctx = useRef({ client: null, userId: null, lkey: null });
+  const skipNextSave = useRef(true);
+  const bootedRef = useRef(false);
+
+  useEffect(() => {
+    if (bootedRef.current) return;
+    bootedRef.current = true;
+    (async () => {
+      try {
+        const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+          auth: { persistSession: false, autoRefreshToken: true },
+        });
+        ctx.current.client = client;
+
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        const at = hash.get("at"), rt = hash.get("rt");
+        if (at && rt) {
+          await client.auth.setSession({ access_token: at, refresh_token: rt });
+          history.replaceState(null, "", window.location.pathname);
+        }
+        const { data: { user } } = await client.auth.getUser();
+        if (!user) { setReady(true); return; }
+        ctx.current.userId = user.id;
+        ctx.current.lkey = "wlp_doc_" + user.id;
+
+        let local = null;
+        try { local = JSON.parse(localStorage.getItem(ctx.current.lkey) || "null"); } catch {}
+
+        let cloud = null;
+        try {
+          const { data } = await client.from("user_data")
+            .select("value, updated_at").eq("key", "planner").maybeSingle();
+          cloud = data;
+        } catch (e) { console.warn("cloud read failed (offline?)", e); }
+
+        let chosen = null;
+        if (cloud && local) {
+          const cT = +new Date(cloud.updated_at), lT = +new Date(local.updated_at || 0);
+          chosen = lT > cT ? local.value : cloud.value;
+          if (lT > cT) {
+            client.from("user_data").upsert({ user_id: user.id, key: "planner", value: local.value });
+          }
+        } else if (cloud) {
+          chosen = cloud.value;
+        } else if (local) {
+          chosen = local.value;
+          client.from("user_data").upsert({ user_id: user.id, key: "planner", value: local.value });
+        } else {
+          // first-time login: pull any legacy pre-auth local data
+          try {
+            const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || "null");
+            if (legacy && legacy.value) {
+              chosen = legacy.value;
+              client.from("user_data").upsert({ user_id: user.id, key: "planner", value: legacy.value });
+              localStorage.removeItem(LEGACY_KEY);
+            }
+          } catch {}
+        }
+
+        if (chosen && typeof chosen === "object") {
+          skipNextSave.current = true;
+          setD(chosen);
+        }
+      } catch (e) {
+        console.warn("sync init failed", e);
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, []);
+
+  // persist on every change: local immediately, cloud debounced
+  useEffect(() => {
+    if (!ready) return;
+    if (skipNextSave.current) { skipNextSave.current = false; return; }
+    const { client, userId, lkey } = ctx.current;
+    const updated_at = new Date().toISOString();
+    if (lkey) {
+      try { localStorage.setItem(lkey, JSON.stringify({ value: d, updated_at })); } catch {}
+    } else {
+      try { localStorage.setItem(LEGACY_KEY, JSON.stringify({ value: d, updated_at })); } catch {}
+    }
+    if (!client || !userId) return;
+    const t = setTimeout(() => {
+      client.from("user_data")
+        .upsert({ user_id: userId, key: "planner", value: d, updated_at })
+        .then(({ error }) => { if (error) console.warn("cloud save failed", error); });
+    }, 800);
+    return () => clearTimeout(t);
+  }, [d, ready]);
+
+  return ready;
+}
+
+
 
 
 // ─── Whole Life — Tabbed App ──────────────────────────────────────
@@ -89,15 +195,17 @@ function App() {
   const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
   const [menuOpen, setMenuOpen] = useState(false);
   const [d, setD] = useState(seed);
+  const synced = useCloudSync(d, setD);
 
   // monthly reset: wipe habit checks, one-offs, med checks, workout logs, mood grids
   useEffect(() => {
+    if (!synced) return;
     const cur = monthKey(now);
     if (d.monthStamp !== cur) {
       setD((p) => ({ ...p, monthStamp: cur, habitChecks: {}, habitOneoffs: {}, medChecks: {}, workoutDone: {},
         blocks: p.blocks.map((b) => b.type === "mood" ? { ...b, monthStamp: cur, days: {} } : b) }));
     }
-  }, [now]); // eslint-disable-line
+  }, [now, synced]); // eslint-disable-line
 
   const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
   const common = { d, setD, now, go, back: () => setPage(null) };
