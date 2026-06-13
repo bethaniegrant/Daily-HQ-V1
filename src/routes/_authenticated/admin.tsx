@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
       _user_id: u.user.id,
       _role: "admin",
     });
-    if (!isAdmin) throw redirect({ to: "/" });
+    if (!isAdmin) throw redirect({ to: "/app" });
   },
   component: AdminPage,
 });
