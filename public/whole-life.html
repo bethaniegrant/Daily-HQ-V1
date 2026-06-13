@@ -222,7 +222,7 @@ function App() {
   }, [now, synced]); // eslint-disable-line
 
   const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
-  const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true) };
+  const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true), isDesktop };
 
   // resolve current page
   let view;
