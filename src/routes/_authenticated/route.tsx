@@ -7,16 +7,18 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     let { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
+      let subscription: { unsubscribe: () => void } | null = null;
       await new Promise((resolve) => {
         const timeout = window.setTimeout(resolve, 1200);
         const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
           if (session) {
             window.clearTimeout(timeout);
-            sub.subscription.unsubscribe();
             resolve(undefined);
           }
         });
+        subscription = sub.subscription;
       });
+      subscription?.unsubscribe();
       sessionData = (await supabase.auth.getSession()).data;
     }
 
