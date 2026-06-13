@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Whole Life Planner" },
-      { name: "description", content: "Track money, health, habits, meds, workouts, and plans — all in one place, synced across devices." },
+      { title: "Daily HQ" },
+      { name: "description", content: "Your private command center." },
     ],
   }),
   component: PlannerPage,
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/")({
 
 function PlannerPage() {
   const navigate = useNavigate();
+  const { isAdmin } = Route.useRouteContext();
   const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,18 +45,20 @@ function PlannerPage() {
       {src && (
         <iframe
           src={src}
-          title="Whole Life Planner"
+          title="Daily HQ"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
         />
       )}
-      <Button
-        onClick={signOut}
-        size="sm"
-        variant="secondary"
-        style={{ position: "fixed", top: 12, right: 12, zIndex: 50, opacity: 0.85 }}
-      >
-        Sign out
-      </Button>
+      <div style={{ position: "fixed", top: 12, right: 12, zIndex: 50, display: "flex", gap: 8 }}>
+        {isAdmin && (
+          <Link to="/admin">
+            <Button size="sm" variant="secondary" style={{ opacity: 0.85 }}>Admin</Button>
+          </Link>
+        )}
+        <Button onClick={signOut} size="sm" variant="secondary" style={{ opacity: 0.85 }}>
+          Sign out
+        </Button>
+      </div>
     </div>
   );
 }
