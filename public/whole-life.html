@@ -159,11 +159,15 @@ const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay
 const seed = () => ({
   pay: "",
   budget: {
-    fixed: [{ id: uid(), n: "Rent", a: "" }, { id: uid(), n: "Car payment", a: "" }],
-    variable: [{ id: uid(), n: "Groceries", a: "" }, { id: uid(), n: "Gas", a: "" }],
-    savings: [{ id: uid(), n: "Emergency fund", a: "" }],
-    debt: [{ id: uid(), n: "Credit card", a: "" }],
+    fixed: [{ id: uid(), n: "Rent", a: "", due: "" }, { id: uid(), n: "Car payment", a: "", due: "" }],
+    variable: [{ id: uid(), n: "Groceries", a: "", due: "" }, { id: uid(), n: "Gas", a: "", due: "" }],
+    savings: [{ id: uid(), n: "Emergency fund", a: "", due: "" }],
+    debt: [{ id: uid(), n: "Credit card", a: "", due: "" }],
   },
+  savingsGoals: [
+    { id: uid(), n: "Emergency fund", target: "", saved: "", color: "#7d8a5e" },
+    { id: uid(), n: "Vacation", target: "", saved: "", color: "#b97a3a" },
+  ],
   monthStamp: monthKey(),
   habitDefs: [{ id: uid(), n: "Move my body" }, { id: uid(), n: "Drink water" }, { id: uid(), n: "Read 10 min" }],
   habitChecks: {}, habitOneoffs: {},
