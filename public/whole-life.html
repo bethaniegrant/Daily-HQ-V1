@@ -344,7 +344,7 @@ function App() {
 }
 
 // ═══ HOME ═════════════════════════════════════════════════════════
-function Home({ d, now, go, openMenu }) {
+function Home({ d, now, go, openMenu, isDesktop }) {
   const hour = now.getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const comp = dayCompletion(d, now);
@@ -359,13 +359,17 @@ function Home({ d, now, go, openMenu }) {
   return (
     <div className="fade" style={{ background: PAPER, minHeight: "100vh" }}>
       {/* Pill nav */}
-      <div style={{ position: "sticky", top: 0, zIndex: 30, padding: "14px 16px 6px", background: `linear-gradient(${PAPER} 70%, rgba(236,230,220,0))` }}>
-        <nav style={{ background: INK, borderRadius: 999, padding: "10px 16px 10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
-          <span style={{ color: PAPER, fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 15, letterSpacing: "-.01em" }}>Daily <span style={{ color: AMBER }}>HQ</span></span>
-          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 30, padding: isDesktop ? "20px 32px 8px" : "14px 16px 6px", background: `linear-gradient(${PAPER} 70%, rgba(236,230,220,0))` }}>
+        <nav style={{ background: INK, borderRadius: 999, padding: "10px 16px 10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src={LOGO_URL} alt="Bethanie Rose" style={{ width: 28, height: 28, borderRadius: 999, background: PAPER, padding: 2, objectFit: "contain" }} />
+            <span style={{ color: PAPER, fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 15, letterSpacing: "-.01em" }}>Daily <span style={{ color: AMBER }}>HQ</span></span>
+          </span>
+          <div style={{ display: "flex", gap: isDesktop ? 22 : 14, alignItems: "center" }}>
             {navBtn("Today", () => go("home"))}
             {navBtn("Health", () => go("health"))}
             {navBtn("Plan", () => go("plan"))}
+            {isDesktop && navBtn("Money", () => go("money"))}
             <button onClick={openMenu} aria-label="Menu" className="pop" style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.2)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
             </button>
@@ -374,28 +378,33 @@ function Home({ d, now, go, openMenu }) {
       </div>
 
       {/* Greeting */}
-      <header style={{ padding: "22px 22px 6px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ height: 1, width: 18, background: AMBER }} />
-          <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{dateLine}</span>
+      <header style={{ padding: isDesktop ? "36px 32px 12px" : "22px 22px 6px", display: isDesktop ? "grid" : "block", gridTemplateColumns: isDesktop ? "1fr auto" : undefined, alignItems: "center", gap: 24 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ height: 1, width: 18, background: AMBER }} />
+            <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{dateLine}</span>
+          </div>
+          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isDesktop ? 64 : 38, fontWeight: 600, lineHeight: 1.05, letterSpacing: "-.02em", margin: "10px 0 8px", color: INK }}>
+            {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>B.</span>
+          </h1>
+          <p style={{ fontSize: isDesktop ? 16 : 14, color: MUTED, lineHeight: 1.5, maxWidth: 520, margin: 0 }}>
+            {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""} {d.intention ? `Today's intention: ${d.intention.toLowerCase()}.` : ""}
+          </p>
         </div>
-        <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 38, fontWeight: 600, lineHeight: 1.05, letterSpacing: "-.02em", margin: "10px 0 8px", color: INK }}>
-          {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>B.</span>
-        </h1>
-        <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.5, maxWidth: 320, margin: 0 }}>
-          {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""} {d.intention ? `Today's intention: ${d.intention.toLowerCase()}.` : ""}
-        </p>
+        {isDesktop && (
+          <img src={LOGO_URL} alt="Bethanie Rose" style={{ width: 180, height: 180, objectFit: "contain", filter: "drop-shadow(0 20px 40px rgba(22,32,28,.18))" }} />
+        )}
       </header>
 
       {/* Today's Habits */}
-      <section style={{ padding: "20px 18px 0" }}>
+      <section style={{ padding: isDesktop ? "24px 32px 0" : "20px 18px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "0 4px 10px" }}>
           <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's habits</span>
           <button onClick={() => go("plan", "habits")} className="pop" style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: AMBER, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>View all</button>
         </div>
-        <div className="pop" onClick={() => go("plan", "habits")} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
+        <div className="pop" onClick={() => go("plan", "habits")} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, padding: isDesktop ? "28px 32px" : "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
           <div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 26, fontWeight: 600, color: INK, lineHeight: 1 }}>{comp.done} / {comp.total || 0}</div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: isDesktop ? 38 : 26, fontWeight: 600, color: INK, lineHeight: 1 }}>{comp.done} / {comp.total || 0}</div>
             <div style={{ fontSize: 12, color: MUTED, fontWeight: 600, marginTop: 6 }}>
               {comp.pct === 1 && comp.total ? "Every one. Done." : comp.pct >= .5 ? "Past halfway." : comp.total ? "Begin with one." : "Add a habit to begin"}
             </div>
@@ -405,9 +414,9 @@ function Home({ d, now, go, openMenu }) {
       </section>
 
       {/* Jump back in */}
-      <section style={{ padding: "22px 18px 0" }}>
+      <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
         <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Jump back in</div>
-        <div className="stagger" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="stagger" style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "1fr 1fr", gap: isDesktop ? 16 : 12 }}>
           <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money", "budget")} />
           <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />
           <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />
@@ -416,9 +425,9 @@ function Home({ d, now, go, openMenu }) {
       </section>
 
       {/* Explore */}
-      <section style={{ padding: "26px 18px 30px" }}>
+      <section style={{ padding: isDesktop ? "30px 32px 30px" : "26px 18px 30px" }}>
         <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Explore</div>
-        <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ display: "grid", gap: isDesktop ? 12 : 8, gridTemplateColumns: isDesktop ? "repeat(3, 1fr)" : "1fr" }}>
           <HubLink icon={WalletIcon} color={AMBER} title="Money" sub="Budget · debt · savings" onClick={() => go("money")} />
           <HubLink icon={HeartIcon} color={PLUM} title="Health" sub="Meds · workouts · meals · mood" onClick={() => go("health")} />
           <HubLink icon={StarIcon} color={SAGE} title="Plan" sub="Habits · goals · your spaces" onClick={() => go("plan")} />
