@@ -285,7 +285,7 @@ function App() {
         .backdrop{transition:opacity .28s ease;}
       `}</style>
 
-      <div style={{ width: "100%", maxWidth: 440, minHeight: "100vh", background: PAPER, position: "relative" }}>
+      <div style={{ width: "100%", maxWidth: isDesktop ? 1180 : 440, minHeight: "100vh", background: PAPER, position: "relative" }}>
         {view}
 
         {/* hamburger button (top-left, fixed) — hidden on home (pill nav has its own) */}
