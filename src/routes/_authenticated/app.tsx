@@ -41,7 +41,7 @@ function PlannerPage() {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#16201C" }}>
+    <div style={{ position: "fixed", inset: 0, background: "#2a241e" }}>
       {src && (
         <iframe
           src={src}
@@ -50,12 +50,15 @@ function PlannerPage() {
         />
       )}
       <div style={{ position: "fixed", top: 12, right: 12, zIndex: 50, display: "flex", gap: 8 }}>
+        <Link to="/">
+          <Button size="sm" variant="secondary" style={{ opacity: 0.9 }}>Home</Button>
+        </Link>
         {isAdmin && (
           <Link to="/admin">
-            <Button size="sm" variant="secondary" style={{ opacity: 0.85 }}>Admin</Button>
+            <Button size="sm" variant="secondary" style={{ opacity: 0.9 }}>Admin</Button>
           </Link>
         )}
-        <Button onClick={signOut} size="sm" variant="secondary" style={{ opacity: 0.85 }}>
+        <Button onClick={signOut} size="sm" variant="secondary" style={{ opacity: 0.9 }}>
           Sign out
         </Button>
       </div>
