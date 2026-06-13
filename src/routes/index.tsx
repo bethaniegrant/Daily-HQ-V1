@@ -48,10 +48,21 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const navigate = useNavigate();
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-  }, []);
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        navigate({ to: "/app" });
+        return;
+      }
+      setSignedIn(false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) navigate({ to: "/app" });
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [navigate]);
 
   return (
     <div className="stone-scope min-h-screen">
