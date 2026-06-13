@@ -526,6 +526,127 @@ function MoreHub({ d, setD, go }) {
 
 function Note({ children }) { return <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, fontStyle: "italic", fontFamily: "'Fraunces',serif", padding: "4px 2px" }}>{children}</div>; }
 function SectionMini({ text }) { return <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginTop: 8 }}>{text}</div>; }
+function TrackerCalendar({ d, now, go }) {
+  const [cursor, setCursor] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+  const dim = daysInMonth(cursor), pad = firstWeekday(cursor);
+  const todayK = dayKey(now);
+  const dayShells = ["S", "M", "T", "W", "T", "F", "S"];
+
+  // bills due map: day-of-month -> [{ n, color }]
+  const billsByDay = {};
+  BUDGET_SECTIONS.forEach((sec) => {
+    (d.budget[sec.key] || []).forEach((r) => {
+      const day = parseInt(r.due, 10);
+      if (day >= 1 && day <= 31 && r.n) {
+        billsByDay[day] = billsByDay[day] || [];
+        billsByDay[day].push({ n: r.n, color: sec.color, a: r.a });
+      }
+    });
+  });
+
+  const moodBlock = (d.blocks || []).find((b) => b.type === "mood");
+
+  const cellInfo = (day) => {
+    const dt = new Date(cursor.getFullYear(), cursor.getMonth(), day);
+    const k = dayKey(dt);
+    const hc = dayCompletion(d, dt);
+    const habitsPct = hc.total ? hc.done / hc.total : 0;
+    const medsCount = Object.values(d.medChecks[k] || {}).filter(Boolean).length;
+    const medsAll = d.meds.length > 0 && medsCount === d.meds.length;
+    const workoutLogged = !!(d.workoutDone && d.workoutDone[k] && Object.keys(d.workoutDone[k]).length);
+    const moodLogged = !!(moodBlock && moodBlock.days && moodBlock.days[k]);
+    const bills = billsByDay[day] || [];
+    return { dt, k, habitsPct, habitsTotal: hc.total, habitsDone: hc.done, medsCount, medsAll, workoutLogged, moodLogged, bills };
+  };
+
+  const prevMonth = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1));
+  const nextMonth = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1));
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, padding: "18px 18px 16px", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <button onClick={prevMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg></button>
+        <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: INK }}>{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+        <button onClick={nextMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="9,6 15,12 9,18"/></svg></button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+        {dayShells.map((s, i) => <div key={i} style={{ fontSize: 10, fontWeight: 700, color: MUTED, textAlign: "center", letterSpacing: ".1em" }}>{s}</div>)}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+        {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
+        {Array.from({ length: dim }, (_, i) => {
+          const day = i + 1;
+          const info = cellInfo(day);
+          const isToday = info.k === todayK;
+          const hasBills = info.bills.length > 0;
+          const tip = [
+            isToday ? "Today" : info.dt.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }),
+            info.habitsTotal ? `Habits ${info.habitsDone}/${info.habitsTotal}` : null,
+            info.medsCount ? `Meds ${info.medsCount}` : null,
+            info.workoutLogged ? "Workout logged" : null,
+            info.moodLogged ? "Mood logged" : null,
+            hasBills ? `Due: ${info.bills.map((b) => b.n).join(", ")}` : null,
+          ].filter(Boolean).join(" · ");
+          return (
+            <div
+              key={day}
+              title={tip}
+              onClick={() => go("plan", "habits")}
+              className="pop"
+              style={{
+                position: "relative",
+                aspectRatio: "1",
+                borderRadius: 8,
+                background: isToday ? INK : PAPER,
+                border: hasBills ? `1.5px solid ${AMBER}` : `1px solid ${LINE}`,
+                color: isToday ? PAPER : INK,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                padding: "4px 2px 3px",
+                cursor: "pointer",
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{day}</div>
+              {/* habit ring */}
+              {info.habitsTotal > 0 && (
+                <div style={{ width: "70%", height: 2, background: isToday ? "rgba(255,255,255,.2)" : LINE, borderRadius: 999, marginTop: 3, overflow: "hidden" }}>
+                  <div style={{ width: `${info.habitsPct * 100}%`, height: "100%", background: info.habitsPct === 1 ? SAGEHI : SAGE }} />
+                </div>
+              )}
+              {/* dots */}
+              <div style={{ display: "flex", gap: 2, marginTop: "auto" }}>
+                {info.medsAll && <span style={{ width: 4, height: 4, borderRadius: 999, background: PLUM }} />}
+                {info.workoutLogged && <span style={{ width: 4, height: 4, borderRadius: 999, background: BLUE }} />}
+                {info.moodLogged && <span style={{ width: 4, height: 4, borderRadius: 999, background: AMBER }} />}
+                {hasBills && <span style={{ width: 4, height: 4, borderRadius: 999, background: AMBER, boxShadow: `0 0 0 1px ${isToday ? INK : PAPER}` }} />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 12, fontSize: 10, color: MUTED, fontWeight: 600, letterSpacing: ".06em" }}>
+        <Legend color={SAGE} label="Habits" />
+        <Legend color={PLUM} label="Meds" />
+        <Legend color={BLUE} label="Workout" />
+        <Legend color={AMBER} label="Mood" />
+        <Legend color={AMBER} label="Bill due" ring />
+      </div>
+    </div>
+  );
+}
+
+function Legend({ color, label, ring }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+      <span style={{ width: 8, height: 8, borderRadius: 999, background: ring ? "transparent" : color, border: ring ? `1.5px solid ${color}` : "none" }} />
+      {label}
+    </span>
+  );
+}
+
 function HubLink({ icon: Icon, color, title, sub, onClick }) {
   return (
     <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
