@@ -37,7 +37,7 @@ function ResetPasswordPage() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Password updated");
-    navigate({ to: "/" });
+    navigate({ to: "/app" });
   }
 
   return (
