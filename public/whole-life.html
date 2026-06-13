@@ -187,9 +187,23 @@ const seed = () => ({
   ],
 });
 
+const LOGO_URL = "/__l5e/assets-v1/02e61d8c-848c-46af-a767-bb71c175b42d/bethanie-rose-logo.png";
+
+function useIsDesktop() {
+  const [is, setIs] = useState(typeof window !== "undefined" && window.matchMedia("(min-width: 900px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 900px)");
+    const fn = (e) => setIs(e.matches);
+    mq.addEventListener ? mq.addEventListener("change", fn) : mq.addListener(fn);
+    return () => { mq.removeEventListener ? mq.removeEventListener("change", fn) : mq.removeListener(fn); };
+  }, []);
+  return is;
+}
+
 function App() {
   const [now, setNow] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
+  const isDesktop = useIsDesktop();
 
   const [tab, setTab] = useState("home");     // home | money | health | plan | more
   const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
