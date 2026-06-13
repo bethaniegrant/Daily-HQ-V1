@@ -73,9 +73,6 @@ function AuthPage() {
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!token || tokenStatus?.state !== "valid") {
-      return toast.error("A valid invite link is required to create an account");
-    }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -87,17 +84,21 @@ function AuthPage() {
     });
     if (error) { setLoading(false); return toast.error(error.message); }
 
-    // Try to redeem now if a session exists (no email confirmation required)
+    // Try to redeem an invite now if a session exists (no email confirmation required)
     if (data.session) {
-      try { await redeemFn({ data: { token } }); }
-      catch (e: any) { toast.error(e.message); setLoading(false); return; }
+      if (token && tokenStatus?.state === "valid") {
+        try { await redeemFn({ data: { token } }); }
+        catch (e: any) { toast.error(e.message); setLoading(false); return; }
+      }
       setLoading(false);
       toast.success("Welcome to Daily HQ!");
       navigate({ to: "/app" });
     } else {
       setLoading(false);
-      // Stash token so we can redeem after email confirmation
-      try { sessionStorage.setItem("pending_invite_token", token); } catch {}
+      // Stash invite token so we can redeem after email confirmation
+      if (token && tokenStatus?.state === "valid") {
+        try { sessionStorage.setItem("pending_invite_token", token); } catch {}
+      }
       toast.success("Check your email to confirm your account");
     }
   }
@@ -126,7 +127,7 @@ function AuthPage() {
                 : tokenStatus?.state === "valid" ? "Invite confirmed — create your account below."
                 : tokenStatus?.state === "invalid" ? tokenStatus.reason
                 : ""
-              : "Sign in to your account. New accounts require an invite link."}
+              : "Sign in or create your Daily HQ account."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -139,6 +140,7 @@ function AuthPage() {
               setLoading(true);
               const result = await lovable.auth.signInWithOAuth("google", {
                 redirect_uri: `${window.location.origin}/app`,
+                extraParams: { prompt: "select_account" },
               });
               if (result.error) {
                 setLoading(false);
@@ -171,7 +173,7 @@ function AuthPage() {
             </TabsContent>
 
             <TabsContent value="signup">
-              {!canSignUp ? (
+              {token && !canSignUp ? (
                 <div className="mt-4 text-sm text-muted-foreground text-center p-4 border rounded-md">
                   An invite link is required to create an account.<br />
                   Paste your invite URL into the address bar, or contact support.
