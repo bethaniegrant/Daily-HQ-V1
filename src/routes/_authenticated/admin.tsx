@@ -37,17 +37,25 @@ export const Route = createFileRoute("/_authenticated/admin")({
 function AdminPage() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="stone-scope min-h-screen p-4 md:p-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Admin</h1>
-            <p className="text-sm text-muted-foreground">Daily HQ control center</p>
+            <div className="eyebrow mb-2">Control Center</div>
+            <h1 className="font-display text-3xl md:text-4xl">Admin</h1>
+            <p className="text-sm text-muted-foreground mt-1">Daily HQ — invites, members & purchases</p>
           </div>
-          <Button variant="outline" onClick={() => navigate({ to: "/app" })}>
-            Back to app
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/">
+              <Button variant="outline" className="stone-cta-ghost">Home</Button>
+            </Link>
+            <Button variant="outline" className="stone-cta-ghost" onClick={() => navigate({ to: "/app" })}>
+              Back to app
+            </Button>
+          </div>
         </div>
+
+        <div className="stone-divider" />
 
         <StatsRow />
 
