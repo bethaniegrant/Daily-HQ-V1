@@ -328,57 +328,92 @@ function App() {
 }
 
 // ═══ HOME ═════════════════════════════════════════════════════════
-function Home({ d, now, go }) {
+function Home({ d, now, go, openMenu }) {
   const hour = now.getHours();
-  const greet = hour < 12 ? "Morning" : hour < 18 ? "Afternoon" : "Evening";
+  const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const comp = dayCompletion(d, now);
   const left = (Number(d.pay) || 0) - budgetSpent(d);
   const medsToday = d.meds.length, medsTaken = d.meds.filter((m) => (d.medChecks[dayKey(now)] || {})[m.id]).length;
+  const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 
-  const tzShort = now.toLocaleTimeString("en-US", { timeZoneName: "short" }).split(" ").pop();
-  const dateLine = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-  const timeLine = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const navBtn = (label, onClick) => (
+    <button onClick={onClick} className="pop" style={{ background: "none", border: "none", color: "rgba(244,241,234,.62)", fontSize: 12, fontWeight: 600, letterSpacing: ".02em", cursor: "pointer", padding: "4px 2px" }}>{label}</button>
+  );
 
   return (
-    <div className="fade">
-      <div style={{ background: INK, color: PAPER, padding: "26px 22px 64px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div style={{ border: `1px solid rgba(255,255,255,.25)`, borderRadius: 2, padding: "5px 12px", fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase" }}>{d.intention || "—"}</div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, lineHeight: 1 }}>{dateLine}</div>
-            <div style={{ fontSize: 12, color: MIST, fontWeight: 600, marginTop: 3 }}>{timeLine} · {tzShort}</div>
+    <div className="fade" style={{ background: PAPER, minHeight: "100vh" }}>
+      {/* Pill nav */}
+      <div style={{ position: "sticky", top: 0, zIndex: 30, padding: "14px 16px 6px", background: `linear-gradient(${PAPER} 70%, rgba(236,230,220,0))` }}>
+        <nav style={{ background: INK, borderRadius: 999, padding: "10px 16px 10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
+          <span style={{ color: PAPER, fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 15, letterSpacing: "-.01em" }}>Daily <span style={{ color: AMBER }}>HQ</span></span>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            {navBtn("Today", () => go("home"))}
+            {navBtn("Health", () => go("health"))}
+            {navBtn("Plan", () => go("plan"))}
+            <button onClick={openMenu} aria-label="Menu" className="pop" style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.2)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+            </button>
           </div>
+        </nav>
+      </div>
+
+      {/* Greeting */}
+      <header style={{ padding: "22px 22px 6px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ height: 1, width: 18, background: AMBER }} />
+          <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{dateLine}</span>
         </div>
-        <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 38, fontWeight: 600, lineHeight: 1.0, marginTop: 18, letterSpacing: "-.02em" }}>
-          {greet}.<br /><span style={{ color: SAGEHI }}>Let's keep it simple.</span>
+        <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 38, fontWeight: 600, lineHeight: 1.05, letterSpacing: "-.02em", margin: "10px 0 8px", color: INK }}>
+          {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>B.</span>
         </h1>
-      </div>
+        <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.5, maxWidth: 320, margin: 0 }}>
+          {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""} {d.intention ? `Today's intention: ${d.intention.toLowerCase()}.` : ""}
+        </p>
+      </header>
 
-      <div style={{ padding: "0 18px", marginTop: -44, position: "relative", zIndex: 2 }}>
-        <div className="pop" onClick={() => go("plan", "habits")} style={{ background: CARD, borderRadius: 4, padding: "22px 24px", display: "flex", alignItems: "center", gap: 22, boxShadow: "0 20px 40px -16px rgba(22,32,28,.4)", border: `1px solid ${LINE}` }}>
-          <Ring pct={comp.pct} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's habits</div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, margin: "3px 0" }}>{comp.done}<span style={{ color: MUTED }}> / {comp.total}</span></div>
-            <div style={{ fontSize: 13, color: SAGE, fontWeight: 600 }}>{comp.pct === 1 && comp.total ? "Every one. Done." : comp.pct >= .5 ? "Past halfway." : "Begin with one."}</div>
-          </div>
+      {/* Today's Habits */}
+      <section style={{ padding: "20px 18px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "0 4px 10px" }}>
+          <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's habits</span>
+          <button onClick={() => go("plan", "habits")} className="pop" style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: AMBER, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>View all</button>
         </div>
-      </div>
+        <div className="pop" onClick={() => go("plan", "habits")} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
+          <div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 26, fontWeight: 600, color: INK, lineHeight: 1 }}>{comp.done} / {comp.total || 0}</div>
+            <div style={{ fontSize: 12, color: MUTED, fontWeight: 600, marginTop: 6 }}>
+              {comp.pct === 1 && comp.total ? "Every one. Done." : comp.pct >= .5 ? "Past halfway." : comp.total ? "Begin with one." : "Add a habit to begin"}
+            </div>
+          </div>
+          <Ring pct={comp.pct} />
+        </div>
+      </section>
 
-      <SectionLabel text="Jump back in" />
-      <div className="stagger" style={{ padding: "0 18px 10px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money", "budget")} dark />
-        <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />
-        <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />
-        <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${Object.values(d.meals).filter((m) => m.trim()).length}/7`} sub="days planned" onClick={() => go("health", "meals")} dark />
-      </div>
+      {/* Jump back in */}
+      <section style={{ padding: "22px 18px 0" }}>
+        <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Jump back in</div>
+        <div className="stagger" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money", "budget")} />
+          <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />
+          <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />
+          <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${Object.values(d.meals).filter((m) => m.trim()).length}/7`} sub="days planned" onClick={() => go("health", "meals")} />
+        </div>
+      </section>
 
-      <SectionLabel text="Explore" />
-      <div style={{ padding: "0 18px 30px", display: "grid", gap: 10 }}>
-        <HubLink icon={WalletIcon} color={AMBER} title="Money" sub="Budget · debt · savings" onClick={() => go("money")} />
-        <HubLink icon={HeartIcon} color={PLUM} title="Health" sub="Meds · workouts · meals · mood" onClick={() => go("health")} />
-        <HubLink icon={StarIcon} color={SAGE} title="Plan" sub="Habits · goals · your spaces" onClick={() => go("plan")} />
-      </div>
+      {/* Explore */}
+      <section style={{ padding: "26px 18px 30px" }}>
+        <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Explore</div>
+        <div style={{ display: "grid", gap: 8 }}>
+          <HubLink icon={WalletIcon} color={AMBER} title="Money" sub="Budget · debt · savings" onClick={() => go("money")} />
+          <HubLink icon={HeartIcon} color={PLUM} title="Health" sub="Meds · workouts · meals · mood" onClick={() => go("health")} />
+          <HubLink icon={StarIcon} color={SAGE} title="Plan" sub="Habits · goals · your spaces" onClick={() => go("plan")} />
+        </div>
+      </section>
+
+      <footer style={{ display: "flex", justifyContent: "center", gap: 14, padding: "8px 0 28px", opacity: .4 }}>
+        <span style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: INK, fontWeight: 700 }}>Encrypted</span>
+        <span style={{ width: 3, height: 3, borderRadius: 999, background: MUTED, alignSelf: "center" }} />
+        <span style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: INK, fontWeight: 700 }}>No tracking</span>
+      </footer>
     </div>
   );
 }
