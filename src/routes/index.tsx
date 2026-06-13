@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -48,21 +48,16 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-  const navigate = useNavigate();
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        navigate({ to: "/app" });
-        return;
-      }
-      setSignedIn(false);
+      setSignedIn(!!data.session);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate({ to: "/app" });
+      setSignedIn(!!session);
     });
     return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   return (
     <div className="stone-scope min-h-screen">
