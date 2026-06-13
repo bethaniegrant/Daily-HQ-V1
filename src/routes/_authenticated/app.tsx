@@ -49,16 +49,16 @@ function PlannerPage() {
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
         />
       )}
-      <div style={{ position: "fixed", top: 12, right: 12, zIndex: 50, display: "flex", gap: 8 }}>
+      <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 50, display: "flex", gap: 8 }}>
         <Link to="/">
-          <Button size="sm" variant="secondary" style={{ opacity: 0.9 }}>Home</Button>
+          <Button size="sm" variant="secondary" style={{ opacity: 0.92, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" }}>Home</Button>
         </Link>
         {isAdmin && (
           <Link to="/admin">
-            <Button size="sm" variant="secondary" style={{ opacity: 0.9 }}>Admin</Button>
+            <Button size="sm" variant="secondary" style={{ opacity: 0.92, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" }}>Admin</Button>
           </Link>
         )}
-        <Button onClick={signOut} size="sm" variant="secondary" style={{ opacity: 0.9 }}>
+        <Button onClick={signOut} size="sm" variant="secondary" style={{ opacity: 0.92, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" }}>
           Sign out
         </Button>
       </div>
