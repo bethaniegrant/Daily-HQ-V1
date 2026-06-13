@@ -43,7 +43,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/" });
+      if (data.session) navigate({ to: "/app" });
     });
   }, [navigate]);
 
@@ -68,7 +68,7 @@ function AuthPage() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Signed in");
-    navigate({ to: "/" });
+    navigate({ to: "/app" });
   }
 
   async function signUp(e: React.FormEvent) {
@@ -93,7 +93,7 @@ function AuthPage() {
       catch (e: any) { toast.error(e.message); setLoading(false); return; }
       setLoading(false);
       toast.success("Welcome to Daily HQ!");
-      navigate({ to: "/" });
+      navigate({ to: "/app" });
     } else {
       setLoading(false);
       // Stash token so we can redeem after email confirmation
@@ -146,7 +146,7 @@ function AuthPage() {
                 return;
               }
               if (result.redirected) return;
-              navigate({ to: "/" });
+              navigate({ to: "/app" });
             }}
           >
             Continue with Google
