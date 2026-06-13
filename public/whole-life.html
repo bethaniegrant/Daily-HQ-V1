@@ -159,11 +159,15 @@ const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay
 const seed = () => ({
   pay: "",
   budget: {
-    fixed: [{ id: uid(), n: "Rent", a: "" }, { id: uid(), n: "Car payment", a: "" }],
-    variable: [{ id: uid(), n: "Groceries", a: "" }, { id: uid(), n: "Gas", a: "" }],
-    savings: [{ id: uid(), n: "Emergency fund", a: "" }],
-    debt: [{ id: uid(), n: "Credit card", a: "" }],
+    fixed: [{ id: uid(), n: "Rent", a: "", due: "" }, { id: uid(), n: "Car payment", a: "", due: "" }],
+    variable: [{ id: uid(), n: "Groceries", a: "", due: "" }, { id: uid(), n: "Gas", a: "", due: "" }],
+    savings: [{ id: uid(), n: "Emergency fund", a: "", due: "" }],
+    debt: [{ id: uid(), n: "Credit card", a: "", due: "" }],
   },
+  savingsGoals: [
+    { id: uid(), n: "Emergency fund", target: "", saved: "", color: "#7d8a5e" },
+    { id: uid(), n: "Vacation", target: "", saved: "", color: "#b97a3a" },
+  ],
   monthStamp: monthKey(),
   habitDefs: [{ id: uid(), n: "Move my body" }, { id: uid(), n: "Drink water" }, { id: uid(), n: "Read 10 min" }],
   habitChecks: {}, habitOneoffs: {},
@@ -187,7 +191,7 @@ const seed = () => ({
   ],
 });
 
-const LOGO_URL = "/__l5e/assets-v1/02e61d8c-848c-46af-a767-bb71c175b42d/bethanie-rose-logo.png";
+const LOGO_URL = "/__l5e/assets-v1/9dac1cfe-e63c-454c-a03e-d189e841f1f5/bethanie-rose-logo-v2.png";
 
 function useIsDesktop() {
   const [is, setIs] = useState(typeof window !== "undefined" && window.matchMedia("(min-width: 900px)").matches);
@@ -413,7 +417,16 @@ function Home({ d, now, go, openMenu, isDesktop }) {
         </div>
       </section>
 
-      {/* Jump back in */}
+      {/* Monthly tracker calendar */}
+      <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "0 4px 10px" }}>
+          <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>This month at a glance</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: ".12em", textTransform: "uppercase" }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+        </div>
+        <TrackerCalendar d={d} now={now} go={go} />
+      </section>
+
+
       <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
         <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Jump back in</div>
         <div className="stagger" style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "1fr 1fr", gap: isDesktop ? 16 : 12 }}>
@@ -513,6 +526,127 @@ function MoreHub({ d, setD, go }) {
 
 function Note({ children }) { return <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, fontStyle: "italic", fontFamily: "'Fraunces',serif", padding: "4px 2px" }}>{children}</div>; }
 function SectionMini({ text }) { return <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginTop: 8 }}>{text}</div>; }
+function TrackerCalendar({ d, now, go }) {
+  const [cursor, setCursor] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+  const dim = daysInMonth(cursor), pad = firstWeekday(cursor);
+  const todayK = dayKey(now);
+  const dayShells = ["S", "M", "T", "W", "T", "F", "S"];
+
+  // bills due map: day-of-month -> [{ n, color }]
+  const billsByDay = {};
+  BUDGET_SECTIONS.forEach((sec) => {
+    (d.budget[sec.key] || []).forEach((r) => {
+      const day = parseInt(r.due, 10);
+      if (day >= 1 && day <= 31 && r.n) {
+        billsByDay[day] = billsByDay[day] || [];
+        billsByDay[day].push({ n: r.n, color: sec.color, a: r.a });
+      }
+    });
+  });
+
+  const moodBlock = (d.blocks || []).find((b) => b.type === "mood");
+
+  const cellInfo = (day) => {
+    const dt = new Date(cursor.getFullYear(), cursor.getMonth(), day);
+    const k = dayKey(dt);
+    const hc = dayCompletion(d, dt);
+    const habitsPct = hc.total ? hc.done / hc.total : 0;
+    const medsCount = Object.values(d.medChecks[k] || {}).filter(Boolean).length;
+    const medsAll = d.meds.length > 0 && medsCount === d.meds.length;
+    const workoutLogged = !!(d.workoutDone && d.workoutDone[k] && Object.keys(d.workoutDone[k]).length);
+    const moodLogged = !!(moodBlock && moodBlock.days && moodBlock.days[k]);
+    const bills = billsByDay[day] || [];
+    return { dt, k, habitsPct, habitsTotal: hc.total, habitsDone: hc.done, medsCount, medsAll, workoutLogged, moodLogged, bills };
+  };
+
+  const prevMonth = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1));
+  const nextMonth = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1));
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, padding: "18px 18px 16px", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <button onClick={prevMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg></button>
+        <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: INK }}>{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+        <button onClick={nextMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="9,6 15,12 9,18"/></svg></button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+        {dayShells.map((s, i) => <div key={i} style={{ fontSize: 10, fontWeight: 700, color: MUTED, textAlign: "center", letterSpacing: ".1em" }}>{s}</div>)}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+        {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
+        {Array.from({ length: dim }, (_, i) => {
+          const day = i + 1;
+          const info = cellInfo(day);
+          const isToday = info.k === todayK;
+          const hasBills = info.bills.length > 0;
+          const tip = [
+            isToday ? "Today" : info.dt.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }),
+            info.habitsTotal ? `Habits ${info.habitsDone}/${info.habitsTotal}` : null,
+            info.medsCount ? `Meds ${info.medsCount}` : null,
+            info.workoutLogged ? "Workout logged" : null,
+            info.moodLogged ? "Mood logged" : null,
+            hasBills ? `Due: ${info.bills.map((b) => b.n).join(", ")}` : null,
+          ].filter(Boolean).join(" · ");
+          return (
+            <div
+              key={day}
+              title={tip}
+              onClick={() => go("plan", "habits")}
+              className="pop"
+              style={{
+                position: "relative",
+                aspectRatio: "1",
+                borderRadius: 8,
+                background: isToday ? INK : PAPER,
+                border: hasBills ? `1.5px solid ${AMBER}` : `1px solid ${LINE}`,
+                color: isToday ? PAPER : INK,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                padding: "4px 2px 3px",
+                cursor: "pointer",
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{day}</div>
+              {/* habit ring */}
+              {info.habitsTotal > 0 && (
+                <div style={{ width: "70%", height: 2, background: isToday ? "rgba(255,255,255,.2)" : LINE, borderRadius: 999, marginTop: 3, overflow: "hidden" }}>
+                  <div style={{ width: `${info.habitsPct * 100}%`, height: "100%", background: info.habitsPct === 1 ? SAGEHI : SAGE }} />
+                </div>
+              )}
+              {/* dots */}
+              <div style={{ display: "flex", gap: 2, marginTop: "auto" }}>
+                {info.medsAll && <span style={{ width: 4, height: 4, borderRadius: 999, background: PLUM }} />}
+                {info.workoutLogged && <span style={{ width: 4, height: 4, borderRadius: 999, background: BLUE }} />}
+                {info.moodLogged && <span style={{ width: 4, height: 4, borderRadius: 999, background: AMBER }} />}
+                {hasBills && <span style={{ width: 4, height: 4, borderRadius: 999, background: AMBER, boxShadow: `0 0 0 1px ${isToday ? INK : PAPER}` }} />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 12, fontSize: 10, color: MUTED, fontWeight: 600, letterSpacing: ".06em" }}>
+        <Legend color={SAGE} label="Habits" />
+        <Legend color={PLUM} label="Meds" />
+        <Legend color={BLUE} label="Workout" />
+        <Legend color={AMBER} label="Mood" />
+        <Legend color={AMBER} label="Bill due" ring />
+      </div>
+    </div>
+  );
+}
+
+function Legend({ color, label, ring }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+      <span style={{ width: 8, height: 8, borderRadius: 999, background: ring ? "transparent" : color, border: ring ? `1.5px solid ${color}` : "none" }} />
+      {label}
+    </span>
+  );
+}
+
 function HubLink({ icon: Icon, color, title, sub, onClick }) {
   return (
     <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
@@ -864,8 +998,16 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
 function Budget({ d, setD, back }) {
   const pay = Number(d.pay) || 0, spent = budgetSpent(d), left = pay - spent, pct = pay ? Math.min(1, spent / pay) : 0;
   const setRow = (key, id, field, v) => setD({ ...d, budget: { ...d.budget, [key]: d.budget[key].map((r) => r.id === id ? { ...r, [field]: v } : r) } });
-  const addRow = (key) => setD({ ...d, budget: { ...d.budget, [key]: [...d.budget[key], { id: uid(), n: "", a: "" }] } });
+  const addRow = (key) => setD({ ...d, budget: { ...d.budget, [key]: [...d.budget[key], { id: uid(), n: "", a: "", due: "" }] } });
   const delRow = (key, id) => setD({ ...d, budget: { ...d.budget, [key]: d.budget[key].filter((r) => r.id !== id) } });
+
+  // savings goals
+  const goals = d.savingsGoals || [];
+  const setGoal = (id, patch) => setD({ ...d, savingsGoals: goals.map((g) => g.id === id ? { ...g, ...patch } : g) });
+  const addGoal = () => setD({ ...d, savingsGoals: [...goals, { id: uid(), n: "", target: "", saved: "", color: SAGE }] });
+  const delGoal = (id) => setD({ ...d, savingsGoals: goals.filter((g) => g.id !== id) });
+  const goalColors = [SAGE, AMBER, PLUM, BLUE, "#9aa777"];
+
   return (
     <Screen title="Budget" sub="This paycheck" back={back} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14 }}>
@@ -880,8 +1022,12 @@ function Budget({ d, setD, back }) {
           </div>
           <div style={{ display: "grid", gap: 7 }}>
             {d.budget[sec.key].map((r) => (
-              <div key={r.id} style={{ display: "flex", gap: 7, alignItems: "center" }}>
-                <input value={r.n} onChange={(e) => setRow(sec.key, r.id, "n", e.target.value)} placeholder="What for" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 500 }} />
+              <div key={r.id} style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
+                <input value={r.n} onChange={(e) => setRow(sec.key, r.id, "n", e.target.value)} placeholder="What for" style={{ flex: "1 1 120px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 500 }} />
+                <div title="Day of month due (1–31)" style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 8px", width: 78, background: PAPER }}>
+                  <span style={{ color: MUTED, fontSize: 11, fontWeight: 700, letterSpacing: ".08em" }}>DUE</span>
+                  <input inputMode="numeric" maxLength={2} value={r.due || ""} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0,2); setRow(sec.key, r.id, "due", v); }} placeholder="—" style={{ border: "none", width: "100%", textAlign: "right", padding: "9px 0 9px 4px", fontSize: 13, fontWeight: 700, background: "none" }} />
+                </div>
                 <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", width: 96 }}><span style={{ color: MUTED, fontSize: 13 }}>$</span><input inputMode="decimal" value={r.a} onChange={(e) => setRow(sec.key, r.id, "a", e.target.value)} placeholder="0" style={{ border: "none", width: "100%", textAlign: "right", padding: "9px 0 9px 4px", fontSize: 14, fontWeight: 600, background: "none" }} /></div>
                 <div className="pop" onClick={() => delRow(sec.key, r.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
               </div>
@@ -898,7 +1044,54 @@ function Budget({ d, setD, back }) {
         <div style={{ fontFamily: "'Fraunces',serif", fontSize: 46, fontWeight: 600, margin: "4px 0 14px", letterSpacing: "-.02em", color: left < 0 ? AMBER : PAPER }}>${money(Math.abs(left))}</div>
         <div style={{ height: 8, background: "rgba(255,255,255,.15)", overflow: "hidden" }}><div style={{ width: `${pct * 100}%`, height: "100%", background: left < 0 ? AMBER : SAGEHI, transition: "width .5s" }} /></div>
       </div>
-      <p style={tip}>Give every dollar a job. When "left to allocate" hits zero, every dollar has a place.</p>
+
+      {/* Savings Tracker */}
+      <div style={{ marginTop: 22 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "0 2px 10px" }}>
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Savings tracker</div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, color: INK, marginTop: 4 }}>Sinking funds & goals</div>
+          </div>
+        </div>
+        <div style={{ display: "grid", gap: 10 }}>
+          {goals.map((g, i) => {
+            const target = Number(g.target) || 0;
+            const saved = Number(g.saved) || 0;
+            const gpct = target > 0 ? Math.min(1, saved / target) : 0;
+            const color = g.color || goalColors[i % goalColors.length];
+            return (
+              <div key={g.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${color}`, borderRadius: 4, padding: "14px 16px" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
+                  <input value={g.n} onChange={(e) => setGoal(g.id, { n: e.target.value })} placeholder="Goal name" style={{ flex: 1, border: "none", background: "none", fontSize: 15, fontWeight: 700, color: INK }} />
+                  <div className="pop" onClick={() => delGoal(g.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
+                    <span style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em" }}>SAVED</span>
+                    <span style={{ color: MUTED, fontSize: 13, marginLeft: 6 }}>$</span>
+                    <input inputMode="decimal" value={g.saved} onChange={(e) => setGoal(g.id, { saved: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                  </div>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
+                    <span style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em" }}>GOAL</span>
+                    <span style={{ color: MUTED, fontSize: 13, marginLeft: 6 }}>$</span>
+                    <input inputMode="decimal" value={g.target} onChange={(e) => setGoal(g.id, { target: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                  </div>
+                </div>
+                <div style={{ height: 8, background: PAPER, borderRadius: 999, overflow: "hidden", border: `1px solid ${LINE}` }}>
+                  <div style={{ width: `${gpct * 100}%`, height: "100%", background: color, transition: "width .5s" }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: MUTED, fontWeight: 600 }}>
+                  <span>{Math.round(gpct * 100)}% there</span>
+                  <span>${money(Math.max(0, target - saved))} to go</span>
+                </div>
+              </div>
+            );
+          })}
+          <button onClick={addGoal} style={{ ...addBtn, borderColor: SAGE, color: SAGE }}>+ Add a savings goal</button>
+        </div>
+      </div>
+
+      <p style={tip}>Give every dollar a job. Add a "DUE" day so bills don't sneak up. Sinking funds turn surprise costs into planned ones.</p>
     </Screen>
   );
 }
