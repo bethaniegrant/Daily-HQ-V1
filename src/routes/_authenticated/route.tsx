@@ -5,6 +5,23 @@ import { redeemInviteToken } from "@/lib/api/admin.functions";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
+    let { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      await new Promise((resolve) => {
+        const timeout = window.setTimeout(resolve, 1200);
+        const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (session) {
+            window.clearTimeout(timeout);
+            sub.subscription.unsubscribe();
+            resolve(undefined);
+          }
+        });
+      });
+      sessionData = (await supabase.auth.getSession()).data;
+    }
+
+    if (!sessionData.session) throw redirect({ to: "/auth" });
+
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
 
@@ -28,12 +45,12 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/auth" });
     }
 
-    // Expose admin flag
-    const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: data.user.id,
-      _role: "admin",
-    });
-    return { user: data.user, isAdmin: !!isAdmin };
+    // Expose admin flag from the user's own role rows
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id);
+    return { user: data.user, isAdmin: !!roles?.some((r) => r.role === "admin") };
   },
   component: () => <Outlet />,
 });
