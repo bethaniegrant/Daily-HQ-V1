@@ -41,7 +41,7 @@ function PlannerPage() {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#2a241e" }}>
+    <div style={{ position: "fixed", inset: 0, background: "#ece6dc" }}>
       {src && (
         <iframe
           src={src}
