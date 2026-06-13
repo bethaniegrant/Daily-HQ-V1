@@ -44,7 +44,7 @@ function AdminPage() {
             <h1 className="text-2xl md:text-3xl font-bold">Admin</h1>
             <p className="text-sm text-muted-foreground">Daily HQ control center</p>
           </div>
-          <Button variant="outline" onClick={() => navigate({ to: "/" })}>
+          <Button variant="outline" onClick={() => navigate({ to: "/app" })}>
             Back to app
           </Button>
         </div>
