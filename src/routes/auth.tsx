@@ -81,7 +81,7 @@ function AuthPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/app`,
         data: { display_name: displayName || email.split("@")[0] },
       },
     });
@@ -138,7 +138,7 @@ function AuthPage() {
             onClick={async () => {
               setLoading(true);
               const result = await lovable.auth.signInWithOAuth("google", {
-                redirect_uri: window.location.origin,
+                redirect_uri: `${window.location.origin}/app`,
               });
               if (result.error) {
                 setLoading(false);
