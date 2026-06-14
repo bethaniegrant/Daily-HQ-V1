@@ -791,17 +791,27 @@ function OverviewBlock({ label, color, count, children, onClick }) {
 }
 
 function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
-  const b = dayBundle(d, dt);
   const isToday = dayKey(dt) === dayKey(new Date());
   const title = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return (
+    <OverviewShell title={title} sub={isToday ? "Today's overview" : "Day overview"} onClose={onClose}>
+      <DayOverviewBody d={d} setD={setD} dt={dt} go={go} onNavigate={onClose} />
+    </OverviewShell>
+  );
+}
+
+function DayOverviewBody({ d, setD, dt, go, onNavigate }) {
+  const b = dayBundle(d, dt);
   const habitsDone = b.habits.filter((h) => h.done).length;
   const medsDone = b.medsList.reduce((s, m) => s + (m.done >= m.times ? 1 : 0), 0);
   const k = dayKey(dt);
   const note = (d.dayNotes && d.dayNotes[k]) || "";
   const setNote = (v) => setD && setD({ ...d, dayNotes: { ...(d.dayNotes || {}), [k]: v } });
-  const anything = b.habits.length || b.medsList.length || b.workouts.length || b.mood || b.bills.length || b.meal;
+  const hasMeals = MEAL_SLOTS.some((s) => (b.meal[s.key] || "").trim());
+  const anything = b.habits.length || b.medsList.length || b.workouts.length || b.mood || b.bills.length || hasMeals;
+  const nav = (a, b2) => { if (onNavigate) onNavigate(); go(a, b2); };
   return (
-    <OverviewShell title={title} sub={isToday ? "Today's overview" : "Day overview"} onClose={onClose}>
+    <>
       {!anything && !note && <div style={{ fontSize: 13, color: MUTED, padding: "20px 4px", textAlign: "center", fontStyle: "italic", fontFamily: "'DM Serif Display',serif" }}>Nothing tracked for this day yet. Add a note below.</div>}
       <div style={{ display: "grid", gap: 10 }}>
         {b.mood && (
@@ -829,7 +839,7 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
           </OverviewBlock>
         )}
         {b.habits.length > 0 && (
-          <OverviewBlock label="Habits" color={SAGE} count={`${habitsDone}/${b.habits.length}`} onClick={() => { onClose(); go("plan", "habits"); }}>
+          <OverviewBlock label="Habits" color={SAGE} count={`${habitsDone}/${b.habits.length}`} onClick={() => nav("plan", "habits")}>
             <div style={{ display: "grid", gap: 5 }}>
               {b.habits.map((h) => (
                 <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
@@ -842,7 +852,7 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
           </OverviewBlock>
         )}
         {b.medsList.length > 0 && (
-          <OverviewBlock label="Medications" color={PLUM} count={`${medsDone}/${b.medsList.length}`} onClick={() => { onClose(); go("health", "meds"); }}>
+          <OverviewBlock label="Medications" color={PLUM} count={`${medsDone}/${b.medsList.length}`} onClick={() => nav("health", "meds")}>
             <div style={{ display: "grid", gap: 5 }}>
               {b.medsList.map((m) => (
                 <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
@@ -854,7 +864,7 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
           </OverviewBlock>
         )}
         {b.workouts.length > 0 && (
-          <OverviewBlock label="Workouts logged" color={BLUE} count={`${b.workouts.length}`} onClick={() => { onClose(); go("health", "workouts"); }}>
+          <OverviewBlock label="Workouts logged" color={BLUE} count={`${b.workouts.length}`} onClick={() => nav("health", "workouts")}>
             <div style={{ display: "grid", gap: 5 }}>
               {b.workouts.map((w) => (
                 <div key={w.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13 }}>
@@ -868,8 +878,8 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
             </div>
           </OverviewBlock>
         )}
-        {MEAL_SLOTS.some((s) => (b.meal[s.key] || "").trim()) && (
-          <OverviewBlock label={`${b.weekdayShort} meals`} color={SAGE} onClick={() => { onClose(); go("health", "meals"); }}>
+        {hasMeals && (
+          <OverviewBlock label={`${b.weekdayShort} meals`} color={SAGE} onClick={() => nav("health", "meals")}>
             <div style={{ display: "grid", gap: 6 }}>
               {MEAL_SLOTS.filter((s) => (b.meal[s.key] || "").trim()).map((s) => (
                 <div key={s.key} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
@@ -890,7 +900,113 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
           />
         </OverviewBlock>
       </div>
-    </OverviewShell>
+    </>
+  );
+}
+
+// ─── Dashboard calendar with integrated Day / Week side panel ───────
+function DashboardCalendar({ d, setD, now, go, isDesktop }) {
+  const [selectedDay, setSelectedDay] = useState(new Date(now));
+  const [view, setView] = useState("day"); // "day" | "week"
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "minmax(0, 1.05fr) minmax(0, 1fr)" : "1fr", gap: isDesktop ? 16 : 14, alignItems: "start" }}>
+      <TrackerCalendar d={d} setD={setD} now={now} go={go} isDesktop={isDesktop} selectedDay={selectedDay} onSelectDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
+      <SidePanel d={d} setD={setD} go={go} isDesktop={isDesktop} selectedDay={selectedDay} setSelectedDay={setSelectedDay} view={view} setView={setView} />
+    </div>
+  );
+}
+
+function SidePanel({ d, setD, go, isDesktop, selectedDay, setSelectedDay, view, setView }) {
+  const isToday = dayKey(selectedDay) === dayKey(new Date());
+  const sub = view === "week" ? "Week at a glance" : (isToday ? "Today" : "Day overview");
+  const title = view === "week"
+    ? (() => { const s = new Date(selectedDay); s.setDate(selectedDay.getDate() - selectedDay.getDay()); const e = new Date(s); e.setDate(s.getDate() + 6); return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`; })()
+    : selectedDay.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
+  const tabBtn = (id, label) => (
+    <button
+      key={id}
+      onClick={() => setView(id)}
+      className="pop"
+      style={{
+        flex: 1, padding: "8px 10px", borderRadius: 999, border: "none", cursor: "pointer",
+        background: view === id ? PAPER : "transparent",
+        color: view === id ? INK : MIST,
+        fontSize: 10, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase",
+        boxShadow: view === id ? "0 2px 6px -2px rgba(22,32,28,.4)" : "none",
+      }}
+    >{label}</button>
+  );
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)", overflow: "hidden", display: "flex", flexDirection: "column", minHeight: isDesktop ? 480 : "auto" }}>
+      <div style={{ background: INK, color: PAPER, padding: "16px 18px 14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div>
+            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, fontWeight: 600, lineHeight: 1.15, marginTop: 4, letterSpacing: "-.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
+          </div>
+          {view === "day" && !isToday && (
+            <button onClick={() => setSelectedDay(new Date())} className="pop" style={{ background: "rgba(255,255,255,.12)", border: "none", color: PAPER, borderRadius: 999, padding: "6px 12px", fontSize: 9, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: "pointer" }}>Today</button>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.08)", borderRadius: 999, padding: 3 }}>
+          {tabBtn("day", "Day")}
+          {tabBtn("week", "Week")}
+        </div>
+      </div>
+      <div style={{ padding: "16px 16px 18px", flex: 1, overflow: "auto", maxHeight: isDesktop ? 640 : "none" }}>
+        {view === "day"
+          ? <DayOverviewBody d={d} setD={setD} dt={selectedDay} go={go} />
+          : <InlineWeekPanel d={d} setD={setD} go={go} anchor={selectedDay} isDesktop={isDesktop} onPickDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
+        }
+      </div>
+    </div>
+  );
+}
+
+function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
+  const start = new Date(anchor); start.setDate(anchor.getDate() - anchor.getDay());
+  const days = Array.from({ length: 7 }, (_, i) => { const dt = new Date(start); dt.setDate(start.getDate() + i); return dt; });
+  const todayK = dayKey(new Date());
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      {days.map((dt) => {
+        const k = dayKey(dt);
+        const b = dayBundle(d, dt);
+        const isToday = k === todayK;
+        const habitsDone = b.habits.filter((h) => h.done).length;
+        const medsDone = b.medsList.reduce((s, m) => s + (m.done >= m.times ? 1 : 0), 0);
+        const note = (d.dayNotes && d.dayNotes[k]) || "";
+        const setNote = (v) => setD && setD({ ...d, dayNotes: { ...(d.dayNotes || {}), [k]: v } });
+        const mealsCount = MEAL_SLOTS.filter((s) => (b.meal[s.key] || "").trim()).length;
+        return (
+          <div key={k} style={{ background: isToday ? INK : PAPER, color: isToday ? PAPER : INK, border: `1px solid ${isToday ? INK : LINE}`, borderRadius: 14, padding: "12px 14px" }}>
+            <div onClick={() => onPickDay(dt)} className="pop" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <div style={{ fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 800, color: isToday ? MIST : MUTED }}>{dt.toLocaleDateString("en-US", { weekday: "short" })}</div>
+                <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 20, fontWeight: 600, lineHeight: 1 }}>{dt.getDate()}</div>
+                {b.mood && <span title={b.mood.label} style={{ width: 12, height: 12, borderRadius: 4, background: b.mood.color, border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
+              </div>
+              <div style={{ display: "flex", gap: 8, fontSize: 10, fontWeight: 700, color: isToday ? MIST : MUTED, letterSpacing: ".06em", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {b.habits.length > 0 && <span><span style={{ color: SAGE }}>●</span> {habitsDone}/{b.habits.length}</span>}
+                {b.medsList.length > 0 && <span><span style={{ color: PLUM }}>●</span> {medsDone}/{b.medsList.length}</span>}
+                {b.workouts.length > 0 && <span><span style={{ color: BLUE }}>●</span> {b.workouts.length}</span>}
+                {b.bills.length > 0 && <span><span style={{ color: AMBER }}>●</span> {b.bills.length}</span>}
+                {mealsCount > 0 && <span><span style={{ color: SAGE }}>●</span> {mealsCount}/4</span>}
+              </div>
+            </div>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Quick note…"
+              rows={1}
+              style={{ width: "100%", border: `1px solid ${isToday ? "rgba(255,255,255,.15)" : LINE}`, borderRadius: 6, background: isToday ? "rgba(255,255,255,.06)" : CARD, padding: "6px 8px", fontSize: 12, fontFamily: "inherit", color: isToday ? PAPER : TEXT, resize: "vertical", outline: "none" }}
+            />
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
