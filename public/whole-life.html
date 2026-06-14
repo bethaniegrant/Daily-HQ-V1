@@ -31,6 +31,7 @@ const LEGACY_KEY = "wlp_doc";
 
 function useCloudSync(d, setD) {
   const [ready, setReady] = useState(false);
+  const [displayName, setDisplayName] = useState("");
   const ctx = useRef({ client: null, userId: null, lkey: null });
   const skipNextSave = useRef(true);
   const bootedRef = useRef(false);
@@ -55,6 +56,12 @@ function useCloudSync(d, setD) {
         if (!user) { setReady(true); return; }
         ctx.current.userId = user.id;
         ctx.current.lkey = "wlp_doc_" + user.id;
+
+        try {
+          const { data: profile } = await client.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+          setDisplayName(profile?.display_name || user.user_metadata?.display_name || user.user_metadata?.full_name || (user.email ? user.email.split("@")[0] : ""));
+        } catch {}
+
 
         let local = null;
         try { local = JSON.parse(localStorage.getItem(ctx.current.lkey) || "null"); } catch {}
@@ -122,7 +129,7 @@ function useCloudSync(d, setD) {
     return () => clearTimeout(t);
   }, [d, ready]);
 
-  return ready;
+  return { ready, displayName };
 }
 
 
@@ -218,7 +225,7 @@ function App() {
   const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
   const [menuOpen, setMenuOpen] = useState(false);
   const [d, setD] = useState(seed);
-  const synced = useCloudSync(d, setD);
+  const { ready: synced, displayName } = useCloudSync(d, setD);
 
   // monthly reset: wipe habit checks, one-offs, med checks, workout logs, mood grids
   useEffect(() => {
@@ -242,7 +249,7 @@ function App() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true), isDesktop };
+  const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true), isDesktop, displayName };
 
   // resolve current page
   let view;
@@ -364,7 +371,7 @@ function App() {
 }
 
 // ═══ HOME ═════════════════════════════════════════════════════════
-function Home({ d, setD, now, go, openMenu, isDesktop }) {
+function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
   const hour = now.getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const comp = dayCompletion(d, now);
@@ -405,7 +412,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop }) {
             <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{dateLine}</span>
           </div>
           <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: isDesktop ? 64 : 38, fontWeight: 600, lineHeight: 1.05, letterSpacing: "-.02em", margin: "10px 0 8px", color: TEXT }}>
-            {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>B.</span>
+            {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>{((displayName || "").trim().split(/\s+/)[0] || "").charAt(0).toUpperCase() || "•"}.</span>
           </h1>
           <p style={{ fontSize: isDesktop ? 16 : 14, color: MUTED, lineHeight: 1.5, maxWidth: 520, margin: 0 }}>
             {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""}
