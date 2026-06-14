@@ -1039,8 +1039,8 @@ function WeekOverview({ d, anchor, onClose, go, isDesktop, onPickDay }) {
                 {b.medsList.length > 0 && <Row isToday={isToday} color={PLUM} label="Meds" val={`${medsDone}/${b.medsList.length}`} />}
                 {b.workouts.length > 0 && <Row isToday={isToday} color={BLUE} label="Workout" val={`${b.workouts.length}`} />}
                 {b.bills.length > 0 && <Row isToday={isToday} color={AMBER} label="Bills" val={`${b.bills.length}`} />}
-                {b.meal && <Row isToday={isToday} color={SAGE} label="Meal" val={b.meal.length > 14 ? b.meal.slice(0, 14) + "…" : b.meal} />}
-                {b.habits.length === 0 && b.medsList.length === 0 && b.workouts.length === 0 && b.bills.length === 0 && !b.meal && !b.mood && (
+                {MEAL_SLOTS.some((s) => (b.meal[s.key] || "").trim()) && <Row isToday={isToday} color={SAGE} label="Meals" val={`${MEAL_SLOTS.filter((s) => (b.meal[s.key] || "").trim()).length}/4`} />}
+                {b.habits.length === 0 && b.medsList.length === 0 && b.workouts.length === 0 && b.bills.length === 0 && !MEAL_SLOTS.some((s) => (b.meal[s.key] || "").trim()) && !b.mood && (
                   <div style={{ fontSize: 11, color: isToday ? MIST : MUTED, fontStyle: "italic", fontFamily: "'DM Serif Display',serif" }}>Nothing tracked</div>
                 )}
               </div>
