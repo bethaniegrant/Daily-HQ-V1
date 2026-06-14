@@ -249,7 +249,7 @@ function App() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true), isDesktop };
+  const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true), isDesktop, displayName };
 
   // resolve current page
   let view;
