@@ -1625,30 +1625,6 @@ function Meals({ d, setD, back }) {
     </Screen>
   );
 }
-          <div key={day} style={{ background: CARD, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${LINE}` }}>
-            <div style={{ width: 38, fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: i > 4 ? AMBER : SAGE }}>{day}</div>
-            <input value={d.meals[day]} onChange={(e) => set(day, e.target.value)} placeholder="What's for dinner?" style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none" }} />
-          </div>
-        ))}
-      </div>
-      <div style={{ marginTop: 24, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 12, letterSpacing: ".16em", textTransform: "uppercase", color: TEXT, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><CartIcon c={INK} s={16} /> Shopping list</div>
-        {shopTotal > 0 && <div style={{ fontSize: 12, color: MUTED, fontWeight: 600 }}>{gotCount}/{shopTotal} got</div>}
-      </div>
-      <div style={{ display: "grid", gap: 8 }}>
-        {d.shopping.map((s, i) => (
-          <div key={i} style={{ background: s.done ? "#EEF0E9" : CARD, borderRadius: 4, padding: "11px 14px", display: "flex", alignItems: "center", gap: 12, border: `1px solid ${LINE}` }}>
-            <div className="pop" onClick={() => setShop(i, { done: !s.done })} style={{ width: 24, height: 24, borderRadius: 3, border: `2px solid ${SAGE}`, background: s.done ? SAGE : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.done && <CheckIcon c="#fff" s={14} />}</div>
-            <input value={s.t} onChange={(e) => setShop(i, { t: e.target.value })} placeholder="Add an item" style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none", color: s.done ? MUTED : INK, textDecoration: s.done ? "line-through" : "none" }} />
-            <div className="pop" onClick={() => delShop(i)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={14} /></div>
-          </div>
-        ))}
-      </div>
-      <button onClick={addShop} style={addBtn}>+ Add an item</button>
-      <p style={tip}>Plan your dinners, then build the shopping list right under them.</p>
-    </Screen>
-  );
-}
 
 // ═══ CUSTOM BLOCKS (preview, add menu, editors, mood) ═════════════
 function BlockPreview({ block, onClick, now }) {
