@@ -242,6 +242,7 @@ function App() {
   const [tab, setTab] = useState("home");     // home | money | health | plan | more
   const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [d, setD] = useState(seed);
   const { ready: synced, displayName } = useCloudSync(d, setD);
 
@@ -257,15 +258,21 @@ function App() {
 
   const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
 
-  // listen for parent (app shell) messages — e.g. Home button → reset to home tab
+  // listen for parent (app shell) messages — Home, admin context, etc.
   useEffect(() => {
     const handler = (e) => {
       const m = e && e.data;
-      if (m && m.type === "go") { setTab(m.tab || "home"); setPage(m.page || null); }
+      if (!m || typeof m !== "object") return;
+      if (m.type === "go") { setTab(m.tab || "home"); setPage(m.page || null); }
+      else if (m.type === "shell:context") { setIsAdmin(!!m.isAdmin); }
     };
     window.addEventListener("message", handler);
+    try { window.parent && window.parent.postMessage({ type: "shell:ready" }, "*"); } catch (_) {}
     return () => window.removeEventListener("message", handler);
   }, []);
+
+  const signOutFromShell = () => { try { window.parent && window.parent.postMessage({ type: "shell:signOut" }, "*"); } catch (_) {} };
+  const openAdmin = () => { try { window.parent && window.parent.postMessage({ type: "shell:navigate", to: "/admin" }, "*"); } catch (_) {} };
 
   const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true), isDesktop, displayName };
 
@@ -313,6 +320,10 @@ function App() {
       ...blocksFor("more"),
     ]},
     ...customCats.map((c) => ({ label: c.charAt(0).toUpperCase() + c.slice(1), items: blocksFor(c) })),
+    { label: "Account", items: [
+      ...(isAdmin ? [{ icon: GridIcon, color: BLUE, title: "Admin", onClick: () => { closeMenu(); openAdmin(); } }] : []),
+      { icon: XIcon, color: PLUM, title: "Sign out", onClick: () => { closeMenu(); signOutFromShell(); } },
+    ]},
   ];
 
   return (
@@ -917,11 +928,14 @@ function DashboardCalendar({ d, setD, now, go, isDesktop }) {
 }
 
 function SidePanel({ d, setD, go, isDesktop, selectedDay, setSelectedDay, view, setView }) {
+  const [openMobile, setOpenMobile] = useState(false);
   const isToday = dayKey(selectedDay) === dayKey(new Date());
   const sub = view === "week" ? "Week at a glance" : (isToday ? "Today" : "Day overview");
   const title = view === "week"
     ? (() => { const s = new Date(selectedDay); s.setDate(selectedDay.getDate() - selectedDay.getDay()); const e = new Date(s); e.setDate(s.getDate() + 6); return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`; })()
     : selectedDay.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
+  const expanded = isDesktop || openMobile;
 
   const tabBtn = (id, label) => (
     <button
@@ -940,27 +954,34 @@ function SidePanel({ d, setD, go, isDesktop, selectedDay, setSelectedDay, view, 
 
   return (
     <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)", overflow: "hidden", display: "flex", flexDirection: "column", minHeight: isDesktop ? 480 : "auto" }}>
-      <div style={{ background: INK, color: PAPER, padding: "16px 18px 14px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div>
-            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, fontWeight: 600, lineHeight: 1.15, marginTop: 4, letterSpacing: "-.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
+      <div style={{ background: INK, color: PAPER, padding: isDesktop ? "16px 18px 14px" : (expanded ? "14px 16px 12px" : "12px 16px") }}>
+        <div onClick={isDesktop ? undefined : () => setOpenMobile((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: expanded ? 12 : 0, cursor: isDesktop ? "default" : "pointer" }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{expanded ? sub : "Daily / weekly view"}</div>
+            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: expanded ? 22 : 18, fontWeight: 600, lineHeight: 1.15, marginTop: 4, letterSpacing: "-.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{expanded ? title : "Tap to open"}</div>
           </div>
-          {view === "day" && !isToday && (
-            <button onClick={() => setSelectedDay(new Date())} className="pop" style={{ background: "rgba(255,255,255,.12)", border: "none", color: PAPER, borderRadius: 999, padding: "6px 12px", fontSize: 9, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: "pointer" }}>Today</button>
+          {expanded && view === "day" && !isToday && (
+            <button onClick={(e) => { e.stopPropagation(); setSelectedDay(new Date()); }} className="pop" style={{ background: "rgba(255,255,255,.12)", border: "none", color: PAPER, borderRadius: 999, padding: "6px 12px", fontSize: 9, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: "pointer" }}>Today</button>
+          )}
+          {!isDesktop && (
+            <span style={{ color: MIST, fontSize: 18, fontWeight: 700, transition: "transform .2s", transform: openMobile ? "rotate(180deg)" : "none", lineHeight: 1, padding: "0 4px" }}>⌄</span>
           )}
         </div>
-        <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.08)", borderRadius: 999, padding: 3 }}>
-          {tabBtn("day", "Day")}
-          {tabBtn("week", "Week")}
+        {expanded && (
+          <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.08)", borderRadius: 999, padding: 3 }}>
+            {tabBtn("day", "Day")}
+            {tabBtn("week", "Week")}
+          </div>
+        )}
+      </div>
+      {expanded && (
+        <div style={{ padding: "16px 16px 18px", flex: 1, overflow: "auto", maxHeight: isDesktop ? 640 : "none" }}>
+          {view === "day"
+            ? <DayOverviewBody d={d} setD={setD} dt={selectedDay} go={go} />
+            : <InlineWeekPanel d={d} setD={setD} go={go} anchor={selectedDay} isDesktop={isDesktop} onPickDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
+          }
         </div>
-      </div>
-      <div style={{ padding: "16px 16px 18px", flex: 1, overflow: "auto", maxHeight: isDesktop ? 640 : "none" }}>
-        {view === "day"
-          ? <DayOverviewBody d={d} setD={setD} dt={selectedDay} go={go} />
-          : <InlineWeekPanel d={d} setD={setD} go={go} anchor={selectedDay} isDesktop={isDesktop} onPickDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
-        }
-      </div>
+      )}
     </div>
   );
 }
