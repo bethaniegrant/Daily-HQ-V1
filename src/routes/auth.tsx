@@ -186,7 +186,7 @@ function AuthPage() {
                   <div><Label>Display name</Label><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>
                   <div>
                     <Label>Email</Label>
-                    <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={!!tokenStatus && tokenStatus.state === "valid" && !!tokenStatus.email} />
+                    <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
                   <div><Label>Password</Label><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
                   <Button type="submit" disabled={loading} className="w-full">Create account</Button>
