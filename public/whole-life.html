@@ -1036,14 +1036,17 @@ function Budget({ d, setD, back }) {
         <label style={{ ...lbl, color: MIST }}>Take-home pay</label>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ fontSize: 30, fontFamily: "'Fraunces',serif", fontWeight: 600, color: SAGEHI }}>$</span><input inputMode="decimal" value={d.pay} onChange={(e) => setD({ ...d, pay: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, fontSize: 30, fontFamily: "'Fraunces',serif", fontWeight: 600, background: "none", color: PAPER }} /></div>
       </div>
-      {BUDGET_SECTIONS.map((sec) => (
+      {allSections.map((sec) => (
         <div key={sec.key} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${sec.color}`, borderRadius: 4, padding: "15px 16px", marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-            <div><div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.01em" }}>{sec.label}</div><div style={{ fontSize: 12, color: MUTED }}>{sec.hint}</div></div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: sec.color, whiteSpace: "nowrap" }}>${money(sectionTotal(d, sec.key))}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12, gap: 8 }}>
+            <div style={{ minWidth: 0 }}><div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.01em" }}>{sec.label}</div><div style={{ fontSize: 12, color: MUTED }}>{sec.hint}</div></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: sec.color, whiteSpace: "nowrap" }}>${money(sectionTotal(d, sec.key))}</div>
+              {sec.custom && <div className="pop" onClick={() => delSection(sec.key)} title="Remove category" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>}
+            </div>
           </div>
           <div style={{ display: "grid", gap: 7 }}>
-            {d.budget[sec.key].map((r) => (
+            {(d.budget[sec.key] || []).map((r) => (
               <div key={r.id} style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
                 <input value={r.n} onChange={(e) => setRow(sec.key, r.id, "n", e.target.value)} placeholder="What for" style={{ flex: "1 1 120px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 500 }} />
                 <div title="Day of month due (1–31)" style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 8px", width: 78, background: PAPER }}>
@@ -1058,6 +1061,7 @@ function Budget({ d, setD, back }) {
           <button onClick={() => addRow(sec.key)} style={{ marginTop: 10, background: "none", border: "none", color: sec.color, fontWeight: 700, fontSize: 13, cursor: "pointer", padding: 0 }}>+ Add a line</button>
         </div>
       ))}
+      <button onClick={addSection} style={{ ...addBtn, borderColor: PLUM, color: PLUM, marginBottom: 14 }}>+ Add expense category</button>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "22px 24px", marginTop: 6 }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MIST, marginBottom: 6 }}><span>Take-home pay</span><span style={{ fontWeight: 700, color: PAPER }}>${money(pay)}</span></div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MIST, marginBottom: 10 }}><span>Everything assigned</span><span style={{ fontWeight: 700, color: PAPER }}>− ${money(spent)}</span></div>
