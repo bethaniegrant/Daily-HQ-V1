@@ -225,7 +225,7 @@ function App() {
   const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
   const [menuOpen, setMenuOpen] = useState(false);
   const [d, setD] = useState(seed);
-  const synced = useCloudSync(d, setD);
+  const { ready: synced, displayName } = useCloudSync(d, setD);
 
   // monthly reset: wipe habit checks, one-offs, med checks, workout logs, mood grids
   useEffect(() => {
