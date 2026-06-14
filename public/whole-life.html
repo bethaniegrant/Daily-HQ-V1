@@ -560,6 +560,9 @@ function TrackerCalendar({ d, now, go }) {
 
   const moodBlock = (d.blocks || []).find((b) => b.type === "mood");
 
+  const sameMonth = cursor.getFullYear() === now.getFullYear() && cursor.getMonth() === now.getMonth();
+  const moodById = (id) => moodBlock && moodBlock.moods.find((m) => m.id === id);
+
   const cellInfo = (day) => {
     const dt = new Date(cursor.getFullYear(), cursor.getMonth(), day);
     const k = dayKey(dt);
@@ -568,10 +571,13 @@ function TrackerCalendar({ d, now, go }) {
     const medsCount = d.meds.filter((m) => medFullyTaken((d.medChecks[k] || {})[m.id], medTimes(m))).length;
     const medsAll = d.meds.length > 0 && medsCount === d.meds.length;
     const workoutLogged = !!(d.workoutDone && d.workoutDone[k] && Object.keys(d.workoutDone[k]).length);
-    const moodLogged = !!(moodBlock && moodBlock.days && moodBlock.days[k]);
+    const moodId = sameMonth && moodBlock && moodBlock.days ? moodBlock.days[day] : null;
+    const mood = moodId ? moodById(moodId) : null;
+    const moodLogged = !!mood;
     const bills = billsByDay[day] || [];
-    return { dt, k, habitsPct, habitsTotal: hc.total, habitsDone: hc.done, medsCount, medsAll, workoutLogged, moodLogged, bills };
+    return { dt, k, habitsPct, habitsTotal: hc.total, habitsDone: hc.done, medsCount, medsAll, workoutLogged, moodLogged, mood, bills };
   };
+
 
   const prevMonth = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1));
   const nextMonth = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1));
