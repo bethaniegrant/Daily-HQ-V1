@@ -867,9 +867,16 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
             </div>
           </OverviewBlock>
         )}
-        {b.meal && (
-          <OverviewBlock label={`${b.weekdayShort} meal`} color={SAGE} onClick={() => { onClose(); go("health", "meals"); }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: "'DM Serif Display',serif" }}>{b.meal}</div>
+        {MEAL_SLOTS.some((s) => (b.meal[s.key] || "").trim()) && (
+          <OverviewBlock label={`${b.weekdayShort} meals`} color={SAGE} onClick={() => { onClose(); go("health", "meals"); }}>
+            <div style={{ display: "grid", gap: 6 }}>
+              {MEAL_SLOTS.filter((s) => (b.meal[s.key] || "").trim()).map((s) => (
+                <div key={s.key} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: SAGE, minWidth: 64 }}>{s.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: "'DM Serif Display',serif", flex: 1 }}>{b.meal[s.key]}</div>
+                </div>
+              ))}
+            </div>
           </OverviewBlock>
         )}
         <OverviewBlock label="Notes" color={MIST}>
