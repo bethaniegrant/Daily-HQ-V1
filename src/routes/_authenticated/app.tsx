@@ -1,7 +1,6 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app")({
@@ -35,17 +34,34 @@ function PlannerPage() {
     return () => { cancelled = true; };
   }, []);
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    toast.success("Signed out");
-    navigate({ to: "/auth" });
-  }
+  // Send isAdmin to iframe once loaded, and listen for shell actions
+  useEffect(() => {
+    const handler = async (e: MessageEvent) => {
+      const m = e?.data;
+      if (!m || typeof m !== "object") return;
+      if (m.type === "shell:signOut") {
+        await supabase.auth.signOut();
+        toast.success("Signed out");
+        navigate({ to: "/auth" });
+      } else if (m.type === "shell:navigate" && typeof m.to === "string") {
+        navigate({ to: m.to });
+      } else if (m.type === "shell:ready") {
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: "shell:context", isAdmin },
+          "*",
+        );
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isAdmin, navigate]);
 
-  function goHome() {
-    iframeRef.current?.contentWindow?.postMessage({ type: "go", tab: "home" }, "*");
+  function onIframeLoad() {
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "shell:context", isAdmin },
+      "*",
+    );
   }
-
-  const btn = { opacity: 0.94, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" } as const;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#ece6dc" }}>
@@ -54,20 +70,10 @@ function PlannerPage() {
           ref={iframeRef}
           src={src}
           title="Daily HQ"
+          onLoad={onIframeLoad}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
         />
       )}
-      <div style={{ position: "fixed", top: 16, right: 16, zIndex: 50, display: "flex", gap: 8 }}>
-        <Button onClick={goHome} size="sm" variant="secondary" style={btn}>Home</Button>
-        {isAdmin && (
-          <Link to="/admin">
-            <Button size="sm" variant="secondary" style={btn}>Admin</Button>
-          </Link>
-        )}
-        <Button onClick={signOut} size="sm" variant="secondary" style={btn}>
-          Sign out
-        </Button>
-      </div>
     </div>
   );
 }
