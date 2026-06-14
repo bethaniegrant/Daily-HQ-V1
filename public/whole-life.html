@@ -657,6 +657,7 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
           const day = i + 1;
           const info = cellInfo(day);
           const isToday = info.k === todayK;
+          const isSelected = selectedDay && dayKey(selectedDay) === info.k;
           const hasBills = info.bills.length > 0;
           const tip = [
             isToday ? "Today" : info.dt.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }),
@@ -670,15 +671,15 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
             <div
               key={day}
               title={tip}
-              onClick={() => setOverviewDay(info.dt)}
+              onClick={() => (onSelectDay ? onSelectDay(info.dt) : setOverviewDay(info.dt))}
               className="pop"
               style={{
                 position: "relative",
                 aspectRatio: "1",
                 borderRadius: 8,
                 background: isToday ? INK : info.mood ? info.mood.color + "33" : PAPER,
-                border: isToday ? `2px solid ${AMBER}` : hasBills ? `1.5px solid ${AMBER}` : `1px solid ${LINE}`,
-                boxShadow: isToday ? `0 0 0 2px ${PAPER}, 0 0 0 3px ${INK}` : "none",
+                border: isToday ? `2px solid ${AMBER}` : isSelected ? `2px solid ${INK}` : hasBills ? `1.5px solid ${AMBER}` : `1px solid ${LINE}`,
+                boxShadow: isToday ? `0 0 0 2px ${PAPER}, 0 0 0 3px ${INK}` : isSelected ? `0 0 0 2px ${PAPER}, 0 0 0 3px ${INK}` : "none",
                 color: isToday ? PAPER : INK,
                 display: "flex",
                 flexDirection: "column",
