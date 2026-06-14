@@ -155,6 +155,10 @@ const monthKey = (dt = new Date()) => `${dt.getFullYear()}-${dt.getMonth() + 1}`
 const dayKey = (dt) => `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
 const daysInMonth = (dt) => new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
 const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay();
+const medTimes = (m) => Math.max(1, Number(m && m.times) || 1);
+const medDoseArr = (val, times) => { const t = Math.max(1, times || 1); if (Array.isArray(val)) return Array.from({ length: t }, (_, i) => !!val[i]); return Array.from({ length: t }, () => !!val); };
+const medDoneCount = (val, times) => medDoseArr(val, times).filter(Boolean).length;
+const medFullyTaken = (val, times) => medDoneCount(val, times) >= Math.max(1, times || 1);
 
 const seed = () => ({
   pay: "",
@@ -171,7 +175,7 @@ const seed = () => ({
   monthStamp: monthKey(),
   habitDefs: [{ id: uid(), n: "Move my body" }, { id: uid(), n: "Drink water" }, { id: uid(), n: "Read 10 min" }],
   habitChecks: {}, habitOneoffs: {},
-  meds: [{ id: uid(), n: "Vitamin D", dose: "1000 IU", when: "Morning" }, { id: uid(), n: "Magnesium", dose: "200 mg", when: "Night" }],
+  meds: [{ id: uid(), n: "Vitamin D", dose: "1000 IU", times: 1 }, { id: uid(), n: "Magnesium", dose: "200 mg", times: 1 }],
   medChecks: {}, // { dayKey: { medId: true } }
   workouts: [
     { id: uid(), n: "Push day", cat: "push",   ex: [{ id: uid(), n: "Bench press",    sets: "3", reps: "8",  w: "" }, { id: uid(), n: "Shoulder press", sets: "3", reps: "10", w: "" }] },
@@ -353,7 +357,7 @@ function Home({ d, now, go, openMenu, isDesktop }) {
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const comp = dayCompletion(d, now);
   const left = (Number(d.pay) || 0) - budgetSpent(d);
-  const medsToday = d.meds.length, medsTaken = d.meds.filter((m) => (d.medChecks[dayKey(now)] || {})[m.id]).length;
+  const medsToday = d.meds.length, medsTaken = d.meds.filter((m) => medFullyTaken((d.medChecks[dayKey(now)] || {})[m.id], medTimes(m))).length;
   const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 
   const navBtn = (label, onClick) => (
@@ -501,7 +505,7 @@ function MoneyHub({ d, go }) {
   );
 }
 function HealthHub({ d, now, go }) {
-  const medsTaken = d.meds.filter((m) => (d.medChecks[dayKey(now)] || {})[m.id]).length;
+  const medsTaken = d.meds.filter((m) => medFullyTaken((d.medChecks[dayKey(now)] || {})[m.id], medTimes(m))).length;
   return (
     <Hub title="Health" sub="Care for the basics">
       <ToolRow icon={PillIcon} color={PLUM} title="Medications" sub="Track your daily doses" stat={d.meds.length ? `${medsTaken}/${d.meds.length}` : ""} onClick={() => go("health", "meds")} />
@@ -560,7 +564,7 @@ function TrackerCalendar({ d, now, go }) {
     const k = dayKey(dt);
     const hc = dayCompletion(d, dt);
     const habitsPct = hc.total ? hc.done / hc.total : 0;
-    const medsCount = Object.values(d.medChecks[k] || {}).filter(Boolean).length;
+    const medsCount = d.meds.filter((m) => medFullyTaken((d.medChecks[k] || {})[m.id], medTimes(m))).length;
     const medsAll = d.meds.length > 0 && medsCount === d.meds.length;
     const workoutLogged = !!(d.workoutDone && d.workoutDone[k] && Object.keys(d.workoutDone[k]).length);
     const moodLogged = !!(moodBlock && moodBlock.days && moodBlock.days[k]);
@@ -674,15 +678,22 @@ function Meds({ d, setD, now, back }) {
   const [edit, setEdit] = useState(false);
   const checks = d.medChecks[selKey] || {};
 
-  const toggle = (id) => { const day = { ...(d.medChecks[selKey] || {}) }; day[id] = !day[id]; setD({ ...d, medChecks: { ...d.medChecks, [selKey]: day } }); };
+  const toggle = (id, idx, times) => {
+    const day = { ...(d.medChecks[selKey] || {}) };
+    const arr = medDoseArr(day[id], times);
+    arr[idx] = !arr[idx];
+    day[id] = arr;
+    setD({ ...d, medChecks: { ...d.medChecks, [selKey]: day } });
+  };
   const setMed = (id, f, v) => setD({ ...d, meds: d.meds.map((m) => m.id === id ? { ...m, [f]: v } : m) });
-  const addMed = () => setD({ ...d, meds: [...d.meds, { id: uid(), n: "", dose: "", when: "Morning" }] });
+  const setTimes = (id, t) => setD({ ...d, meds: d.meds.map((m) => m.id === id ? { ...m, times: Math.max(1, Math.min(12, t)) } : m) });
+  const addMed = () => setD({ ...d, meds: [...d.meds, { id: uid(), n: "", dose: "", times: 1 }] });
   const delMed = (id) => setD({ ...d, meds: d.meds.filter((m) => m.id !== id) });
 
   const weekStart = new Date(sel); weekStart.setDate(sel.getDate() - sel.getDay());
   const weekDays = Array.from({ length: 7 }, (_, i) => { const dt = new Date(weekStart); dt.setDate(weekStart.getDate() + i); return dt; });
   const dim = daysInMonth(sel), pad = firstWeekday(sel);
-  const medsTakenOn = (dt) => { const c = d.medChecks[dayKey(dt)] || {}; return d.meds.filter((m) => c[m.id]).length; };
+  const medsTakenOn = (dt) => { const c = d.medChecks[dayKey(dt)] || {}; return d.meds.filter((m) => medFullyTaken(c[m.id], medTimes(m))).length; };
   const selLabel = sel.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 
   return (
@@ -699,33 +710,47 @@ function Meds({ d, setD, now, back }) {
 
       {edit ? (
         <div style={{ display: "grid", gap: 9 }}>
-          {d.meds.map((m) => (
+          {d.meds.map((m) => {
+            const t = medTimes(m);
+            return (
             <div key={m.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "12px 14px", display: "grid", gap: 7 }}>
               <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
                 <input value={m.n} onChange={(e) => setMed(m.id, "n", e.target.value)} placeholder="Medication name" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 600 }} />
                 <div className="pop" onClick={() => delMed(m.id)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={15} /></div>
               </div>
-              <div style={{ display: "flex", gap: 7 }}>
+              <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
                 <input value={m.dose} onChange={(e) => setMed(m.id, "dose", e.target.value)} placeholder="Dose (e.g. 200 mg)" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13 }} />
-                <select value={m.when} onChange={(e) => setMed(m.id, "when", e.target.value)} style={{ border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13, background: CARD, fontWeight: 600, color: INK }}>
-                  {["Morning", "Midday", "Evening", "Night", "As needed"].map((w) => <option key={w}>{w}</option>)}
-                </select>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, border: `1px solid ${LINE}`, borderRadius: 3, padding: "4px 8px", background: CARD }}>
+                  <div className="pop" onClick={() => setTimes(m.id, t - 1)} style={{ cursor: "pointer", fontWeight: 700, color: PLUM, fontSize: 16, width: 18, textAlign: "center" }}>−</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: INK, minWidth: 56, textAlign: "center" }}>{t}×/day</div>
+                  <div className="pop" onClick={() => setTimes(m.id, t + 1)} style={{ cursor: "pointer", fontWeight: 700, color: PLUM, fontSize: 16, width: 18, textAlign: "center" }}>+</div>
+                </div>
               </div>
             </div>
-          ))}
+            );
+          })}
           <button onClick={addMed} style={addBtn}>+ Add a medication</button>
         </div>
       ) : (
         <div style={{ display: "grid", gap: 9 }}>
           {d.meds.length === 0 && <Note>No meds yet. Tap "Edit meds" to add your first.</Note>}
           {d.meds.map((m) => {
-            const taken = !!checks[m.id];
+            const t = medTimes(m);
+            const doses = medDoseArr(checks[m.id], t);
+            const doneCount = doses.filter(Boolean).length;
+            const allTaken = doneCount >= t;
             return (
-              <div key={m.id} style={{ background: taken ? INK : CARD, color: taken ? PAPER : INK, borderRadius: 4, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, border: taken ? "none" : `1px solid ${LINE}` }}>
-                <div className="pop" onClick={() => toggle(m.id)} style={{ width: 28, height: 28, borderRadius: 3, border: `2px solid ${taken ? SAGEHI : PLUM}`, background: taken ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{taken && <CheckIcon c={INK} s={15} />}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, textDecoration: taken ? "line-through" : "none" }}>{m.n || "Unnamed"}</div>
-                  <div style={{ fontSize: 12, color: taken ? "rgba(244,241,234,.6)" : MUTED }}>{[m.dose, m.when].filter(Boolean).join(" · ")}</div>
+              <div key={m.id} style={{ background: allTaken ? INK : CARD, color: allTaken ? PAPER : INK, borderRadius: 4, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, border: allTaken ? "none" : `1px solid ${LINE}`, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, textDecoration: allTaken ? "line-through" : "none" }}>{m.n || "Unnamed"}</div>
+                  <div style={{ fontSize: 12, color: allTaken ? "rgba(244,241,234,.6)" : MUTED }}>{[m.dose, t > 1 ? `${doneCount}/${t} today` : null].filter(Boolean).join(" · ")}</div>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {doses.map((on, i) => (
+                    <div key={i} className="pop" onClick={() => toggle(m.id, i, t)} title={`Dose ${i + 1}`} style={{ width: 30, height: 30, borderRadius: 3, border: `2px solid ${on ? SAGEHI : PLUM}`, background: on ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
+                      {on ? <CheckIcon c={INK} s={15} /> : <span style={{ fontSize: 11, fontWeight: 700, color: allTaken ? PAPER : MUTED }}>{i + 1}</span>}
+                    </div>
+                  ))}
                 </div>
               </div>
             );
