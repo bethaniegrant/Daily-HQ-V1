@@ -1117,13 +1117,19 @@ function Budget({ d, setD, back }) {
         </div>
       </div>
 
-      <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 22px", marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: left < 0 ? AMBER : MIST }}>{left < 0 ? "Over by" : "Left to allocate"}</div>
-          <div style={{ fontSize: 12, color: MIST, marginTop: 4 }}>After every expense category above</div>
-        </div>
-        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 34, fontWeight: 600, letterSpacing: "-.02em", color: left < 0 ? AMBER : PAPER }}>${money(Math.abs(left))}</div>
-      </div>
+      {(() => {
+        const savedTotal = goals.reduce((s, g) => s + (Number(g.saved) || 0), 0);
+        const leftFinal = left - savedTotal;
+        return (
+          <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 22px", marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: leftFinal < 0 ? AMBER : MIST }}>{leftFinal < 0 ? "Over by" : "Left to allocate"}</div>
+              <div style={{ fontSize: 12, color: MIST, marginTop: 4 }}>After expenses & savings (− ${money(savedTotal)})</div>
+            </div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 34, fontWeight: 600, letterSpacing: "-.02em", color: leftFinal < 0 ? AMBER : PAPER }}>${money(Math.abs(leftFinal))}</div>
+          </div>
+        );
+      })()}
 
       <p style={tip}>Give every dollar a job. Add a "DUE" day so bills don't sneak up. Sinking funds turn surprise costs into planned ones.</p>
     </Screen>
