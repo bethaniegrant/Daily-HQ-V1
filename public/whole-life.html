@@ -828,6 +828,7 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
           <OverviewBlock label={`${b.weekdayShort} meal`} color={SAGE} onClick={() => { onClose(); go("health", "meals"); }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: INK, fontFamily: "'Fraunces',serif" }}>{b.meal}</div>
           </OverviewBlock>
+        )}
         <OverviewBlock label="Notes" color={MIST}>
           <textarea
             value={note}
