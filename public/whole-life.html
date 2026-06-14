@@ -564,7 +564,7 @@ function TrackerCalendar({ d, now, go }) {
     const k = dayKey(dt);
     const hc = dayCompletion(d, dt);
     const habitsPct = hc.total ? hc.done / hc.total : 0;
-    const medsCount = Object.values(d.medChecks[k] || {}).filter(Boolean).length;
+    const medsCount = d.meds.filter((m) => medFullyTaken((d.medChecks[k] || {})[m.id], medTimes(m))).length;
     const medsAll = d.meds.length > 0 && medsCount === d.meds.length;
     const workoutLogged = !!(d.workoutDone && d.workoutDone[k] && Object.keys(d.workoutDone[k]).length);
     const moodLogged = !!(moodBlock && moodBlock.days && moodBlock.days[k]);
