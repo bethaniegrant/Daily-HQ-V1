@@ -746,16 +746,19 @@ function OverviewBlock({ label, color, count, children, onClick }) {
   );
 }
 
-function DayOverview({ d, dt, onClose, go, isDesktop }) {
+function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
   const b = dayBundle(d, dt);
   const isToday = dayKey(dt) === dayKey(new Date());
   const title = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   const habitsDone = b.habits.filter((h) => h.done).length;
   const medsDone = b.medsList.reduce((s, m) => s + (m.done >= m.times ? 1 : 0), 0);
+  const k = dayKey(dt);
+  const note = (d.dayNotes && d.dayNotes[k]) || "";
+  const setNote = (v) => setD && setD({ ...d, dayNotes: { ...(d.dayNotes || {}), [k]: v } });
   const anything = b.habits.length || b.medsList.length || b.workouts.length || b.mood || b.bills.length || b.meal;
   return (
     <OverviewShell title={title} sub={isToday ? "Today's overview" : "Day overview"} onClose={onClose}>
-      {!anything && <div style={{ fontSize: 13, color: MUTED, padding: "20px 4px", textAlign: "center", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>Nothing tracked for this day yet.</div>}
+      {!anything && !note && <div style={{ fontSize: 13, color: MUTED, padding: "20px 4px", textAlign: "center", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>Nothing tracked for this day yet. Add a note below.</div>}
       <div style={{ display: "grid", gap: 10 }}>
         {b.mood && (
           <OverviewBlock label="Mood" color={b.mood.color}>
