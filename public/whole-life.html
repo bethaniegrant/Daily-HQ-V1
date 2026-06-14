@@ -257,7 +257,7 @@ function App() {
     view = { home: <Home {...common} />, money: <Budget {...common} back={() => go("home")} />, health: <HealthHub {...common} />, plan: <PlanHub {...common} />, more: <MoreHub {...common} /> }[tab];
   } else if (page.startsWith("block:")) {
     const b = d.blocks.find((x) => x.id === page.split(":")[1]);
-    view = b ? (b.type === "mood" ? <MoodEditor block={b} {...common} /> : <BlockEditor block={b} {...common} />) : <PlanHub {...common} />;
+    view = b ? (b.type === "mood" ? <MoodEditor block={b} {...common} /> : b.type === "events" ? <EventsEditor block={b} {...common} /> : <BlockEditor block={b} {...common} />) : <PlanHub {...common} />;
   } else if (page.startsWith("workout:")) {
     const w = d.workouts.find((x) => x.id === page.split(":")[1]);
     view = w ? <WorkoutEditor workout={w} {...common} /> : <HealthHub {...common} />;
@@ -1579,6 +1579,7 @@ function BlockPreview({ block, onClick, now }) {
   let summary = "";
   if (block.type === "mood") summary = `${Object.keys(block.days).length} of ${daysInMonth(now)} days`;
   else if (block.type === "notes") summary = block.items ? block.items.slice(0, 50) : "Empty note";
+  else if (block.type === "events") { const upcoming = (block.events || []).filter((e) => e.date && e.date >= dayKey(now)).length; summary = upcoming ? `${upcoming} upcoming` : `${(block.events || []).length} event${(block.events || []).length === 1 ? "" : "s"}`; }
   else { const total = block.items.filter((i) => (i.t || "").trim()).length; if (block.type === "checklist") { const done = block.items.filter((i) => i.done).length; summary = `${done} of ${total} done`; } else summary = `${total} item${total === 1 ? "" : "s"}`; }
   return (
     <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${meta.color}`, borderRadius: 4, padding: "15px 16px", display: "flex", alignItems: "center", gap: 14 }}>
@@ -1599,11 +1600,12 @@ function getCategories(d) {
   return [...BUILTIN_CATEGORIES, ...custom];
 }
 function makeBlock(type, category, title) {
-  const t = (title || "").trim() || ({ checklist: "New checklist", list: "New list", schedule: "New schedule", notes: "New note", mood: "New mood tracker" }[type]);
+  const t = (title || "").trim() || ({ checklist: "New checklist", list: "New list", schedule: "New schedule", notes: "New note", mood: "New mood tracker", events: "Calendar" }[type]);
   const base = { id: uid(), type, category, title: t };
   if (type === "mood") return { ...base, monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} };
   if (type === "notes") return { ...base, items: "" };
   if (type === "schedule") return { ...base, items: [{ time: "", t: "" }] };
+  if (type === "events") return { ...base, events: [], googleSync: { connected: false, lastSyncAt: null, calendarId: "primary" } };
   return { ...base, items: [{ t: "", done: false }] };
 }
 function AddBlockMenu({ d, setD, go }) {
@@ -1744,6 +1746,100 @@ function BlockEditor({ block, d, setD, back }) {
     </div>
   );
 }
+function EventsEditor({ block, d, setD, now, back }) {
+  const meta = BLOCK_META.events;
+  const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
+  const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
+  const events = block.events || [];
+  const sync = block.googleSync || { connected: false, lastSyncAt: null };
+  const todayK = dayKey(now);
+  const sorted = [...events].sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")));
+  const upcoming = sorted.filter((e) => !e.date || e.date >= todayK);
+  const past = sorted.filter((e) => e.date && e.date < todayK);
+  const [editingId, setEditingId] = useState(null);
+  const addEvent = () => {
+    const e = { id: uid(), title: "", date: todayK, allDay: false, start: "09:00", end: "10:00", location: "", notes: "", source: "local", googleId: null, updatedAt: new Date().toISOString() };
+    update({ events: [...events, e] });
+    setEditingId(e.id);
+  };
+  const setEv = (id, patch) => update({ events: events.map((e) => e.id === id ? { ...e, ...patch, updatedAt: new Date().toISOString() } : e) });
+  const delEv = (id) => update({ events: events.filter((e) => e.id !== id) });
+  const fmtDate = (k) => { if (!k) return "No date"; const [y, m, dd] = k.split("-").map(Number); return new Date(y, m - 1, dd).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); };
+
+  return (
+    <div className="fade">
+      <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><CalendarIcon c={MIST} s={13} /> Calendar</div></div>
+          <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
+        </div>
+        <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this calendar" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'DM Serif Display',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
+      </div>
+      <div style={{ padding: "20px 18px 50px" }}>
+        <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "14px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 3, background: meta.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><CalendarIcon c={meta.color} s={18} /></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Google Calendar sync</div>
+            <div style={{ fontSize: 12, color: MUTED }}>{sync.connected ? `Connected · last synced ${sync.lastSyncAt ? new Date(sync.lastSyncAt).toLocaleString() : "never"}` : "Not connected — coming soon (one-way: Google → Planner)"}</div>
+          </div>
+          <button disabled style={{ background: "transparent", border: `1.5px solid ${LINE}`, color: MUTED, fontWeight: 700, fontSize: 12, padding: "8px 12px", borderRadius: 3, opacity: .6, cursor: "not-allowed" }}>Connect</button>
+        </div>
+
+        {upcoming.length === 0 && past.length === 0 && <div style={{ fontSize: 13, color: MUTED, fontStyle: "italic", padding: "12px 2px" }}>No events yet. Add your first below.</div>}
+
+        {upcoming.length > 0 && <SectionMini text="Upcoming" />}
+        <div style={{ display: "grid", gap: 9, marginTop: 8 }}>
+          {upcoming.map((e) => <EventRow key={e.id} e={e} isToday={e.date === todayK} editing={editingId === e.id} onEdit={() => setEditingId(editingId === e.id ? null : e.id)} onChange={(p) => setEv(e.id, p)} onDelete={() => delEv(e.id)} fmtDate={fmtDate} />)}
+        </div>
+
+        {past.length > 0 && <div style={{ marginTop: 16 }}><SectionMini text="Past" /></div>}
+        <div style={{ display: "grid", gap: 9, marginTop: 8, opacity: .65 }}>
+          {past.slice(-10).reverse().map((e) => <EventRow key={e.id} e={e} editing={editingId === e.id} onEdit={() => setEditingId(editingId === e.id ? null : e.id)} onChange={(p) => setEv(e.id, p)} onDelete={() => delEv(e.id)} fmtDate={fmtDate} />)}
+        </div>
+
+        <button onClick={addEvent} style={{ ...addBtn, marginTop: 14 }}>+ Add an event</button>
+        <p style={tip}>Each event has a date, time, location and notes. Once Google Calendar sync is on, your Google events will appear here automatically.</p>
+      </div>
+    </div>
+  );
+}
+function EventRow({ e, isToday, editing, onEdit, onChange, onDelete, fmtDate }) {
+  const accent = isToday ? AMBER : "#6E8597";
+  return (
+    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${accent}`, borderRadius: 4, padding: "12px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }} onClick={onEdit} className="pop">
+          <div style={{ fontSize: 15, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title || <span style={{ color: MUTED, fontWeight: 500 }}>Untitled event</span>}</div>
+          <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
+            {fmtDate(e.date)}{!e.allDay && e.start ? ` · ${e.start}${e.end ? `–${e.end}` : ""}` : e.allDay ? " · All day" : ""}{e.location ? ` · ${e.location}` : ""}
+            {e.source === "google" && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#6E8597", letterSpacing: ".08em" }}>· GOOGLE</span>}
+          </div>
+        </div>
+        <div className="pop" onClick={onDelete} style={{ cursor: "pointer", opacity: .4, flexShrink: 0 }}><XIcon c={MUTED} s={15} /></div>
+      </div>
+      {editing && (
+        <div style={{ display: "grid", gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${LINE}` }}>
+          <input value={e.title} onChange={(ev) => onChange({ title: ev.target.value })} placeholder="Event title" style={{ border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 600 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "center" }}>
+            <input type="date" value={e.date} onChange={(ev) => onChange({ date: ev.target.value })} style={{ border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14 }} />
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: MUTED }}>
+              <input type="checkbox" checked={!!e.allDay} onChange={(ev) => onChange({ allDay: ev.target.checked })} /> All day
+            </label>
+          </div>
+          {!e.allDay && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <input type="time" value={e.start || ""} onChange={(ev) => onChange({ start: ev.target.value })} style={{ border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14 }} />
+              <input type="time" value={e.end || ""} onChange={(ev) => onChange({ end: ev.target.value })} style={{ border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14 }} />
+            </div>
+          )}
+          <input value={e.location || ""} onChange={(ev) => onChange({ location: ev.target.value })} placeholder="Location (optional)" style={{ border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14 }} />
+          <textarea value={e.notes || ""} onChange={(ev) => onChange({ notes: ev.target.value })} placeholder="Notes" rows={3} style={{ border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, resize: "vertical", fontFamily: "inherit" }} />
+        </div>
+      )}
+    </div>
+  );
+}
 function BlockRow({ type, item, accent, onToggle, onText, onTime, onDelete }) {
   return (
     <div style={{ background: type === "checklist" && item.done ? INK : CARD, color: type === "checklist" && item.done ? PAPER : INK, border: `1px solid ${LINE}`, borderRadius: 4, padding: "13px 14px", display: "flex", alignItems: "center", gap: 12 }}>
@@ -1869,6 +1965,7 @@ const BLOCK_META = {
   checklist: { label: "Checklist", desc: "Tap to check off", color: SAGE, icon: (p) => <CheckSquareIcon {...p} /> },
   list: { label: "List", desc: "Simple bullet lines", color: AMBER, icon: (p) => <ListIcon {...p} /> },
   schedule: { label: "Schedule", desc: "Time + task", color: "#6E8597", icon: (p) => <ClockIcon {...p} /> },
+  events: { label: "Calendar", desc: "Dated events, syncable", color: "#6E8597", icon: (p) => <CalendarIcon {...p} /> },
   mood: { label: "Mood Tracker", desc: "Color a day, monthly", color: "#9C7E96", icon: (p) => <HeartIcon {...p} /> },
   notes: { label: "Notes", desc: "Free writing", color: "#7E8C6E", icon: (p) => <NoteIcon {...p} /> },
 };
@@ -1889,6 +1986,7 @@ const CheckSquareIcon = (p) => <svg {...I(p)}><rect x="3" y="3" width="18" heigh
 const ListIcon = (p) => <svg {...I(p)}><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>;
 const ClockIcon = (p) => <svg {...I(p)}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>;
 const NoteIcon = (p) => <svg {...I(p)}><path d="M4 4h16v12l-4 4H4z" /><path d="M16 20v-4h4" /></svg>;
+const CalendarIcon = (p) => <svg {...I(p)}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>;
 const HeartIcon = (p) => <svg {...I(p)}><path d="M12 21s-7-4.6-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.4 12 21 12 21z" /></svg>;
 const CartIcon = (p) => <svg {...I(p)}><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /><path d="M2 3h3l2.4 12.4a1.5 1.5 0 0 0 1.5 1.2h8.7a1.5 1.5 0 0 0 1.5-1.2L22 7H6" /></svg>;
 const FlameIcon = (p) => <svg {...I(p)}><path d="M12 2c1 3-1.5 4.5-1.5 7A2.5 2.5 0 0 0 13 11c1.5-1 1-3 1-3 2 1.5 4 3.5 4 7a6 6 0 0 1-12 0c0-3.5 3-5.5 3-8 0-2 1-4 3-5z" /></svg>;
