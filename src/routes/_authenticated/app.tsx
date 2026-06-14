@@ -18,7 +18,7 @@ function PlannerPage() {
   const navigate = useNavigate();
   const { isAdmin } = Route.useRouteContext();
   const [src, setSrc] = useState<string | null>(null);
-  const iframeRef = useState<{ el: HTMLIFrameElement | null }>({ el: null })[0];
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
