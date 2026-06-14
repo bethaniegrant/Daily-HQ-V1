@@ -57,6 +57,12 @@ function useCloudSync(d, setD) {
         ctx.current.userId = user.id;
         ctx.current.lkey = "wlp_doc_" + user.id;
 
+        try {
+          const { data: profile } = await client.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+          setDisplayName(profile?.display_name || user.user_metadata?.display_name || user.user_metadata?.full_name || (user.email ? user.email.split("@")[0] : ""));
+        } catch {}
+
+
         let local = null;
         try { local = JSON.parse(localStorage.getItem(ctx.current.lkey) || "null"); } catch {}
 
