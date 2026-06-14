@@ -616,7 +616,7 @@ function TrackerCalendar({ d, now, go, isDesktop }) {
             <div
               key={day}
               title={tip}
-              onClick={() => go("plan", "habits")}
+              onClick={() => setOverviewDay(info.dt)}
               className="pop"
               style={{
                 position: "relative",
