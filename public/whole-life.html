@@ -586,9 +586,12 @@ function TrackerCalendar({ d, now, go, isDesktop }) {
 
   return (
     <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, padding: "18px 18px 16px", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
         <button onClick={prevMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg></button>
-        <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: INK }}>{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, justifyContent: "center" }}>
+          <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: INK }}>{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+          <button onClick={() => setWeekOpen(true)} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, padding: "4px 10px", fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: INK, cursor: "pointer" }}>Week view</button>
+        </div>
         <button onClick={nextMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="9,6 15,12 9,18"/></svg></button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
