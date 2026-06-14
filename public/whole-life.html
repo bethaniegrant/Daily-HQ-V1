@@ -404,6 +404,15 @@ function Home({ d, now, go, openMenu, isDesktop }) {
         )}
       </header>
 
+      {/* Monthly tracker calendar */}
+      <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "0 4px 10px" }}>
+          <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>This month at a glance</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: ".12em", textTransform: "uppercase" }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+        </div>
+        <TrackerCalendar d={d} now={now} go={go} />
+      </section>
+
       {/* Today's Habits */}
       <section style={{ padding: isDesktop ? "24px 32px 0" : "20px 18px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "0 4px 10px" }}>
@@ -421,14 +430,6 @@ function Home({ d, now, go, openMenu, isDesktop }) {
         </div>
       </section>
 
-      {/* Monthly tracker calendar */}
-      <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "0 4px 10px" }}>
-          <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>This month at a glance</span>
-          <span style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: ".12em", textTransform: "uppercase" }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
-        </div>
-        <TrackerCalendar d={d} now={now} go={go} />
-      </section>
 
 
       <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
