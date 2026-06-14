@@ -1579,6 +1579,7 @@ function BlockPreview({ block, onClick, now }) {
   let summary = "";
   if (block.type === "mood") summary = `${Object.keys(block.days).length} of ${daysInMonth(now)} days`;
   else if (block.type === "notes") summary = block.items ? block.items.slice(0, 50) : "Empty note";
+  else if (block.type === "events") { const upcoming = (block.events || []).filter((e) => e.date && e.date >= dayKey(now)).length; summary = upcoming ? `${upcoming} upcoming` : `${(block.events || []).length} event${(block.events || []).length === 1 ? "" : "s"}`; }
   else { const total = block.items.filter((i) => (i.t || "").trim()).length; if (block.type === "checklist") { const done = block.items.filter((i) => i.done).length; summary = `${done} of ${total} done`; } else summary = `${total} item${total === 1 ? "" : "s"}`; }
   return (
     <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${meta.color}`, borderRadius: 4, padding: "15px 16px", display: "flex", alignItems: "center", gap: 14 }}>
