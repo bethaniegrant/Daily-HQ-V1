@@ -1564,15 +1564,67 @@ function Goals({ d, setD, back }) {
 
 function Meals({ d, setD, back }) {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const set = (day, v) => setD({ ...d, meals: { ...d.meals, [day]: v } });
+  const setSlot = (day, slot, v) => {
+    const cur = mealsFor(d.meals[day]);
+    const next = { ...cur, [slot]: v };
+    setD({ ...d, meals: { ...d.meals, [day]: next } });
+  };
   const setShop = (i, patch) => setD({ ...d, shopping: d.shopping.map((s, j) => j === i ? { ...s, ...patch } : s) });
   const addShop = () => setD({ ...d, shopping: [...d.shopping, { t: "", done: false }] });
   const delShop = (i) => setD({ ...d, shopping: d.shopping.filter((_, j) => j !== i) });
   const gotCount = d.shopping.filter((s) => s.done && s.t.trim()).length, shopTotal = d.shopping.filter((s) => s.t.trim()).length;
+  const today = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];
+  const [openDay, setOpenDay] = useState(today);
   return (
     <Screen title="Meals" sub="This week" back={back} accent={SAGE}>
       <div style={{ display: "grid", gap: 8 }}>
-        {days.map((day, i) => (
+        {days.map((day, i) => {
+          const m = mealsFor(d.meals[day]);
+          const filled = MEAL_SLOTS.filter((s) => (m[s.key] || "").trim()).length;
+          const isOpen = openDay === day;
+          const isToday = day === today;
+          return (
+            <div key={day} style={{ background: CARD, borderRadius: 4, border: `1px solid ${isToday ? SAGE : LINE}`, overflow: "hidden" }}>
+              <div className="pop" onClick={() => setOpenDay(isOpen ? null : day)} style={{ padding: "13px 16px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+                <div style={{ width: 38, fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: i > 4 ? AMBER : SAGE }}>{day}</div>
+                <div style={{ flex: 1, fontSize: 13, color: filled ? TEXT : MUTED, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {filled ? MEAL_SLOTS.filter((s) => (m[s.key] || "").trim()).map((s) => m[s.key]).join(" · ") : "Tap to plan meals"}
+                </div>
+                <div style={{ fontSize: 11, color: MUTED, fontWeight: 700 }}>{filled}/4</div>
+                <div style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .15s" }}><ChevIcon c={MUTED} s={16} /></div>
+              </div>
+              {isOpen && (
+                <div style={{ display: "grid", gap: 8, padding: "4px 16px 16px" }}>
+                  {MEAL_SLOTS.map((s) => (
+                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10, background: PAPER, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: SAGE, width: 72, flexShrink: 0 }}>{s.label}</div>
+                      <input value={m[s.key] || ""} onChange={(e) => setSlot(day, s.key, e.target.value)} placeholder={`What's for ${s.label.toLowerCase()}?`} style={{ border: "none", flex: 1, fontSize: 14, fontWeight: 500, background: "none" }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ marginTop: 24, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 12, letterSpacing: ".16em", textTransform: "uppercase", color: TEXT, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><CartIcon c={INK} s={16} /> Shopping list</div>
+        {shopTotal > 0 && <div style={{ fontSize: 12, color: MUTED, fontWeight: 600 }}>{gotCount}/{shopTotal} got</div>}
+      </div>
+      <div style={{ display: "grid", gap: 8 }}>
+        {d.shopping.map((s, i) => (
+          <div key={i} style={{ background: s.done ? "#EEF0E9" : CARD, borderRadius: 4, padding: "11px 14px", display: "flex", alignItems: "center", gap: 12, border: `1px solid ${LINE}` }}>
+            <div className="pop" onClick={() => setShop(i, { done: !s.done })} style={{ width: 24, height: 24, borderRadius: 3, border: `2px solid ${SAGE}`, background: s.done ? SAGE : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.done && <CheckIcon c="#fff" s={14} />}</div>
+            <input value={s.t} onChange={(e) => setShop(i, { t: e.target.value })} placeholder="Add an item" style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none", color: s.done ? MUTED : INK, textDecoration: s.done ? "line-through" : "none" }} />
+            <div className="pop" onClick={() => delShop(i)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={14} /></div>
+          </div>
+        ))}
+      </div>
+      <button onClick={addShop} style={addBtn}>+ Add an item</button>
+      <p style={tip}>Tap a day to plan breakfast, lunch, dinner and snacks. Today's row is highlighted.</p>
+    </Screen>
+  );
+}
           <div key={day} style={{ background: CARD, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${LINE}` }}>
             <div style={{ width: 38, fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: i > 4 ? AMBER : SAGE }}>{day}</div>
             <input value={d.meals[day]} onChange={(e) => set(day, e.target.value)} placeholder="What's for dinner?" style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none" }} />
