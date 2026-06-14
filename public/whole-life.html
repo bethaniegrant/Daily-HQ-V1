@@ -756,7 +756,7 @@ function dayBundle(d, dt) {
     });
   });
   const weekdayShort = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()];
-  const meal = (d.meals && d.meals[weekdayShort]) || "";
+  const meal = mealsFor(d.meals && d.meals[weekdayShort]);
   return { habits, medsList, workouts, mood, bills, meal, weekdayShort };
 }
 
