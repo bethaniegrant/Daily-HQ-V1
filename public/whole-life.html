@@ -429,11 +429,20 @@ function Home({ d, now, go, openMenu, isDesktop }) {
 
       <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
         <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Jump back in</div>
-        <div className="stagger" style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "1fr 1fr", gap: isDesktop ? 16 : 12 }}>
-          <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money", "budget")} />
+        <div className="stagger" style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(5, 1fr)" : "1fr 1fr", gap: isDesktop ? 16 : 12 }}>
+          <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money")} />
           <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />
           <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />
           <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${Object.values(d.meals).filter((m) => m.trim()).length}/7`} sub="days planned" onClick={() => go("health", "meals")} />
+          {(() => {
+            const mb = d.blocks.find((b) => b.type === "mood");
+            const logged = mb ? Object.keys(mb.days || {}).length : 0;
+            const today = mb && mb.days && mb.days[now.getDate()];
+            const moodToday = today && mb.moods.find((m) => m.id === today);
+            return (
+              <Tile accent={PLUM} icon={HeartIcon} title="Mood" big={moodToday ? moodToday.label : (logged ? `${logged}` : "Log")} sub={moodToday ? "today" : (logged ? "days this month" : "tap to begin")} onClick={() => go("plan", mb ? "block:" + mb.id : null)} />
+            );
+          })()}
         </div>
       </section>
 
@@ -1117,13 +1126,19 @@ function Budget({ d, setD, back }) {
         </div>
       </div>
 
-      <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 22px", marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: left < 0 ? AMBER : MIST }}>{left < 0 ? "Over by" : "Left to allocate"}</div>
-          <div style={{ fontSize: 12, color: MIST, marginTop: 4 }}>After every expense category above</div>
-        </div>
-        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 34, fontWeight: 600, letterSpacing: "-.02em", color: left < 0 ? AMBER : PAPER }}>${money(Math.abs(left))}</div>
-      </div>
+      {(() => {
+        const savedTotal = goals.reduce((s, g) => s + (Number(g.saved) || 0), 0);
+        const leftFinal = left - savedTotal;
+        return (
+          <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 22px", marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: leftFinal < 0 ? AMBER : MIST }}>{leftFinal < 0 ? "Over by" : "Left to allocate"}</div>
+              <div style={{ fontSize: 12, color: MIST, marginTop: 4 }}>After expenses & savings (− ${money(savedTotal)})</div>
+            </div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 34, fontWeight: 600, letterSpacing: "-.02em", color: leftFinal < 0 ? AMBER : PAPER }}>${money(Math.abs(leftFinal))}</div>
+          </div>
+        );
+      })()}
 
       <p style={tip}>Give every dollar a job. Add a "DUE" day so bills don't sneak up. Sinking funds turn surprise costs into planned ones.</p>
     </Screen>
