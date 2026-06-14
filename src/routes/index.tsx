@@ -113,7 +113,7 @@ function TopNav({ signedIn }: { signedIn: boolean }) {
           <div className="ml-auto flex items-center gap-2">
             <Link
               to={signedIn ? "/app" : "/auth"}
-              className="hidden sm:inline-flex items-center text-[13px] px-4 py-2 rounded-full text-[color:var(--stone-on-dark-soft)] hover:text-[color:var(--stone-on-dark)] transition-colors"
+              className="inline-flex items-center text-[13px] px-4 py-2 rounded-full text-[color:var(--stone-on-dark-soft)] hover:text-[color:var(--stone-on-dark)] transition-colors"
             >
               {signedIn ? "Open app" : "Sign in"}
             </Link>
