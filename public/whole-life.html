@@ -171,7 +171,7 @@ const seed = () => ({
   monthStamp: monthKey(),
   habitDefs: [{ id: uid(), n: "Move my body" }, { id: uid(), n: "Drink water" }, { id: uid(), n: "Read 10 min" }],
   habitChecks: {}, habitOneoffs: {},
-  meds: [{ id: uid(), n: "Vitamin D", dose: "1000 IU", when: "Morning" }, { id: uid(), n: "Magnesium", dose: "200 mg", when: "Night" }],
+  meds: [{ id: uid(), n: "Vitamin D", dose: "1000 IU", times: 1 }, { id: uid(), n: "Magnesium", dose: "200 mg", times: 1 }],
   medChecks: {}, // { dayKey: { medId: true } }
   workouts: [
     { id: uid(), n: "Push day", cat: "push",   ex: [{ id: uid(), n: "Bench press",    sets: "3", reps: "8",  w: "" }, { id: uid(), n: "Shoulder press", sets: "3", reps: "10", w: "" }] },
