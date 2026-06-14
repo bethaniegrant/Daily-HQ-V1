@@ -129,7 +129,7 @@ function useCloudSync(d, setD) {
     return () => clearTimeout(t);
   }, [d, ready]);
 
-  return ready;
+  return { ready, displayName };
 }
 
 
