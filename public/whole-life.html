@@ -492,7 +492,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
           <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money")} />
           <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />
           <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />
-          <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${Object.values(d.meals).filter((m) => m.trim()).length}/7`} sub="days planned" onClick={() => go("health", "meals")} />
+          <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${daysPlanned(d)}/7`} sub="days planned" onClick={() => go("health", "meals")} />
           {(() => {
             const mb = d.blocks.find((b) => b.type === "mood");
             const logged = mb ? Object.keys(mb.days || {}).length : 0;
