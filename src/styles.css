@@ -166,25 +166,25 @@
    rest of the app keeps its existing shadcn tokens.
    =========================================================== */
 .stone-scope {
-  --stone-bg: oklch(0.965 0.012 75);
-  --stone-bg-2: oklch(0.935 0.014 72);
-  --stone-surface: oklch(0.905 0.018 70);
-  --stone-surface-2: oklch(0.85 0.02 68);
-  --stone-line: oklch(0.82 0.018 70);
-  --stone-line-soft: oklch(0.88 0.014 72);
-  --stone-ink: oklch(0.22 0.012 55);
-  --stone-ink-soft: oklch(0.42 0.012 55);
-  --stone-ink-mute: oklch(0.56 0.012 60);
-  --stone-dark: oklch(0.22 0.012 55);
-  --stone-dark-2: oklch(0.27 0.014 55);
-  --stone-dark-line: oklch(0.34 0.012 55);
-  --stone-on-dark: oklch(0.93 0.012 75);
-  --stone-on-dark-soft: oklch(0.78 0.014 70);
-  --stone-accent: oklch(0.56 0.085 50);
-  --stone-accent-2: oklch(0.66 0.105 55);
-  --stone-accent-soft: oklch(0.88 0.04 65);
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --stone-bg: #EDE3D5;
+  --stone-bg-2: #FDFAF4;
+  --stone-surface: #FDFAF4;
+  --stone-surface-2: #EDE3D5;
+  --stone-line: rgba(60,40,20,0.08);
+  --stone-line-soft: rgba(60,40,20,0.05);
+  --stone-ink: #2A2018;
+  --stone-ink-soft: #1B3652;
+  --stone-ink-mute: #9A9082;
+  --stone-dark: #1B3652;
+  --stone-dark-2: #14283F;
+  --stone-dark-line: rgba(255,255,255,0.10);
+  --stone-on-dark: #FDFAF4;
+  --stone-on-dark-soft: #C4B4A4;
+  --stone-accent: #C4717A;
+  --stone-accent-2: #5A9AB5;
+  --stone-accent-soft: rgba(196,113,122,0.18);
+  --font-display: "DM Serif Display", ui-serif, Georgia, serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
   font-family: var(--font-sans);
   color: var(--stone-ink);
   background: var(--stone-bg);
