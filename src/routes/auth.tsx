@@ -120,7 +120,8 @@ function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
+        <CardHeader className="items-center text-center">
+          <img src={logoUrl} alt="Bethanie Rose" className="h-20 w-auto mb-2" />
           <CardTitle>Daily HQ</CardTitle>
           <CardDescription>
             {token
