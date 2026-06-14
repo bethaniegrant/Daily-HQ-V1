@@ -1600,11 +1600,12 @@ function getCategories(d) {
   return [...BUILTIN_CATEGORIES, ...custom];
 }
 function makeBlock(type, category, title) {
-  const t = (title || "").trim() || ({ checklist: "New checklist", list: "New list", schedule: "New schedule", notes: "New note", mood: "New mood tracker" }[type]);
+  const t = (title || "").trim() || ({ checklist: "New checklist", list: "New list", schedule: "New schedule", notes: "New note", mood: "New mood tracker", events: "Calendar" }[type]);
   const base = { id: uid(), type, category, title: t };
   if (type === "mood") return { ...base, monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} };
   if (type === "notes") return { ...base, items: "" };
   if (type === "schedule") return { ...base, items: [{ time: "", t: "" }] };
+  if (type === "events") return { ...base, events: [], googleSync: { connected: false, lastSyncAt: null, calendarId: "primary" } };
   return { ...base, items: [{ t: "", done: false }] };
 }
 function AddBlockMenu({ d, setD, go }) {
