@@ -31,6 +31,7 @@ const LEGACY_KEY = "wlp_doc";
 
 function useCloudSync(d, setD) {
   const [ready, setReady] = useState(false);
+  const [displayName, setDisplayName] = useState("");
   const ctx = useRef({ client: null, userId: null, lkey: null });
   const skipNextSave = useRef(true);
   const bootedRef = useRef(false);
