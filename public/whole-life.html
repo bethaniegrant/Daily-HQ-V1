@@ -193,7 +193,7 @@ const seed = () => ({
   ],
   workoutDone: {}, // { dayKey: { workoutId: { exId: true } } }
   goals: [{ n: "", done: false }, { n: "", done: false }, { n: "", done: false }],
-  meals: { Mon: "", Tue: "", Wed: "", Thu: "", Fri: "", Sat: "", Sun: "" },
+  meals: { Mon: {}, Tue: {}, Wed: {}, Thu: {}, Fri: {}, Sat: {}, Sun: {} },
   shopping: [{ t: "", done: false }],
   intention: "Steady",
   dayNotes: {}, // { dayKey: string }
@@ -204,6 +204,24 @@ const seed = () => ({
 });
 
 const LOGO_URL = "/__l5e/assets-v1/9dac1cfe-e63c-454c-a03e-d189e841f1f5/bethanie-rose-logo-v2.png";
+
+const MEAL_SLOTS = [
+  { key: "breakfast", label: "Breakfast" },
+  { key: "lunch", label: "Lunch" },
+  { key: "dinner", label: "Dinner" },
+  { key: "snacks", label: "Snacks" },
+];
+// Normalize a day's meal entry — supports legacy string (treated as dinner) or object.
+const mealsFor = (entry) => {
+  if (!entry) return {};
+  if (typeof entry === "string") return entry.trim() ? { dinner: entry } : {};
+  return entry;
+};
+const dayHasMeal = (entry) => {
+  const m = mealsFor(entry);
+  return MEAL_SLOTS.some((s) => (m[s.key] || "").trim());
+};
+const daysPlanned = (d) => Object.values(d.meals || {}).filter(dayHasMeal).length;
 
 function useIsDesktop() {
   const [is, setIs] = useState(typeof window !== "undefined" && window.matchMedia("(min-width: 900px)").matches);
@@ -474,7 +492,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
           <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money")} />
           <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />
           <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />
-          <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${Object.values(d.meals).filter((m) => m.trim()).length}/7`} sub="days planned" onClick={() => go("health", "meals")} />
+          <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${daysPlanned(d)}/7`} sub="days planned" onClick={() => go("health", "meals")} />
           {(() => {
             const mb = d.blocks.find((b) => b.type === "mood");
             const logged = mb ? Object.keys(mb.days || {}).length : 0;
@@ -547,7 +565,7 @@ function HealthHub({ d, now, go }) {
     <Hub title="Health" sub="Care for the basics">
       <ToolRow icon={PillIcon} color={PLUM} title="Medications" sub="Track your daily doses" stat={d.meds.length ? `${medsTaken}/${d.meds.length}` : ""} onClick={() => go("health", "meds")} />
       <ToolRow icon={DumbbellIcon} color={BLUE} title="Workouts" sub="Build and log your training" stat={`${d.workouts.length}`} onClick={() => go("health", "workouts")} />
-      <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping list" stat={`${Object.values(d.meals).filter((m) => m.trim()).length}/7`} onClick={() => go("health", "meals")} />
+      <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping list" stat={`${daysPlanned(d)}/7`} onClick={() => go("health", "meals")} />
       <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("plan", mb ? "block:" + mb.id : null); }} />
     </Hub>
   );
@@ -738,7 +756,7 @@ function dayBundle(d, dt) {
     });
   });
   const weekdayShort = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()];
-  const meal = (d.meals && d.meals[weekdayShort]) || "";
+  const meal = mealsFor(d.meals && d.meals[weekdayShort]);
   return { habits, medsList, workouts, mood, bills, meal, weekdayShort };
 }
 
@@ -849,9 +867,16 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
             </div>
           </OverviewBlock>
         )}
-        {b.meal && (
-          <OverviewBlock label={`${b.weekdayShort} meal`} color={SAGE} onClick={() => { onClose(); go("health", "meals"); }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: "'DM Serif Display',serif" }}>{b.meal}</div>
+        {MEAL_SLOTS.some((s) => (b.meal[s.key] || "").trim()) && (
+          <OverviewBlock label={`${b.weekdayShort} meals`} color={SAGE} onClick={() => { onClose(); go("health", "meals"); }}>
+            <div style={{ display: "grid", gap: 6 }}>
+              {MEAL_SLOTS.filter((s) => (b.meal[s.key] || "").trim()).map((s) => (
+                <div key={s.key} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: SAGE, minWidth: 64 }}>{s.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: "'DM Serif Display',serif", flex: 1 }}>{b.meal[s.key]}</div>
+                </div>
+              ))}
+            </div>
           </OverviewBlock>
         )}
         <OverviewBlock label="Notes" color={MIST}>
@@ -1539,20 +1564,48 @@ function Goals({ d, setD, back }) {
 
 function Meals({ d, setD, back }) {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const set = (day, v) => setD({ ...d, meals: { ...d.meals, [day]: v } });
+  const setSlot = (day, slot, v) => {
+    const cur = mealsFor(d.meals[day]);
+    const next = { ...cur, [slot]: v };
+    setD({ ...d, meals: { ...d.meals, [day]: next } });
+  };
   const setShop = (i, patch) => setD({ ...d, shopping: d.shopping.map((s, j) => j === i ? { ...s, ...patch } : s) });
   const addShop = () => setD({ ...d, shopping: [...d.shopping, { t: "", done: false }] });
   const delShop = (i) => setD({ ...d, shopping: d.shopping.filter((_, j) => j !== i) });
   const gotCount = d.shopping.filter((s) => s.done && s.t.trim()).length, shopTotal = d.shopping.filter((s) => s.t.trim()).length;
+  const today = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];
+  const [openDay, setOpenDay] = useState(today);
   return (
     <Screen title="Meals" sub="This week" back={back} accent={SAGE}>
       <div style={{ display: "grid", gap: 8 }}>
-        {days.map((day, i) => (
-          <div key={day} style={{ background: CARD, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${LINE}` }}>
-            <div style={{ width: 38, fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: i > 4 ? AMBER : SAGE }}>{day}</div>
-            <input value={d.meals[day]} onChange={(e) => set(day, e.target.value)} placeholder="What's for dinner?" style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none" }} />
-          </div>
-        ))}
+        {days.map((day, i) => {
+          const m = mealsFor(d.meals[day]);
+          const filled = MEAL_SLOTS.filter((s) => (m[s.key] || "").trim()).length;
+          const isOpen = openDay === day;
+          const isToday = day === today;
+          return (
+            <div key={day} style={{ background: CARD, borderRadius: 4, border: `1px solid ${isToday ? SAGE : LINE}`, overflow: "hidden" }}>
+              <div className="pop" onClick={() => setOpenDay(isOpen ? null : day)} style={{ padding: "13px 16px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+                <div style={{ width: 38, fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: i > 4 ? AMBER : SAGE }}>{day}</div>
+                <div style={{ flex: 1, fontSize: 13, color: filled ? TEXT : MUTED, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {filled ? MEAL_SLOTS.filter((s) => (m[s.key] || "").trim()).map((s) => m[s.key]).join(" · ") : "Tap to plan meals"}
+                </div>
+                <div style={{ fontSize: 11, color: MUTED, fontWeight: 700 }}>{filled}/4</div>
+                <div style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .15s" }}><ChevIcon c={MUTED} s={16} /></div>
+              </div>
+              {isOpen && (
+                <div style={{ display: "grid", gap: 8, padding: "4px 16px 16px" }}>
+                  {MEAL_SLOTS.map((s) => (
+                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10, background: PAPER, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: SAGE, width: 72, flexShrink: 0 }}>{s.label}</div>
+                      <input value={m[s.key] || ""} onChange={(e) => setSlot(day, s.key, e.target.value)} placeholder={`What's for ${s.label.toLowerCase()}?`} style={{ border: "none", flex: 1, fontSize: 14, fontWeight: 500, background: "none" }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       <div style={{ marginTop: 24, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 12, letterSpacing: ".16em", textTransform: "uppercase", color: TEXT, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><CartIcon c={INK} s={16} /> Shopping list</div>
@@ -1568,7 +1621,7 @@ function Meals({ d, setD, back }) {
         ))}
       </div>
       <button onClick={addShop} style={addBtn}>+ Add an item</button>
-      <p style={tip}>Plan your dinners, then build the shopping list right under them.</p>
+      <p style={tip}>Tap a day to plan breakfast, lunch, dinner and snacks. Today's row is highlighted.</p>
     </Screen>
   );
 }
