@@ -189,6 +189,7 @@ const seed = () => ({
   meals: { Mon: "", Tue: "", Wed: "", Thu: "", Fri: "", Sat: "", Sun: "" },
   shopping: [{ t: "", done: false }],
   intention: "Steady",
+  dayNotes: {}, // { dayKey: string }
   blocks: [
     { id: uid(), type: "checklist", category: "plan", title: "Errands", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }] },
     { id: uid(), type: "mood", category: "health", title: "Mood", monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} },
@@ -230,6 +231,17 @@ function App() {
   }, [now, synced]); // eslint-disable-line
 
   const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
+
+  // listen for parent (app shell) messages — e.g. Home button → reset to home tab
+  useEffect(() => {
+    const handler = (e) => {
+      const m = e && e.data;
+      if (m && m.type === "go") { setTab(m.tab || "home"); setPage(m.page || null); }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
   const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true), isDesktop };
 
   // resolve current page
@@ -352,7 +364,7 @@ function App() {
 }
 
 // ═══ HOME ═════════════════════════════════════════════════════════
-function Home({ d, now, go, openMenu, isDesktop }) {
+function Home({ d, setD, now, go, openMenu, isDesktop }) {
   const hour = now.getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const comp = dayCompletion(d, now);
@@ -396,7 +408,7 @@ function Home({ d, now, go, openMenu, isDesktop }) {
             {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>B.</span>
           </h1>
           <p style={{ fontSize: isDesktop ? 16 : 14, color: MUTED, lineHeight: 1.5, maxWidth: 520, margin: 0 }}>
-            {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""} {d.intention ? `Today's intention: ${d.intention.toLowerCase()}.` : ""}
+            {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""}
           </p>
         </div>
         {isDesktop && (
@@ -404,13 +416,30 @@ function Home({ d, now, go, openMenu, isDesktop }) {
         )}
       </header>
 
+      {/* Today's intention */}
+      <section style={{ padding: isDesktop ? "18px 32px 0" : "16px 18px 0" }}>
+        <div style={{ background: INK, color: PAPER, borderRadius: 24, padding: isDesktop ? "26px 30px" : "20px 22px", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ height: 1, width: 18, background: AMBER }} />
+            <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>Today's intention</span>
+          </div>
+          <input
+            value={d.intention || ""}
+            onChange={(e) => setD({ ...d, intention: e.target.value })}
+            placeholder="What word will guide today?"
+            style={{ width: "100%", border: "none", outline: "none", background: "transparent", color: PAPER, fontFamily: "'Fraunces',serif", fontWeight: 600, fontStyle: "italic", fontSize: isDesktop ? 44 : 30, lineHeight: 1.1, letterSpacing: "-.01em", padding: 0 }}
+          />
+        </div>
+      </section>
+
+
       {/* Monthly tracker calendar */}
       <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "0 4px 10px" }}>
           <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>This month at a glance</span>
           <span style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: ".12em", textTransform: "uppercase" }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
         </div>
-        <TrackerCalendar d={d} now={now} go={go} isDesktop={isDesktop} />
+        <TrackerCalendar d={d} setD={setD} now={now} go={go} isDesktop={isDesktop} />
       </section>
 
       {/* Today's Habits */}
@@ -540,7 +569,7 @@ function MoreHub({ d, setD, go }) {
 
 function Note({ children }) { return <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, fontStyle: "italic", fontFamily: "'Fraunces',serif", padding: "4px 2px" }}>{children}</div>; }
 function SectionMini({ text }) { return <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginTop: 8 }}>{text}</div>; }
-function TrackerCalendar({ d, now, go, isDesktop }) {
+function TrackerCalendar({ d, setD, now, go, isDesktop }) {
   const [overviewDay, setOverviewDay] = useState(null); // Date or null
   const [weekOpen, setWeekOpen] = useState(false);
   const [cursor, setCursor] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -660,7 +689,7 @@ function TrackerCalendar({ d, now, go, isDesktop }) {
         <Legend color={AMBER} label="Mood" />
         <Legend color={AMBER} label="Bill due" ring />
       </div>
-      {overviewDay && <DayOverview d={d} dt={overviewDay} onClose={() => setOverviewDay(null)} go={go} isDesktop={isDesktop} />}
+      {overviewDay && <DayOverview d={d} setD={setD} dt={overviewDay} onClose={() => setOverviewDay(null)} go={go} isDesktop={isDesktop} />}
       {weekOpen && <WeekOverview d={d} anchor={overviewDay || now} onClose={() => setWeekOpen(false)} go={go} isDesktop={isDesktop} onPickDay={(dt) => { setWeekOpen(false); setOverviewDay(dt); }} />}
     </div>
   );
@@ -734,16 +763,19 @@ function OverviewBlock({ label, color, count, children, onClick }) {
   );
 }
 
-function DayOverview({ d, dt, onClose, go, isDesktop }) {
+function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
   const b = dayBundle(d, dt);
   const isToday = dayKey(dt) === dayKey(new Date());
   const title = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   const habitsDone = b.habits.filter((h) => h.done).length;
   const medsDone = b.medsList.reduce((s, m) => s + (m.done >= m.times ? 1 : 0), 0);
+  const k = dayKey(dt);
+  const note = (d.dayNotes && d.dayNotes[k]) || "";
+  const setNote = (v) => setD && setD({ ...d, dayNotes: { ...(d.dayNotes || {}), [k]: v } });
   const anything = b.habits.length || b.medsList.length || b.workouts.length || b.mood || b.bills.length || b.meal;
   return (
     <OverviewShell title={title} sub={isToday ? "Today's overview" : "Day overview"} onClose={onClose}>
-      {!anything && <div style={{ fontSize: 13, color: MUTED, padding: "20px 4px", textAlign: "center", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>Nothing tracked for this day yet.</div>}
+      {!anything && !note && <div style={{ fontSize: 13, color: MUTED, padding: "20px 4px", textAlign: "center", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>Nothing tracked for this day yet. Add a note below.</div>}
       <div style={{ display: "grid", gap: 10 }}>
         {b.mood && (
           <OverviewBlock label="Mood" color={b.mood.color}>
@@ -814,6 +846,15 @@ function DayOverview({ d, dt, onClose, go, isDesktop }) {
             <div style={{ fontSize: 14, fontWeight: 600, color: INK, fontFamily: "'Fraunces',serif" }}>{b.meal}</div>
           </OverviewBlock>
         )}
+        <OverviewBlock label="Notes" color={MIST}>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Add a note for this day…"
+            rows={3}
+            style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 6, background: PAPER, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", color: INK, resize: "vertical", outline: "none" }}
+          />
+        </OverviewBlock>
       </div>
     </OverviewShell>
   );
