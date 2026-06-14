@@ -231,7 +231,7 @@ function App() {
   // resolve current page
   let view;
   if (page === null) {
-    view = { home: <Home {...common} />, money: <MoneyHub {...common} />, health: <HealthHub {...common} />, plan: <PlanHub {...common} />, more: <MoreHub {...common} /> }[tab];
+    view = { home: <Home {...common} />, money: <Budget {...common} back={() => go("home")} />, health: <HealthHub {...common} />, plan: <PlanHub {...common} />, more: <MoreHub {...common} /> }[tab];
   } else if (page.startsWith("block:")) {
     const b = d.blocks.find((x) => x.id === page.split(":")[1]);
     view = b ? (b.type === "mood" ? <MoodEditor block={b} {...common} /> : <BlockEditor block={b} {...common} />) : <PlanHub {...common} />;
