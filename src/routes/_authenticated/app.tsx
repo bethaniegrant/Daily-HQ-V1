@@ -18,6 +18,7 @@ function PlannerPage() {
   const navigate = useNavigate();
   const { isAdmin } = Route.useRouteContext();
   const [src, setSrc] = useState<string | null>(null);
+  const iframeRef = useState<{ el: HTMLIFrameElement | null }>({ el: null })[0];
 
   useEffect(() => {
     let cancelled = false;
@@ -40,25 +41,30 @@ function PlannerPage() {
     navigate({ to: "/auth" });
   }
 
+  function goHome() {
+    iframeRef.el?.contentWindow?.postMessage({ type: "go", tab: "home" }, "*");
+  }
+
+  const btn = { opacity: 0.94, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" } as const;
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "#ece6dc" }}>
       {src && (
         <iframe
+          ref={(el) => { iframeRef.el = el; }}
           src={src}
           title="Daily HQ"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
         />
       )}
-      <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 50, display: "flex", gap: 8 }}>
-        <Link to="/app">
-          <Button size="sm" variant="secondary" style={{ opacity: 0.92, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" }}>Home</Button>
-        </Link>
+      <div style={{ position: "fixed", top: 16, right: 16, zIndex: 50, display: "flex", gap: 8 }}>
+        <Button onClick={goHome} size="sm" variant="secondary" style={btn}>Home</Button>
         {isAdmin && (
           <Link to="/admin">
-            <Button size="sm" variant="secondary" style={{ opacity: 0.92, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" }}>Admin</Button>
+            <Button size="sm" variant="secondary" style={btn}>Admin</Button>
           </Link>
         )}
-        <Button onClick={signOut} size="sm" variant="secondary" style={{ opacity: 0.92, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" }}>
+        <Button onClick={signOut} size="sm" variant="secondary" style={btn}>
           Sign out
         </Button>
       </div>
