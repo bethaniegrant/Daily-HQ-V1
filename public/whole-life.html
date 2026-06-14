@@ -828,7 +828,15 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
           <OverviewBlock label={`${b.weekdayShort} meal`} color={SAGE} onClick={() => { onClose(); go("health", "meals"); }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: INK, fontFamily: "'Fraunces',serif" }}>{b.meal}</div>
           </OverviewBlock>
-        )}
+        <OverviewBlock label="Notes" color={MIST}>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Add a note for this day…"
+            rows={3}
+            style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 6, background: PAPER, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", color: INK, resize: "vertical", outline: "none" }}
+          />
+        </OverviewBlock>
       </div>
     </OverviewShell>
   );
