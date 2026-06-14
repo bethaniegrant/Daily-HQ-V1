@@ -42,7 +42,7 @@ function PlannerPage() {
   }
 
   function goHome() {
-    iframeRef.el?.contentWindow?.postMessage({ type: "go", tab: "home" }, "*");
+    iframeRef.current?.contentWindow?.postMessage({ type: "go", tab: "home" }, "*");
   }
 
   const btn = { opacity: 0.94, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" } as const;
@@ -51,7 +51,7 @@ function PlannerPage() {
     <div style={{ position: "fixed", inset: 0, background: "#ece6dc" }}>
       {src && (
         <iframe
-          ref={(el) => { iframeRef.el = el; }}
+          ref={iframeRef}
           src={src}
           title="Daily HQ"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
