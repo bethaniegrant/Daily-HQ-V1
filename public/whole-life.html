@@ -242,6 +242,7 @@ function App() {
   const [tab, setTab] = useState("home");     // home | money | health | plan | more
   const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [d, setD] = useState(seed);
   const { ready: synced, displayName } = useCloudSync(d, setD);
 
