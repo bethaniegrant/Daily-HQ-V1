@@ -565,7 +565,7 @@ function HealthHub({ d, now, go }) {
     <Hub title="Health" sub="Care for the basics">
       <ToolRow icon={PillIcon} color={PLUM} title="Medications" sub="Track your daily doses" stat={d.meds.length ? `${medsTaken}/${d.meds.length}` : ""} onClick={() => go("health", "meds")} />
       <ToolRow icon={DumbbellIcon} color={BLUE} title="Workouts" sub="Build and log your training" stat={`${d.workouts.length}`} onClick={() => go("health", "workouts")} />
-      <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping list" stat={`${Object.values(d.meals).filter((m) => m.trim()).length}/7`} onClick={() => go("health", "meals")} />
+      <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping list" stat={`${daysPlanned(d)}/7`} onClick={() => go("health", "meals")} />
       <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("plan", mb ? "block:" + mb.id : null); }} />
     </Hub>
   );
