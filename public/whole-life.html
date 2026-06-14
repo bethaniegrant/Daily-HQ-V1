@@ -408,13 +408,30 @@ function Home({ d, setD, now, go, openMenu, isDesktop }) {
             {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>B.</span>
           </h1>
           <p style={{ fontSize: isDesktop ? 16 : 14, color: MUTED, lineHeight: 1.5, maxWidth: 520, margin: 0 }}>
-            {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""} {d.intention ? `Today's intention: ${d.intention.toLowerCase()}.` : ""}
+            {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""}
           </p>
         </div>
         {isDesktop && (
           <img src={LOGO_URL} alt="Bethanie Rose" style={{ width: 180, height: 180, objectFit: "contain", filter: "drop-shadow(0 20px 40px rgba(22,32,28,.18))" }} />
         )}
       </header>
+
+      {/* Today's intention */}
+      <section style={{ padding: isDesktop ? "18px 32px 0" : "16px 18px 0" }}>
+        <div style={{ background: INK, color: PAPER, borderRadius: 24, padding: isDesktop ? "26px 30px" : "20px 22px", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ height: 1, width: 18, background: AMBER }} />
+            <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>Today's intention</span>
+          </div>
+          <input
+            value={d.intention || ""}
+            onChange={(e) => setD({ ...d, intention: e.target.value })}
+            placeholder="What word will guide today?"
+            style={{ width: "100%", border: "none", outline: "none", background: "transparent", color: PAPER, fontFamily: "'Fraunces',serif", fontWeight: 600, fontStyle: "italic", fontSize: isDesktop ? 44 : 30, lineHeight: 1.1, letterSpacing: "-.01em", padding: 0 }}
+          />
+        </div>
+      </section>
+
 
       {/* Monthly tracker calendar */}
       <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
