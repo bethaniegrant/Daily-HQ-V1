@@ -50,7 +50,7 @@ function PlannerPage() {
         />
       )}
       <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 50, display: "flex", gap: 8 }}>
-        <Link to="/">
+        <Link to="/app">
           <Button size="sm" variant="secondary" style={{ opacity: 0.92, boxShadow: "0 8px 24px -10px rgba(22,32,28,.35)" }}>Home</Button>
         </Link>
         {isAdmin && (

@@ -46,7 +46,7 @@ function AdminPage() {
             <p className="text-sm text-muted-foreground mt-1">Daily HQ — invites, members & purchases</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/">
+            <Link to="/app">
               <Button variant="outline" className="stone-cta-ghost">Home</Button>
             </Link>
             <Button variant="outline" className="stone-cta-ghost" onClick={() => navigate({ to: "/app" })}>
