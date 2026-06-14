@@ -617,8 +617,8 @@ function TrackerCalendar({ d, now, go }) {
                 position: "relative",
                 aspectRatio: "1",
                 borderRadius: 8,
-                background: isToday ? INK : PAPER,
-                border: hasBills ? `1.5px solid ${AMBER}` : `1px solid ${LINE}`,
+                background: isToday && info.mood ? info.mood.color : isToday ? INK : info.mood ? info.mood.color + "33" : PAPER,
+                border: hasBills ? `1.5px solid ${AMBER}` : isToday && info.mood ? `1.5px solid ${info.mood.color}` : `1px solid ${LINE}`,
                 color: isToday ? PAPER : INK,
                 display: "flex",
                 flexDirection: "column",
@@ -632,7 +632,7 @@ function TrackerCalendar({ d, now, go }) {
               <div style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{day}</div>
               {/* habit ring */}
               {info.habitsTotal > 0 && (
-                <div style={{ width: "70%", height: 2, background: isToday ? "rgba(255,255,255,.2)" : LINE, borderRadius: 999, marginTop: 3, overflow: "hidden" }}>
+                <div style={{ width: "70%", height: 2, background: isToday ? "rgba(255,255,255,.25)" : LINE, borderRadius: 999, marginTop: 3, overflow: "hidden" }}>
                   <div style={{ width: `${info.habitsPct * 100}%`, height: "100%", background: info.habitsPct === 1 ? SAGEHI : SAGE }} />
                 </div>
               )}
@@ -640,10 +640,11 @@ function TrackerCalendar({ d, now, go }) {
               <div style={{ display: "flex", gap: 2, marginTop: "auto" }}>
                 {info.medsAll && <span style={{ width: 4, height: 4, borderRadius: 999, background: PLUM }} />}
                 {info.workoutLogged && <span style={{ width: 4, height: 4, borderRadius: 999, background: BLUE }} />}
-                {info.moodLogged && <span style={{ width: 4, height: 4, borderRadius: 999, background: AMBER }} />}
+                {info.moodLogged && !isToday && <span style={{ width: 4, height: 4, borderRadius: 999, background: info.mood.color }} />}
                 {hasBills && <span style={{ width: 4, height: 4, borderRadius: 999, background: AMBER, boxShadow: `0 0 0 1px ${isToday ? INK : PAPER}` }} />}
               </div>
             </div>
+
           );
         })}
       </div>
