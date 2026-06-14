@@ -357,7 +357,7 @@ function Home({ d, now, go, openMenu, isDesktop }) {
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const comp = dayCompletion(d, now);
   const left = (Number(d.pay) || 0) - budgetSpent(d);
-  const medsToday = d.meds.length, medsTaken = d.meds.filter((m) => (d.medChecks[dayKey(now)] || {})[m.id]).length;
+  const medsToday = d.meds.length, medsTaken = d.meds.filter((m) => medFullyTaken((d.medChecks[dayKey(now)] || {})[m.id], medTimes(m))).length;
   const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 
   const navBtn = (label, onClick) => (
