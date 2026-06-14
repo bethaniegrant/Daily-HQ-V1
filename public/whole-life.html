@@ -672,7 +672,7 @@ function TrackerCalendar({ d, setD, now, go, isDesktop }) {
         <Legend color={AMBER} label="Mood" />
         <Legend color={AMBER} label="Bill due" ring />
       </div>
-      {overviewDay && <DayOverview d={d} dt={overviewDay} onClose={() => setOverviewDay(null)} go={go} isDesktop={isDesktop} />}
+      {overviewDay && <DayOverview d={d} setD={setD} dt={overviewDay} onClose={() => setOverviewDay(null)} go={go} isDesktop={isDesktop} />}
       {weekOpen && <WeekOverview d={d} anchor={overviewDay || now} onClose={() => setWeekOpen(false)} go={go} isDesktop={isDesktop} onPickDay={(dt) => { setWeekOpen(false); setOverviewDay(dt); }} />}
     </div>
   );
