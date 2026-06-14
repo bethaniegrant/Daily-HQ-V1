@@ -552,7 +552,7 @@ function MoreHub({ d, setD, go }) {
 
 function Note({ children }) { return <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, fontStyle: "italic", fontFamily: "'Fraunces',serif", padding: "4px 2px" }}>{children}</div>; }
 function SectionMini({ text }) { return <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginTop: 8 }}>{text}</div>; }
-function TrackerCalendar({ d, now, go, isDesktop }) {
+function TrackerCalendar({ d, setD, now, go, isDesktop }) {
   const [overviewDay, setOverviewDay] = useState(null); // Date or null
   const [weekOpen, setWeekOpen] = useState(false);
   const [cursor, setCursor] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
