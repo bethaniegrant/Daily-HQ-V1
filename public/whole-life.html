@@ -155,6 +155,10 @@ const monthKey = (dt = new Date()) => `${dt.getFullYear()}-${dt.getMonth() + 1}`
 const dayKey = (dt) => `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
 const daysInMonth = (dt) => new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
 const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay();
+const medTimes = (m) => Math.max(1, Number(m && m.times) || 1);
+const medDoseArr = (val, times) => { const t = Math.max(1, times || 1); if (Array.isArray(val)) return Array.from({ length: t }, (_, i) => !!val[i]); return Array.from({ length: t }, () => !!val); };
+const medDoneCount = (val, times) => medDoseArr(val, times).filter(Boolean).length;
+const medFullyTaken = (val, times) => medDoneCount(val, times) >= Math.max(1, times || 1);
 
 const seed = () => ({
   pay: "",
