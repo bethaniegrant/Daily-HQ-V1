@@ -1519,7 +1519,7 @@ const BUDGET_SECTIONS = [
   { key: "debt", label: "Debt payments", hint: "Cards, loans", color: "#9C7E96" },
 ];
 const sectionTotal = (d, key) => (d.budget[key] || []).reduce((s, r) => s + (Number(r.a) || 0), 0);
-const budgetSpent = (d) => BUDGET_SECTIONS.reduce((s, sec) => s + sectionTotal(d, sec.key), 0);
+const budgetSpent = (d) => Object.values(d.budget || {}).reduce((s, arr) => s + (Array.isArray(arr) ? arr.reduce((a, r) => a + (Number(r.a) || 0), 0) : 0), 0);
 const BLOCK_META = {
   checklist: { label: "Checklist", desc: "Tap to check off", color: SAGE, icon: (p) => <CheckSquareIcon {...p} /> },
   list: { label: "List", desc: "Simple bullet lines", color: AMBER, icon: (p) => <ListIcon {...p} /> },
