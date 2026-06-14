@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#ece6dc" />
+<meta name="theme-color" content="#F0E8DC" />
 <title>Whole Life Planner</title>
 <style>
-  html, body { margin: 0; padding: 0; background: #ece6dc; }
+  html, body { margin: 0; padding: 0; background: #F0E8DC; }
   #root { min-height: 100vh; }
 </style>
 <!-- React + Babel from CDN so this runs with no build step.
@@ -134,9 +134,9 @@ function useCloudSync(d, setD) {
 // New this round: Meds tracker + Workout builder.
 // Per-day habits/meds, monthly reset (local tz), streaks, custom spaces.
 
-const INK = "#2a241e", PAPER = "#ece6dc", CARD = "#f6f1e7",
-      SAGE = "#7d8a5e", SAGEHI = "#9aa777", LINE = "#d6cdba",
-      MUTED = "#8a8170", AMBER = "#b97a3a", MIST = "#c4baa4",
+const INK = "#1B3652", TEXT = "#2A2018", PAPER = "#F0E8DC", CARD = "#FFFBF5",
+      SAGE = "#7d8a5e", SAGEHI = "#9aa777", LINE = "#DDD5C8",
+      MUTED = "#9A9088", AMBER = "#C4717A", MIST = "#B8C8D8",
       BLUE = "#7a8a93", PLUM = "#9a7e8e";
 
 const WORKOUT_CATS = [
@@ -170,7 +170,7 @@ const seed = () => ({
   },
   savingsGoals: [
     { id: uid(), n: "Emergency fund", target: "", saved: "", color: "#7d8a5e" },
-    { id: uid(), n: "Vacation", target: "", saved: "", color: "#b97a3a" },
+    { id: uid(), n: "Vacation", target: "", saved: "", color: "#C4717A" },
   ],
   monthStamp: monthKey(),
   habitDefs: [{ id: uid(), n: "Move my body" }, { id: uid(), n: "Drink water" }, { id: uid(), n: "Read 10 min" }],
@@ -291,8 +291,8 @@ function App() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: PAPER, display: "flex", justifyContent: "center", fontFamily: "'Space Grotesk', -apple-system, sans-serif", color: INK }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
+    <div style={{ minHeight: "100vh", background: PAPER, display: "flex", justifyContent: "center", fontFamily: "'Outfit', -apple-system, sans-serif", color: TEXT }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM Serif Display:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin:0; }
         input,textarea{font-family:inherit;}
         .pop{transition:transform .12s ease;cursor:pointer;}.pop:active{transform:scale(.96);}
@@ -335,7 +335,7 @@ function App() {
         >
           <div style={{ background: INK, color: PAPER, padding: "max(22px, env(safe-area-inset-top)) 22px 22px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, lineHeight: 1 }}>Whole Life</div>
+              <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, fontWeight: 600, lineHeight: 1 }}>Whole Life</div>
               <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MIST, fontWeight: 700, marginTop: 6 }}>Menu</div>
             </div>
             <button onClick={closeMenu} aria-label="Close menu" style={{ width: 36, height: 36, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.25)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
@@ -347,7 +347,7 @@ function App() {
               <div key={gi} style={{ marginTop: g.label ? 14 : 4 }}>
                 {g.label && <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 12px 6px" }}>{g.label}</div>}
                 {g.items.map((it, ii) => (
-                  <button key={ii} onClick={it.onClick} className="pop" style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "none", border: "none", textAlign: "left", borderRadius: 6, color: INK, fontSize: 15, fontWeight: 600 }}>
+                  <button key={ii} onClick={it.onClick} className="pop" style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "none", border: "none", textAlign: "left", borderRadius: 6, color: TEXT, fontSize: 15, fontWeight: 600 }}>
                     <span style={{ width: 32, height: 32, borderRadius: 6, background: it.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <it.icon c={PAPER} s={16} />
                     </span>
@@ -383,7 +383,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop }) {
         <nav style={{ background: INK, borderRadius: 999, padding: "10px 16px 10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src={LOGO_URL} alt="Bethanie Rose" style={{ width: 28, height: 28, borderRadius: 999, background: PAPER, padding: 2, objectFit: "contain" }} />
-            <span style={{ color: PAPER, fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 15, letterSpacing: "-.01em" }}>Daily <span style={{ color: AMBER }}>HQ</span></span>
+            <span style={{ color: PAPER, fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 15, letterSpacing: "-.01em" }}>Daily <span style={{ color: AMBER }}>HQ</span></span>
           </span>
           <div style={{ display: "flex", gap: isDesktop ? 22 : 14, alignItems: "center" }}>
             {navBtn("Today", () => go("home"))}
@@ -404,7 +404,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop }) {
             <span style={{ height: 1, width: 18, background: AMBER }} />
             <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{dateLine}</span>
           </div>
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isDesktop ? 64 : 38, fontWeight: 600, lineHeight: 1.05, letterSpacing: "-.02em", margin: "10px 0 8px", color: INK }}>
+          <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: isDesktop ? 64 : 38, fontWeight: 600, lineHeight: 1.05, letterSpacing: "-.02em", margin: "10px 0 8px", color: TEXT }}>
             {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>B.</span>
           </h1>
           <p style={{ fontSize: isDesktop ? 16 : 14, color: MUTED, lineHeight: 1.5, maxWidth: 520, margin: 0 }}>
@@ -427,7 +427,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop }) {
             value={d.intention || ""}
             onChange={(e) => setD({ ...d, intention: e.target.value })}
             placeholder="What word will guide today?"
-            style={{ width: "100%", border: "none", outline: "none", background: "transparent", color: PAPER, fontFamily: "'Fraunces',serif", fontWeight: 600, fontStyle: "italic", fontSize: isDesktop ? 44 : 30, lineHeight: 1.1, letterSpacing: "-.01em", padding: 0 }}
+            style={{ width: "100%", border: "none", outline: "none", background: "transparent", color: PAPER, fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontStyle: "italic", fontSize: isDesktop ? 44 : 30, lineHeight: 1.1, letterSpacing: "-.01em", padding: 0 }}
           />
         </div>
       </section>
@@ -450,7 +450,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop }) {
         </div>
         <div className="pop" onClick={() => go("plan", "habits")} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, padding: isDesktop ? "28px 32px" : "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
           <div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: isDesktop ? 38 : 26, fontWeight: 600, color: INK, lineHeight: 1 }}>{comp.done} / {comp.total || 0}</div>
+            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: isDesktop ? 38 : 26, fontWeight: 600, color: TEXT, lineHeight: 1 }}>{comp.done} / {comp.total || 0}</div>
             <div style={{ fontSize: 12, color: MUTED, fontWeight: 600, marginTop: 6 }}>
               {comp.pct === 1 && comp.total ? "Every one. Done." : comp.pct >= .5 ? "Past halfway." : comp.total ? "Begin with one." : "Add a habit to begin"}
             </div>
@@ -491,9 +491,9 @@ function Home({ d, setD, now, go, openMenu, isDesktop }) {
       </section>
 
       <footer style={{ display: "flex", justifyContent: "center", gap: 14, padding: "8px 0 28px", opacity: .4 }}>
-        <span style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: INK, fontWeight: 700 }}>Encrypted</span>
+        <span style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: TEXT, fontWeight: 700 }}>Encrypted</span>
         <span style={{ width: 3, height: 3, borderRadius: 999, background: MUTED, alignSelf: "center" }} />
-        <span style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: INK, fontWeight: 700 }}>No tracking</span>
+        <span style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: TEXT, fontWeight: 700 }}>No tracking</span>
       </footer>
     </div>
   );
@@ -505,7 +505,7 @@ function Hub({ title, sub, children }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "30px 22px 26px" }}>
         <div style={{ fontSize: 12, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div>
-        <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 34, fontWeight: 600, lineHeight: 1, marginTop: 4, letterSpacing: "-.02em" }}>{title}</h1>
+        <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 34, fontWeight: 600, lineHeight: 1, marginTop: 4, letterSpacing: "-.02em" }}>{title}</h1>
       </div>
       <div className="stagger" style={{ padding: "20px 18px 30px", display: "grid", gap: 12 }}>{children}</div>
     </div>
@@ -519,7 +519,7 @@ function ToolRow({ icon: Icon, color, title, sub, stat, onClick }) {
         <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-.01em" }}>{title}</div>
         <div style={{ fontSize: 13, color: MUTED }}>{sub}</div>
       </div>
-      {stat && <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color }}>{stat}</div>}
+      {stat && <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 18, fontWeight: 600, color }}>{stat}</div>}
       <ChevIcon c={MUTED} />
     </div>
   );
@@ -567,7 +567,7 @@ function MoreHub({ d, setD, go }) {
   );
 }
 
-function Note({ children }) { return <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, fontStyle: "italic", fontFamily: "'Fraunces',serif", padding: "4px 2px" }}>{children}</div>; }
+function Note({ children }) { return <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, fontStyle: "italic", fontFamily: "'DM Serif Display',serif", padding: "4px 2px" }}>{children}</div>; }
 function SectionMini({ text }) { return <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginTop: 8 }}>{text}</div>; }
 function TrackerCalendar({ d, setD, now, go, isDesktop }) {
   const [overviewDay, setOverviewDay] = useState(null); // Date or null
@@ -618,8 +618,8 @@ function TrackerCalendar({ d, setD, now, go, isDesktop }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
         <button onClick={prevMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg></button>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, justifyContent: "center" }}>
-          <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: INK }}>{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
-          <button onClick={() => setWeekOpen(true)} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, padding: "4px 10px", fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: INK, cursor: "pointer" }}>Week view</button>
+          <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: TEXT }}>{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+          <button onClick={() => setWeekOpen(true)} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, padding: "4px 10px", fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: TEXT, cursor: "pointer" }}>Week view</button>
         </div>
         <button onClick={nextMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="9,6 15,12 9,18"/></svg></button>
       </div>
@@ -741,7 +741,7 @@ function OverviewShell({ title, sub, onClose, children, width }) {
         <div style={{ background: INK, color: PAPER, padding: "20px 22px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginTop: 4 }}>{title}</div>
+            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginTop: 4 }}>{title}</div>
           </div>
           <button onClick={onClose} className="pop" style={{ background: "rgba(255,255,255,.12)", border: "none", borderRadius: 999, width: 32, height: 32, color: PAPER, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><XIcon c={PAPER} s={16} /></button>
         </div>
@@ -775,13 +775,13 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
   const anything = b.habits.length || b.medsList.length || b.workouts.length || b.mood || b.bills.length || b.meal;
   return (
     <OverviewShell title={title} sub={isToday ? "Today's overview" : "Day overview"} onClose={onClose}>
-      {!anything && !note && <div style={{ fontSize: 13, color: MUTED, padding: "20px 4px", textAlign: "center", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>Nothing tracked for this day yet. Add a note below.</div>}
+      {!anything && !note && <div style={{ fontSize: 13, color: MUTED, padding: "20px 4px", textAlign: "center", fontStyle: "italic", fontFamily: "'DM Serif Display',serif" }}>Nothing tracked for this day yet. Add a note below.</div>}
       <div style={{ display: "grid", gap: 10 }}>
         {b.mood && (
           <OverviewBlock label="Mood" color={b.mood.color}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ width: 22, height: 22, borderRadius: 6, background: b.mood.color }} />
-              <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>{b.mood.label}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>{b.mood.label}</div>
             </div>
           </OverviewBlock>
         )}
@@ -792,10 +792,10 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                     <span style={{ width: 6, height: 6, borderRadius: 999, background: bl.color, flexShrink: 0 }} />
-                    <span style={{ fontWeight: 600, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bl.n}</span>
+                    <span style={{ fontWeight: 600, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bl.n}</span>
                     <span style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase" }}>{bl.section}</span>
                   </div>
-                  {bl.a && <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, color: INK }}>${money(bl.a)}</div>}
+                  {bl.a && <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, color: TEXT }}>${money(bl.a)}</div>}
                 </div>
               ))}
             </div>
@@ -843,7 +843,7 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
         )}
         {b.meal && (
           <OverviewBlock label={`${b.weekdayShort} meal`} color={SAGE} onClick={() => { onClose(); go("health", "meals"); }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: INK, fontFamily: "'Fraunces',serif" }}>{b.meal}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: "'DM Serif Display',serif" }}>{b.meal}</div>
           </OverviewBlock>
         )}
         <OverviewBlock label="Notes" color={MIST}>
@@ -852,7 +852,7 @@ function DayOverview({ d, setD, dt, onClose, go, isDesktop }) {
             onChange={(e) => setNote(e.target.value)}
             placeholder="Add a note for this day…"
             rows={3}
-            style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 6, background: PAPER, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", color: INK, resize: "vertical", outline: "none" }}
+            style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 6, background: PAPER, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", color: TEXT, resize: "vertical", outline: "none" }}
           />
         </OverviewBlock>
       </div>
@@ -880,7 +880,7 @@ function WeekOverview({ d, anchor, onClose, go, isDesktop, onPickDay }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <div>
                   <div style={{ fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 700, color: isToday ? MIST : MUTED }}>{dt.toLocaleDateString("en-US", { weekday: "short" })}</div>
-                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, lineHeight: 1 }}>{dt.getDate()}</div>
+                  <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, fontWeight: 600, lineHeight: 1 }}>{dt.getDate()}</div>
                 </div>
                 {b.mood && <div title={b.mood.label} style={{ width: 14, height: 14, borderRadius: 4, background: b.mood.color, border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
               </div>
@@ -891,7 +891,7 @@ function WeekOverview({ d, anchor, onClose, go, isDesktop, onPickDay }) {
                 {b.bills.length > 0 && <Row isToday={isToday} color={AMBER} label="Bills" val={`${b.bills.length}`} />}
                 {b.meal && <Row isToday={isToday} color={SAGE} label="Meal" val={b.meal.length > 14 ? b.meal.slice(0, 14) + "…" : b.meal} />}
                 {b.habits.length === 0 && b.medsList.length === 0 && b.workouts.length === 0 && b.bills.length === 0 && !b.meal && !b.mood && (
-                  <div style={{ fontSize: 11, color: isToday ? MIST : MUTED, fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>Nothing tracked</div>
+                  <div style={{ fontSize: 11, color: isToday ? MIST : MUTED, fontStyle: "italic", fontFamily: "'DM Serif Display',serif" }}>Nothing tracked</div>
                 )}
               </div>
             </div>
@@ -967,7 +967,7 @@ function Meds({ d, setD, now, back }) {
         : <MonthGrid sel={sel} setSel={setSel} now={now} fillFor={(dt) => { const t = d.meds.length, done = medsTakenOn(dt); return t && done === t ? PLUM : done ? PLUM + "33" : null; }} />}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 0 10px" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: INK, fontFamily: "'Fraunces',serif" }}>{selLabel}</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: "'DM Serif Display',serif" }}>{selLabel}</div>
         <div className="pop" onClick={() => setEdit(!edit)} style={{ fontSize: 12, fontWeight: 700, color: PLUM, cursor: "pointer" }}>{edit ? "Done" : "Edit meds"}</div>
       </div>
 
@@ -985,7 +985,7 @@ function Meds({ d, setD, now, back }) {
                 <input value={m.dose} onChange={(e) => setMed(m.id, "dose", e.target.value)} placeholder="Dose (e.g. 200 mg)" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13 }} />
                 <div style={{ display: "flex", alignItems: "center", gap: 6, border: `1px solid ${LINE}`, borderRadius: 3, padding: "4px 8px", background: CARD }}>
                   <div className="pop" onClick={() => setTimes(m.id, t - 1)} style={{ cursor: "pointer", fontWeight: 700, color: PLUM, fontSize: 16, width: 18, textAlign: "center" }}>−</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: INK, minWidth: 56, textAlign: "center" }}>{t}×/day</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, minWidth: 56, textAlign: "center" }}>{t}×/day</div>
                   <div className="pop" onClick={() => setTimes(m.id, t + 1)} style={{ cursor: "pointer", fontWeight: 700, color: PLUM, fontSize: 16, width: 18, textAlign: "center" }}>+</div>
                 </div>
               </div>
@@ -1067,7 +1067,7 @@ function Workouts({ d, setD, go, back, now }) {
     <Screen title="Workouts" sub="Train, log, track" back={back} accent={BLUE}>
       {/* CALENDAR */}
       <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px 14px", marginBottom: 14 }}>
-        <div style={{ textAlign: "center", fontSize: 14, fontWeight: 700, color: INK, marginBottom: 10, fontFamily: "'Fraunces',serif" }}>
+        <div style={{ textAlign: "center", fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 10, fontFamily: "'DM Serif Display',serif" }}>
           {sel.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5, marginBottom: 5 }}>
@@ -1085,7 +1085,7 @@ function Workouts({ d, setD, go, back, now }) {
             return (
               <div key={day} className="pop" onClick={() => setSel(dt)}
                 style={{ aspectRatio: "1", borderRadius: 4, background: CARD, border: isSel ? `2px solid ${INK}` : isTod ? `2px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "4px 2px" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: INK }}>{day}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{day}</div>
                 <div style={{ display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center", minHeight: 6 }}>
                   {cats.slice(0, 4).map((c) => {
                     const col = catOf(c).color;
@@ -1102,7 +1102,7 @@ function Workouts({ d, setD, go, back, now }) {
       {/* LEGEND */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
         {WORKOUT_CATS.filter((c) => d.workouts.some((w) => (w.cat || "other") === c.id)).map((c) => (
-          <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: INK, background: CARD, border: `1px solid ${LINE}`, borderRadius: 99, padding: "4px 10px" }}>
+          <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: TEXT, background: CARD, border: `1px solid ${LINE}`, borderRadius: 99, padding: "4px 10px" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.color }} />{c.label}
           </div>
         ))}
@@ -1111,12 +1111,12 @@ function Workouts({ d, setD, go, back, now }) {
       {/* MONTH STATS */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
         <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "12px 10px", textAlign: "center" }}>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 26, fontWeight: 600, color: BLUE, lineHeight: 1 }}>{activeDays}</div>
+          <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 26, fontWeight: 600, color: BLUE, lineHeight: 1 }}>{activeDays}</div>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginTop: 6 }}>Active days</div>
           <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>this month</div>
         </div>
         <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "12px 10px", textAlign: "center" }}>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 26, fontWeight: 600, color: BLUE, lineHeight: 1 }}>{usedCats.length}</div>
+          <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 26, fontWeight: 600, color: BLUE, lineHeight: 1 }}>{usedCats.length}</div>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginTop: 6 }}>Categories</div>
           <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>trained</div>
         </div>
@@ -1127,7 +1127,7 @@ function Workouts({ d, setD, go, back, now }) {
         <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>
           {sel.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
         </div>
-        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 600, marginTop: 2 }}>
+        <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 20, fontWeight: 600, marginTop: 2 }}>
           {selCats.length ? selCats.map((c) => catOf(c).label).join(" · ") : "Rest day"}
         </div>
       </div>
@@ -1196,7 +1196,7 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
           </div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
-        <input value={workout.n} onChange={(e) => update({ n: e.target.value })} placeholder="Name this workout" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'Fraunces',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
+        <input value={workout.n} onChange={(e) => update({ n: e.target.value })} placeholder="Name this workout" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'DM Serif Display',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
       </div>
 
       <div style={{ padding: "18px 18px 50px" }}>
@@ -1217,7 +1217,7 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
                 return (
                   <div key={k} className="pop" onClick={() => setSel(new Date(dt))} style={{ borderRadius: 4, padding: "8px 2px", textAlign: "center", background: isSel ? INK : CARD, color: isSel ? PAPER : INK, border: isTod && !isSel ? `2px solid ${SAGEHI}` : `1px solid ${LINE}` }}>
                     <div style={{ fontSize: 9.5, fontWeight: 700, color: isSel ? MIST : MUTED }}>{"SMTWTFS"[dt.getDay()]}</div>
-                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, margin: "2px 0" }}>{dt.getDate()}</div>
+                    <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 17, fontWeight: 600, margin: "2px 0" }}>{dt.getDate()}</div>
                     <div style={{ width: 6, height: 6, borderRadius: "50%", margin: "0 auto", background: exTotal && done === exTotal ? cat.color : done ? cat.color + "55" : (isSel ? "rgba(255,255,255,.25)" : LINE) }} />
                   </div>
                 );
@@ -1225,7 +1225,7 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
             </div>
 
             <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div><div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{selLabel}</div><div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600 }}>{doneCount}/{exTotal} done</div></div>
+              <div><div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{selLabel}</div><div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, fontWeight: 600 }}>{doneCount}/{exTotal} done</div></div>
               <DumbbellIcon c={SAGEHI} s={30} />
             </div>
             <div style={{ display: "grid", gap: 9 }}>
@@ -1300,7 +1300,7 @@ function Budget({ d, setD, back }) {
 
   // custom expense categories
   const customSections = d.customBudgetSections || [];
-  const sectionColors = ["#8a6b9c", "#4f7a8c", "#b97a3a", "#7d8a5e", "#a05b5b", "#5a8a7d"];
+  const sectionColors = ["#8a6b9c", "#4f7a8c", "#C4717A", "#7d8a5e", "#a05b5b", "#5a8a7d"];
   const addSection = () => {
     const label = (typeof window !== "undefined" ? window.prompt("Name this expense category", "") : "") || "";
     const name = label.trim();
@@ -1331,14 +1331,14 @@ function Budget({ d, setD, back }) {
     <Screen title="Budget" sub="This paycheck" back={back} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14 }}>
         <label style={{ ...lbl, color: MIST }}>Take-home pay</label>
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ fontSize: 30, fontFamily: "'Fraunces',serif", fontWeight: 600, color: SAGEHI }}>$</span><input inputMode="decimal" value={d.pay} onChange={(e) => setD({ ...d, pay: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, fontSize: 30, fontFamily: "'Fraunces',serif", fontWeight: 600, background: "none", color: PAPER }} /></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, color: SAGEHI }}>$</span><input inputMode="decimal" value={d.pay} onChange={(e) => setD({ ...d, pay: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, background: "none", color: PAPER }} /></div>
       </div>
       {allSections.map((sec) => (
         <div key={sec.key} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${sec.color}`, borderRadius: 4, padding: "15px 16px", marginBottom: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12, gap: 8 }}>
             <div style={{ minWidth: 0 }}><div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.01em" }}>{sec.label}</div><div style={{ fontSize: 12, color: MUTED }}>{sec.hint}</div></div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: sec.color, whiteSpace: "nowrap" }}>${money(sectionTotal(d, sec.key))}</div>
+              <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: sec.color, whiteSpace: "nowrap" }}>${money(sectionTotal(d, sec.key))}</div>
               {sec.custom && <div className="pop" onClick={() => delSection(sec.key)} title="Remove category" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>}
             </div>
           </div>
@@ -1364,7 +1364,7 @@ function Budget({ d, setD, back }) {
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MIST, marginBottom: 10 }}><span>Everything assigned</span><span style={{ fontWeight: 700, color: PAPER }}>− ${money(spent)}</span></div>
         <div style={{ height: 1, background: "rgba(255,255,255,.15)", margin: "4px 0 12px" }} />
         <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: left < 0 ? AMBER : MIST }}>{left < 0 ? "Over by" : "Left to allocate"}</div>
-        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 46, fontWeight: 600, margin: "4px 0 14px", letterSpacing: "-.02em", color: left < 0 ? AMBER : PAPER }}>${money(Math.abs(left))}</div>
+        <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 46, fontWeight: 600, margin: "4px 0 14px", letterSpacing: "-.02em", color: left < 0 ? AMBER : PAPER }}>${money(Math.abs(left))}</div>
         <div style={{ height: 8, background: "rgba(255,255,255,.15)", overflow: "hidden" }}><div style={{ width: `${pct * 100}%`, height: "100%", background: left < 0 ? AMBER : SAGEHI, transition: "width .5s" }} /></div>
       </div>
 
@@ -1373,7 +1373,7 @@ function Budget({ d, setD, back }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "0 2px 10px" }}>
           <div>
             <div style={{ fontSize: 11, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Savings tracker</div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, color: INK, marginTop: 4 }}>Sinking funds & goals</div>
+            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, fontWeight: 600, color: TEXT, marginTop: 4 }}>Sinking funds & goals</div>
           </div>
         </div>
         <div style={{ display: "grid", gap: 10 }}>
@@ -1385,7 +1385,7 @@ function Budget({ d, setD, back }) {
             return (
               <div key={g.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${color}`, borderRadius: 4, padding: "14px 16px" }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                  <input value={g.n} onChange={(e) => setGoal(g.id, { n: e.target.value })} placeholder="Goal name" style={{ flex: 1, border: "none", background: "none", fontSize: 15, fontWeight: 700, color: INK }} />
+                  <input value={g.n} onChange={(e) => setGoal(g.id, { n: e.target.value })} placeholder="Goal name" style={{ flex: 1, border: "none", background: "none", fontSize: 15, fontWeight: 700, color: TEXT }} />
                   <div className="pop" onClick={() => delGoal(g.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -1423,7 +1423,7 @@ function Budget({ d, setD, back }) {
               <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: leftFinal < 0 ? AMBER : MIST }}>{leftFinal < 0 ? "Over by" : "Left to allocate"}</div>
               <div style={{ fontSize: 12, color: MIST, marginTop: 4 }}>After expenses & savings (− ${money(savedTotal)})</div>
             </div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 34, fontWeight: 600, letterSpacing: "-.02em", color: leftFinal < 0 ? AMBER : PAPER }}>${money(Math.abs(leftFinal))}</div>
+            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 34, fontWeight: 600, letterSpacing: "-.02em", color: leftFinal < 0 ? AMBER : PAPER }}>${money(Math.abs(leftFinal))}</div>
           </div>
         );
       })()}
@@ -1460,7 +1460,7 @@ function Habits({ d, setD, now, back }) {
         : <MonthGrid sel={sel} setSel={setSel} now={now} fillFor={(dt) => { const c = dayCompletion(d, dt); return c.total && c.pct === 1 ? SAGEHI : c.done ? AMBER + "33" : null; }} />}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 0 10px" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: INK, fontFamily: "'Fraunces',serif" }}>{selLabel}</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: "'DM Serif Display',serif" }}>{selLabel}</div>
         <div className="pop" onClick={() => setEditDefs(!editDefs)} style={{ fontSize: 12, fontWeight: 700, color: SAGE, cursor: "pointer" }}>{editDefs ? "Done" : "Edit habits"}</div>
       </div>
 
@@ -1514,12 +1514,12 @@ function Goals({ d, setD, back }) {
     <Screen title="Goals" sub="This month" back={back} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 20px", marginBottom: 14 }}>
         <label style={{ ...lbl, color: MIST }}>Word of the month</label>
-        <input value={d.intention} onChange={(e) => setD({ ...d, intention: e.target.value })} placeholder="e.g. Steady" style={{ border: "none", fontSize: 26, fontFamily: "'Fraunces',serif", fontWeight: 600, width: "100%", background: "none", color: PAPER }} />
+        <input value={d.intention} onChange={(e) => setD({ ...d, intention: e.target.value })} placeholder="e.g. Steady" style={{ border: "none", fontSize: 26, fontFamily: "'DM Serif Display',serif", fontWeight: 600, width: "100%", background: "none", color: PAPER }} />
       </div>
       <div style={{ display: "grid", gap: 10 }}>
         {d.goals.map((g, i) => (
           <div key={i} style={{ background: CARD, borderRadius: 4, padding: "16px 17px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${LINE}` }}>
-            <div className="pop" onClick={() => toggle(i)} style={{ width: 30, height: 30, borderRadius: 3, border: `2px solid ${AMBER}`, background: g.done ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "'Fraunces',serif", fontWeight: 700, color: g.done ? "#fff" : AMBER, fontSize: 14 }}>{g.done ? <CheckIcon c="#fff" s={16} /> : i + 1}</div>
+            <div className="pop" onClick={() => toggle(i)} style={{ width: 30, height: 30, borderRadius: 3, border: `2px solid ${AMBER}`, background: g.done ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "'DM Serif Display',serif", fontWeight: 700, color: g.done ? "#fff" : AMBER, fontSize: 14 }}>{g.done ? <CheckIcon c="#fff" s={16} /> : i + 1}</div>
             <input value={g.n} onChange={(e) => rename(i, e.target.value)} placeholder={`Goal ${i + 1}`} style={{ border: "none", flex: 1, fontSize: 16, fontWeight: 600, background: "none" }} />
           </div>
         ))}
@@ -1547,7 +1547,7 @@ function Meals({ d, setD, back }) {
         ))}
       </div>
       <div style={{ marginTop: 24, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 12, letterSpacing: ".16em", textTransform: "uppercase", color: INK, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><CartIcon c={INK} s={16} /> Shopping list</div>
+        <div style={{ fontSize: 12, letterSpacing: ".16em", textTransform: "uppercase", color: TEXT, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><CartIcon c={INK} s={16} /> Shopping list</div>
         {shopTotal > 0 && <div style={{ fontSize: 12, color: MUTED, fontWeight: 600 }}>{gotCount}/{shopTotal} got</div>}
       </div>
       <div style={{ display: "grid", gap: 8 }}>
@@ -1666,7 +1666,7 @@ function MoodEditor({ block, d, setD, now, back }) {
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><HeartIcon c={MIST} s={13} /> Mood Tracker</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
-        <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this space" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'Fraunces',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
+        <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this space" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'DM Serif Display',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
         <div style={{ fontSize: 13, color: MIST, fontWeight: 600, marginTop: 2 }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })} · resets at month's end</div>
       </div>
       <div style={{ padding: "20px 18px 50px" }}>
@@ -1680,7 +1680,7 @@ function MoodEditor({ block, d, setD, now, back }) {
         </div>
         <div style={{ marginTop: 20, background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700, color: INK }}>How was {now.toLocaleDateString("en-US", { month: "short" })} {selected}?</div>
+            <div style={{ fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700, color: TEXT }}>How was {now.toLocaleDateString("en-US", { month: "short" })} {selected}?</div>
             <div className="pop" onClick={() => setEditMoods(!editMoods)} style={{ fontSize: 12, fontWeight: 700, color: SAGE, cursor: "pointer" }}>{editMoods ? "Done" : "Edit moods"}</div>
           </div>
           {!editMoods ? (
@@ -1721,11 +1721,11 @@ function BlockEditor({ block, d, setD, back }) {
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><meta.icon c={MIST} s={13} /> {meta.label}</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
-        <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this space" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'Fraunces',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
+        <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this space" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'DM Serif Display',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
       </div>
       <div style={{ padding: "22px 18px 50px" }}>
         {block.type === "notes" ? (
-          <textarea value={block.items} onChange={(e) => update({ items: e.target.value })} placeholder="Start writing…" style={{ width: "100%", minHeight: 320, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", fontSize: 16, lineHeight: 1.6, background: CARD, resize: "vertical", color: INK }} />
+          <textarea value={block.items} onChange={(e) => update({ items: e.target.value })} placeholder="Start writing…" style={{ width: "100%", minHeight: 320, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", fontSize: 16, lineHeight: 1.6, background: CARD, resize: "vertical", color: TEXT }} />
         ) : (
           <>
             <div style={{ display: "grid", gap: 9 }}>{block.items.map((it, i) => <BlockRow key={i} type={block.type} item={it} accent={meta.color} onToggle={() => setItem(i, { done: !it.done })} onText={(v) => setItem(i, { t: v })} onTime={(v) => setItem(i, { time: v })} onDelete={() => delItem(i)} />)}</div>
@@ -1767,7 +1767,7 @@ function WeekStrip({ weekDays, sel, setSel, now, doneFor, totalFor }) {
         return (
           <div key={dt.toISOString()} className="pop" onClick={() => setSel(new Date(dt))} style={{ borderRadius: 4, padding: "8px 2px", textAlign: "center", background: isSel ? INK : CARD, color: isSel ? PAPER : INK, border: isTod && !isSel ? `2px solid ${SAGEHI}` : `1px solid ${LINE}` }}>
             <div style={{ fontSize: 9.5, fontWeight: 700, color: isSel ? MIST : MUTED }}>{"SMTWTFS"[dt.getDay()]}</div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, margin: "2px 0" }}>{dt.getDate()}</div>
+            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 17, fontWeight: 600, margin: "2px 0" }}>{dt.getDate()}</div>
             <div style={{ width: 6, height: 6, borderRadius: "50%", margin: "0 auto", background: total && done === total ? SAGEHI : done ? AMBER : (isSel ? "rgba(255,255,255,.25)" : LINE) }} />
           </div>
         );
@@ -1779,7 +1779,7 @@ function MonthGrid({ sel, setSel, now, fillFor }) {
   const dim = daysInMonth(sel), pad = firstWeekday(sel);
   return (
     <div style={{ marginBottom: 18 }}>
-      <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: INK, marginBottom: 10, fontFamily: "'Fraunces',serif" }}>{sel.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+      <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 10, fontFamily: "'DM Serif Display',serif" }}>{sel.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5, marginBottom: 5 }}>{["S", "M", "T", "W", "T", "F", "S"].map((w, i) => <div key={i} style={{ textAlign: "center", fontSize: 9.5, fontWeight: 700, color: MUTED }}>{w}</div>)}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5 }}>
         {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
@@ -1798,7 +1798,7 @@ function Ring({ pct }) {
     <svg width="84" height="84" viewBox="0 0 84 84" style={{ flexShrink: 0 }}>
       <circle cx="42" cy="42" r={r} fill="none" stroke={LINE} strokeWidth="7" />
       <circle cx="42" cy="42" r={r} fill="none" stroke={SAGE} strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 42 42)" style={{ transition: "stroke-dashoffset .6s" }} />
-      <text x="42" y="48" textAnchor="middle" fill={INK} fontSize="19" fontWeight="700" fontFamily="Space Grotesk">{Math.round(pct * 100)}</text>
+      <text x="42" y="48" textAnchor="middle" fill={TEXT} fontSize="19" fontWeight="700" fontFamily="Outfit">{Math.round(pct * 100)}</text>
     </svg>
   );
 }
@@ -1808,7 +1808,7 @@ function Tile({ accent, icon: Icon, title, big, sub, onClick, dark }) {
     <div className="pop" onClick={onClick} style={{ background: bg, color: fg, borderRadius: 4, padding: "18px 18px 16px", minHeight: 138, display: "flex", flexDirection: "column", justifyContent: "space-between", border: dark ? "none" : `1px solid ${LINE}`, boxShadow: dark ? "0 14px 30px -14px rgba(22,32,28,.55)" : "none" }}>
       <div style={{ width: 40, height: 40, borderRadius: 3, background: dark ? "rgba(255,255,255,.1)" : accent + "18", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon c={dark ? PAPER : accent} s={21} /></div>
       <div>
-        <div style={{ fontFamily: "'Fraunces',serif", fontSize: big.length > 5 ? 22 : 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.01em" }}>{big}</div>
+        <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: big.length > 5 ? 22 : 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.01em" }}>{big}</div>
         <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>{title}</div>
         <div style={{ fontSize: 12, color: submuted, fontWeight: 500 }}>{sub}</div>
       </div>
@@ -1816,14 +1816,14 @@ function Tile({ accent, icon: Icon, title, big, sub, onClick, dark }) {
   );
 }
 function SectionLabel({ text }) {
-  return <div style={{ padding: "24px 22px 12px", display: "flex", alignItems: "center", gap: 10 }}><div style={{ fontSize: 12, letterSpacing: ".18em", textTransform: "uppercase", color: INK, fontWeight: 700 }}>{text}</div><div style={{ flex: 1, height: 1, background: LINE }} /></div>;
+  return <div style={{ padding: "24px 22px 12px", display: "flex", alignItems: "center", gap: 10 }}><div style={{ fontSize: 12, letterSpacing: ".18em", textTransform: "uppercase", color: TEXT, fontWeight: 700 }}>{text}</div><div style={{ flex: 1, height: 1, background: LINE }} /></div>;
 }
 function Screen({ title, sub, back, accent = SAGE, children }) {
   return (
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px", display: "flex", alignItems: "center", gap: 14 }}>
         <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
-        <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div><h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.02em" }}>{title}</h2></div>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div><h2 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.02em" }}>{title}</h2></div>
         <div style={{ width: 12, height: 12, borderRadius: "50%", background: accent }} />
       </div>
       <div style={{ padding: "22px 18px 40px" }}>{children}</div>
@@ -1831,8 +1831,8 @@ function Screen({ title, sub, back, accent = SAGE, children }) {
   );
 }
 const lbl = { fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, display: "block", marginBottom: 5, fontWeight: 700 };
-const addBtn = { marginTop: 12, background: "none", border: `1.5px solid ${INK}`, color: INK, fontWeight: 700, fontSize: 14, cursor: "pointer", padding: "14px", borderRadius: 4, width: "100%", letterSpacing: "-.01em" };
-const tip = { fontSize: 14, color: MUTED, lineHeight: 1.55, marginTop: 22, fontStyle: "italic", fontFamily: "'Fraunces',serif" };
+const addBtn = { marginTop: 12, background: "none", border: `1.5px solid ${INK}`, color: TEXT, fontWeight: 700, fontSize: 14, cursor: "pointer", padding: "14px", borderRadius: 4, width: "100%", letterSpacing: "-.01em" };
+const tip = { fontSize: 14, color: MUTED, lineHeight: 1.55, marginTop: 22, fontStyle: "italic", fontFamily: "'DM Serif Display',serif" };
 const PALETTE = ["#5A6B4D", "#D9B16A", "#6E8597", "#C8783C", "#9C7E96", "#8A9A5B", "#B5654D", "#5E7E8C"];
 
 function dayCompletion(d, dt) {
