@@ -230,6 +230,17 @@ function App() {
   }, [now, synced]); // eslint-disable-line
 
   const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
+
+  // listen for parent (app shell) messages — e.g. Home button → reset to home tab
+  useEffect(() => {
+    const handler = (e) => {
+      const m = e && e.data;
+      if (m && m.type === "go") { setTab(m.tab || "home"); setPage(m.page || null); }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
   const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true), isDesktop };
 
   // resolve current page
