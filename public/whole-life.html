@@ -371,7 +371,7 @@ function App() {
 }
 
 // ═══ HOME ═════════════════════════════════════════════════════════
-function Home({ d, setD, now, go, openMenu, isDesktop }) {
+function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
   const hour = now.getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const comp = dayCompletion(d, now);
