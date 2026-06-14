@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import logoUrl from "@/assets/bethanie-rose-logo.png";
+import logoAsset from "@/assets/bethanie-rose-logo.png.asset.json";
+const logoUrl = logoAsset.url;
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
