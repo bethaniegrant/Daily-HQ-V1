@@ -410,7 +410,7 @@ function Home({ d, now, go, openMenu, isDesktop }) {
           <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>This month at a glance</span>
           <span style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: ".12em", textTransform: "uppercase" }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
         </div>
-        <TrackerCalendar d={d} now={now} go={go} />
+        <TrackerCalendar d={d} now={now} go={go} isDesktop={isDesktop} />
       </section>
 
       {/* Today's Habits */}
@@ -540,7 +540,9 @@ function MoreHub({ d, setD, go }) {
 
 function Note({ children }) { return <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, fontStyle: "italic", fontFamily: "'Fraunces',serif", padding: "4px 2px" }}>{children}</div>; }
 function SectionMini({ text }) { return <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginTop: 8 }}>{text}</div>; }
-function TrackerCalendar({ d, now, go }) {
+function TrackerCalendar({ d, now, go, isDesktop }) {
+  const [overviewDay, setOverviewDay] = useState(null); // Date or null
+  const [weekOpen, setWeekOpen] = useState(false);
   const [cursor, setCursor] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
   const dim = daysInMonth(cursor), pad = firstWeekday(cursor);
   const todayK = dayKey(now);
@@ -584,9 +586,12 @@ function TrackerCalendar({ d, now, go }) {
 
   return (
     <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, padding: "18px 18px 16px", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
         <button onClick={prevMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg></button>
-        <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: INK }}>{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, justifyContent: "center" }}>
+          <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: INK }}>{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+          <button onClick={() => setWeekOpen(true)} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, padding: "4px 10px", fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: INK, cursor: "pointer" }}>Week view</button>
+        </div>
         <button onClick={nextMonth} className="pop" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round"><polyline points="9,6 15,12 9,18"/></svg></button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
@@ -611,7 +616,7 @@ function TrackerCalendar({ d, now, go }) {
             <div
               key={day}
               title={tip}
-              onClick={() => go("plan", "habits")}
+              onClick={() => setOverviewDay(info.dt)}
               className="pop"
               style={{
                 position: "relative",
@@ -655,6 +660,215 @@ function TrackerCalendar({ d, now, go }) {
         <Legend color={AMBER} label="Mood" />
         <Legend color={AMBER} label="Bill due" ring />
       </div>
+      {overviewDay && <DayOverview d={d} dt={overviewDay} onClose={() => setOverviewDay(null)} go={go} isDesktop={isDesktop} />}
+      {weekOpen && <WeekOverview d={d} anchor={overviewDay || now} onClose={() => setWeekOpen(false)} go={go} isDesktop={isDesktop} onPickDay={(dt) => { setWeekOpen(false); setOverviewDay(dt); }} />}
+    </div>
+  );
+}
+
+// ─── Day & Week Overview ────────────────────────────────────────
+function dayBundle(d, dt) {
+  const k = dayKey(dt);
+  const dayNum = dt.getDate();
+  const sameMonth = dt.getFullYear() === new Date().getFullYear() && dt.getMonth() === new Date().getMonth();
+  const checks = d.habitChecks[k] || {};
+  const oneoffs = d.habitOneoffs[k] || [];
+  const habits = [
+    ...d.habitDefs.map((h) => ({ id: h.id, n: h.n, done: !!checks[h.id], recurring: true })),
+    ...oneoffs.map((o) => ({ id: o.id, n: o.n, done: !!o.done, recurring: false })),
+  ];
+  const medsList = d.meds.map((m) => {
+    const t = medTimes(m);
+    const done = medDoneCount((d.medChecks[k] || {})[m.id], t);
+    return { id: m.id, n: m.n, dose: m.dose, done, times: t };
+  });
+  const workoutDone = d.workoutDone && d.workoutDone[k] ? d.workoutDone[k] : {};
+  const workouts = Object.keys(workoutDone).map((wid) => {
+    const w = d.workouts.find((x) => x.id === wid);
+    if (!w) return null;
+    const exDone = workoutDone[wid] || {};
+    const doneCount = (w.ex || []).filter((e) => exDone[e.id]).length;
+    return { id: wid, n: w.n, cat: catOf(w.cat), done: doneCount, total: (w.ex || []).length };
+  }).filter(Boolean);
+  const moodBlock = (d.blocks || []).find((b) => b.type === "mood");
+  const moodId = sameMonth && moodBlock && moodBlock.days ? moodBlock.days[dayNum] : null;
+  const mood = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
+  const bills = [];
+  BUDGET_SECTIONS.forEach((sec) => {
+    (d.budget[sec.key] || []).forEach((r) => {
+      const day = parseInt(r.due, 10);
+      if (day === dayNum && r.n) bills.push({ n: r.n, a: r.a, color: sec.color, section: sec.label });
+    });
+  });
+  const weekdayShort = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()];
+  const meal = (d.meals && d.meals[weekdayShort]) || "";
+  return { habits, medsList, workouts, mood, bills, meal, weekdayShort };
+}
+
+function OverviewShell({ title, sub, onClose, children, width }) {
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(22,32,28,.55)", zIndex: 999, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 16, overflowY: "auto" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 22, maxWidth: width || 520, width: "100%", marginTop: 32, marginBottom: 32, boxShadow: "0 30px 80px -20px rgba(22,32,28,.5)", overflow: "hidden" }}>
+        <div style={{ background: INK, color: PAPER, padding: "20px 22px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginTop: 4 }}>{title}</div>
+          </div>
+          <button onClick={onClose} className="pop" style={{ background: "rgba(255,255,255,.12)", border: "none", borderRadius: 999, width: 32, height: 32, color: PAPER, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><XIcon c={PAPER} s={16} /></button>
+        </div>
+        <div style={{ padding: "18px 18px 22px" }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function OverviewBlock({ label, color, count, children, onClick }) {
+  return (
+    <div onClick={onClick} className={onClick ? "pop" : ""} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${color}`, borderRadius: 8, padding: "12px 14px", cursor: onClick ? "pointer" : "default" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: count != null || children ? 8 : 0 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED }}>{label}</div>
+        {count != null && <div style={{ fontSize: 12, fontWeight: 700, color }}>{count}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function DayOverview({ d, dt, onClose, go, isDesktop }) {
+  const b = dayBundle(d, dt);
+  const isToday = dayKey(dt) === dayKey(new Date());
+  const title = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const habitsDone = b.habits.filter((h) => h.done).length;
+  const medsDone = b.medsList.reduce((s, m) => s + (m.done >= m.times ? 1 : 0), 0);
+  const anything = b.habits.length || b.medsList.length || b.workouts.length || b.mood || b.bills.length || b.meal;
+  return (
+    <OverviewShell title={title} sub={isToday ? "Today's overview" : "Day overview"} onClose={onClose}>
+      {!anything && <div style={{ fontSize: 13, color: MUTED, padding: "20px 4px", textAlign: "center", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>Nothing tracked for this day yet.</div>}
+      <div style={{ display: "grid", gap: 10 }}>
+        {b.mood && (
+          <OverviewBlock label="Mood" color={b.mood.color}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, background: b.mood.color }} />
+              <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>{b.mood.label}</div>
+            </div>
+          </OverviewBlock>
+        )}
+        {b.bills.length > 0 && (
+          <OverviewBlock label="Bills due" color={AMBER} count={`${b.bills.length}`}>
+            <div style={{ display: "grid", gap: 6 }}>
+              {b.bills.map((bl, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 999, background: bl.color, flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bl.n}</span>
+                    <span style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase" }}>{bl.section}</span>
+                  </div>
+                  {bl.a && <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, color: INK }}>${money(bl.a)}</div>}
+                </div>
+              ))}
+            </div>
+          </OverviewBlock>
+        )}
+        {b.habits.length > 0 && (
+          <OverviewBlock label="Habits" color={SAGE} count={`${habitsDone}/${b.habits.length}`} onClick={() => { onClose(); go("plan", "habits"); }}>
+            <div style={{ display: "grid", gap: 5 }}>
+              {b.habits.map((h) => (
+                <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                  <span style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${h.done ? SAGE : LINE}`, background: h.done ? SAGE : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{h.done && <CheckIcon c={PAPER} s={9} />}</span>
+                  <span style={{ color: h.done ? MUTED : INK, fontWeight: 600, textDecoration: h.done ? "line-through" : "none" }}>{h.n || "(unnamed)"}</span>
+                  {!h.recurring && <span style={{ fontSize: 9, color: MUTED, letterSpacing: ".1em", textTransform: "uppercase", fontWeight: 700 }}>once</span>}
+                </div>
+              ))}
+            </div>
+          </OverviewBlock>
+        )}
+        {b.medsList.length > 0 && (
+          <OverviewBlock label="Medications" color={PLUM} count={`${medsDone}/${b.medsList.length}`} onClick={() => { onClose(); go("health", "meds"); }}>
+            <div style={{ display: "grid", gap: 5 }}>
+              {b.medsList.map((m) => (
+                <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                  <span style={{ fontWeight: 600, color: m.done >= m.times ? MUTED : INK }}>{m.n}{m.dose ? ` · ${m.dose}` : ""}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: m.done >= m.times ? SAGE : MUTED }}>{m.done}/{m.times}</span>
+                </div>
+              ))}
+            </div>
+          </OverviewBlock>
+        )}
+        {b.workouts.length > 0 && (
+          <OverviewBlock label="Workouts logged" color={BLUE} count={`${b.workouts.length}`} onClick={() => { onClose(); go("health", "workouts"); }}>
+            <div style={{ display: "grid", gap: 5 }}>
+              {b.workouts.map((w) => (
+                <div key={w.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 999, background: w.cat.color }} />
+                    <span style={{ fontWeight: 600 }}>{w.n}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: MUTED, fontWeight: 700 }}>{w.done}/{w.total}</span>
+                </div>
+              ))}
+            </div>
+          </OverviewBlock>
+        )}
+        {b.meal && (
+          <OverviewBlock label={`${b.weekdayShort} meal`} color={SAGE} onClick={() => { onClose(); go("health", "meals"); }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: INK, fontFamily: "'Fraunces',serif" }}>{b.meal}</div>
+          </OverviewBlock>
+        )}
+      </div>
+    </OverviewShell>
+  );
+}
+
+function WeekOverview({ d, anchor, onClose, go, isDesktop, onPickDay }) {
+  const start = new Date(anchor); start.setDate(anchor.getDate() - anchor.getDay());
+  const days = Array.from({ length: 7 }, (_, i) => { const dt = new Date(start); dt.setDate(start.getDate() + i); return dt; });
+  const endLabel = new Date(start); endLabel.setDate(start.getDate() + 6);
+  const sub = `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${endLabel.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  const todayK = dayKey(new Date());
+  return (
+    <OverviewShell title="Week at a glance" sub={sub} onClose={onClose} width={isDesktop ? 1100 : 560}>
+      <div style={{ display: "grid", gap: 10, gridTemplateColumns: isDesktop ? "repeat(7, minmax(0, 1fr))" : "1fr" }}>
+        {days.map((dt) => {
+          const b = dayBundle(d, dt);
+          const k = dayKey(dt);
+          const isToday = k === todayK;
+          const habitsDone = b.habits.filter((h) => h.done).length;
+          const medsDone = b.medsList.reduce((s, m) => s + (m.done >= m.times ? 1 : 0), 0);
+          return (
+            <div key={k} onClick={() => onPickDay(dt)} className="pop" style={{ background: isToday ? INK : CARD, color: isToday ? PAPER : INK, border: `1px solid ${isToday ? INK : LINE}`, borderRadius: 14, padding: "14px 14px", cursor: "pointer", display: "flex", flexDirection: "column", gap: 8, minHeight: isDesktop ? 220 : "auto" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <div>
+                  <div style={{ fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 700, color: isToday ? MIST : MUTED }}>{dt.toLocaleDateString("en-US", { weekday: "short" })}</div>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, lineHeight: 1 }}>{dt.getDate()}</div>
+                </div>
+                {b.mood && <div title={b.mood.label} style={{ width: 14, height: 14, borderRadius: 4, background: b.mood.color, border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
+              </div>
+              <div style={{ display: "grid", gap: 4, fontSize: 11, fontWeight: 600 }}>
+                {b.habits.length > 0 && <Row isToday={isToday} color={SAGE} label="Habits" val={`${habitsDone}/${b.habits.length}`} />}
+                {b.medsList.length > 0 && <Row isToday={isToday} color={PLUM} label="Meds" val={`${medsDone}/${b.medsList.length}`} />}
+                {b.workouts.length > 0 && <Row isToday={isToday} color={BLUE} label="Workout" val={`${b.workouts.length}`} />}
+                {b.bills.length > 0 && <Row isToday={isToday} color={AMBER} label="Bills" val={`${b.bills.length}`} />}
+                {b.meal && <Row isToday={isToday} color={SAGE} label="Meal" val={b.meal.length > 14 ? b.meal.slice(0, 14) + "…" : b.meal} />}
+                {b.habits.length === 0 && b.medsList.length === 0 && b.workouts.length === 0 && b.bills.length === 0 && !b.meal && !b.mood && (
+                  <div style={{ fontSize: 11, color: isToday ? MIST : MUTED, fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>Nothing tracked</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </OverviewShell>
+  );
+}
+
+function Row({ isToday, color, label, val }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+        <span style={{ width: 6, height: 6, borderRadius: 999, background: color, flexShrink: 0 }} />
+        <span style={{ color: isToday ? MIST : MUTED, fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", fontWeight: 700 }}>{label}</span>
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{val}</span>
     </div>
   );
 }
