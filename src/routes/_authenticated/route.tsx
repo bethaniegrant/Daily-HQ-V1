@@ -39,7 +39,7 @@ export const Route = createFileRoute("/_authenticated")({
     // Block revoked users
     const { data: profile } = await supabase
       .from("profiles")
-      .select("access_revoked")
+      .select("access_revoked, email_verified_deadline")
       .eq("id", data.user.id)
       .maybeSingle();
     if (profile?.access_revoked) {
@@ -47,12 +47,43 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/auth" });
     }
 
-    // Expose admin flag from the user's own role rows
+    // Check admin role
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", data.user.id);
-    return { user: data.user, isAdmin: !!roles?.some((r) => r.role === "admin") };
+    const isAdmin = !!roles?.some((r) => r.role === "admin");
+
+    // Entitlement gate: must be admin OR have redeemed an invite token
+    if (!isAdmin) {
+      const { count: redeemedCount } = await supabase
+        .from("invite_tokens")
+        .select("*", { count: "exact", head: true })
+        .eq("redeemed_by", data.user.id);
+      if (!redeemedCount || redeemedCount === 0) {
+        // No purchase on file — sign them out and send to /purchase
+        await supabase.auth.signOut();
+        throw redirect({ to: "/purchase" });
+      }
+    }
+
+    // 48-hour email verification grace period (skipped for Google/OAuth users — already verified)
+    const emailConfirmed = !!data.user.email_confirmed_at;
+    const provider = data.user.app_metadata?.provider;
+    const isOAuth = provider && provider !== "email";
+    if (!emailConfirmed && !isOAuth && profile?.email_verified_deadline) {
+      const deadline = new Date(profile.email_verified_deadline).getTime();
+      if (Date.now() > deadline) {
+        throw redirect({ to: "/verify-email" });
+      }
+    }
+
+    return {
+      user: data.user,
+      isAdmin,
+      needsVerification: !emailConfirmed && !isOAuth,
+      verificationDeadline: profile?.email_verified_deadline ?? null,
+    };
   },
   component: () => <Outlet />,
 });
