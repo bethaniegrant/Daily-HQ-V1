@@ -176,10 +176,21 @@ function AuthPage() {
             </TabsContent>
 
             <TabsContent value="signup">
-              {token && !canSignUp ? (
-                <div className="mt-4 text-sm text-muted-foreground text-center p-4 border rounded-md">
-                  An invite link is required to create an account.<br />
-                  Paste your invite URL into the address bar, or contact support.
+              {!canSignUp ? (
+                <div className="mt-4 space-y-3 p-4 border rounded-md text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Daily HQ is invite-only. Purchase access to create your account.
+                  </p>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => navigate({ to: "/purchase" })}
+                  >
+                    Get access — $10
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Already purchased? Check your email for an invite link.
+                  </p>
                 </div>
               ) : (
                 <form onSubmit={signUp} className="space-y-3 mt-4">
