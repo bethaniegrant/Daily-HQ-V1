@@ -1,35 +1,47 @@
-## Changes to `public/whole-life.html`
+## Problem
 
-### 1. Remove "About this app"
-Delete the `ToolRow` for "About this app" in `MoreHub` (line 267).
+After signing in, `/app` loads but the iframe (`public/whole-life.html`) renders a blank beige screen. The console shows:
 
-### 2. Replace bottom tab bar with hamburger menu
-- Remove the fixed bottom tab bar `<div>` (lines 129–140) and the `paddingBottom: 78` on the wrapper (line 126).
-- Add a fixed hamburger button in the top-left corner (over the dark header area, white icon, ~44px tap target, `position: fixed`, `top: 14`, `left: 14`, `zIndex: 50`).
-- Add a slide-in drawer (`position: fixed`, left side, ~280px wide, full height, `PAPER` background, slides in from `translateX(-100%)`), plus a dimmed backdrop that closes the menu on tap. Animate with the existing `.fade` style language.
-- New state `const [menuOpen, setMenuOpen] = useState(false);` in the root component.
+> `Uncaught SyntaxError: Failed to execute 'appendChild' on 'Node': Cannot use import statement outside a module` — thrown from `@babel/standalone`.
 
-### 3. Full navigation in the menu
-The drawer lists every destination currently reachable from the home dashboard and the hubs, grouped:
+## Root cause
 
-- **Home** → `go("home")`
-- **Money**
-  - Paycheck Budget → `go("money","budget")`
-  - Debt Payoff → `go("money","budget")`
-  - Sinking Funds → `go("money","budget")`
-- **Health**
-  - Medications → `go("health","meds")`
-  - Workouts → `go("health","workouts")`
-  - Meal Plan → `go("health","meals")`
-  - Mood → opens the mood block (same logic as `HealthHub`)
-- **Plan**
-  - Habits → `go("plan","habits")`
-  - Monthly Goals → `go("plan","goals")`
-  - Your spaces (list `d.blocks` dynamically) → `go("plan","block:"+id)`
-- **More**
-  - Add a space → `go("plan")`
+`public/whole-life.html` runs entirely in-browser via `@babel/standalone` to transpile a `<script type="text/babel" data-presets="react">` block (about 2,100 lines of JSX). The current `@babel/standalone` defaults the React preset's runtime to `"automatic"`, which emits an ESM `import { jsx as _jsx } from "react/jsx-runtime"` at the top of the transformed output. Babel then appends the transformed code as a classic `<script>` (not `type="module"`), so the browser refuses it with "Cannot use import statement outside a module". The whole planner never mounts.
 
-Each item uses the existing icon + color tokens (`WalletIcon/AMBER`, `PillIcon/PLUM`, etc.) for visual consistency with the hubs. Selecting any item closes the drawer.
+This happens only after Google sign-in is successful — the auth flow is fine. The whole-life.html planner itself is broken.
 
-### Out of scope
-No changes to hub pages themselves, data model, styling tokens, or the React/Babel-CDN setup. The `MoreHub` page stays (still reachable via the menu's "More" group header if useful) but loses "About this app".
+## Fix
+
+Force the React preset to use the legacy `"classic"` runtime so Babel emits `React.createElement(...)` (no ESM imports). The `text/babel` auto-runner doesn't accept preset options, so transpile manually:
+
+In `public/whole-life.html`:
+
+1. Change the planner `<script type="text/babel" data-presets="react">` tag to `<script type="text/plain" id="planner-src">` so Babel's auto-runner ignores it.
+2. After the existing CDN script tags, add a small bootstrap `<script>` that runs once on `DOMContentLoaded`:
+
+```html
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const src = document.getElementById('planner-src').textContent;
+    const { code } = Babel.transform(src, {
+      presets: [['react', { runtime: 'classic' }]],
+    });
+    const s = document.createElement('script');
+    s.textContent = code;
+    document.body.appendChild(s);
+  });
+</script>
+```
+
+Nothing else in the file changes.
+
+## Verification
+
+1. Reload `/app` on the published site after sign-in.
+2. Confirm the Daily HQ planner UI renders (no blank beige screen).
+3. Confirm no `SyntaxError` in the browser console.
+
+## Out of scope
+
+- The auth flow (sign-in is already working — logs confirm Bethanie's Google login succeeded).
+- Migrating `whole-life.html` to a real build (longer-term improvement; not needed to unblock).
