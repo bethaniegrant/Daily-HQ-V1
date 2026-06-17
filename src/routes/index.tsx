@@ -120,10 +120,10 @@ function TopNav({ signedIn }: { signedIn: boolean }) {
           </div>
         </div>
         <Link
-          to={signedIn ? "/app" : "/auth"}
+          to={signedIn ? "/app" : "/purchase"}
           className="stone-cta-accent shrink-0 rounded-full px-5 py-3 text-[13px] font-medium inline-flex items-center gap-1.5"
         >
-          {signedIn ? "Open Daily HQ" : "Request access"}
+          {signedIn ? "Open Daily HQ" : "Get access — $10"}
           <ArrowUpRight className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -167,10 +167,10 @@ function Hero({ signedIn }: { signedIn: boolean }) {
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <Link
-              to={signedIn ? "/app" : "/auth"}
+              to={signedIn ? "/app" : "/purchase"}
               className="stone-cta rounded-full px-6 py-3.5 text-[14px] font-medium inline-flex items-center gap-2"
             >
-              {signedIn ? "Open your HQ" : "See how it works"}
+              {signedIn ? "Open your HQ" : "Get access — $10"}
               <ArrowUpRight className="w-4 h-4" />
             </Link>
             <a
