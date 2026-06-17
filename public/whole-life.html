@@ -19,7 +19,18 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const src = document.getElementById('planner-src').textContent;
+  const { code } = Babel.transform(src, {
+    presets: [['react', { runtime: 'classic' }]],
+  });
+  const s = document.createElement('script');
+  s.textContent = code;
+  document.body.appendChild(s);
+});
+</script>
+<script type="text/plain" id="planner-src">
 const { useState, useEffect, useRef } = React;
 
 // ─── Cloud sync (Supabase) ────────────────────────────────────────
