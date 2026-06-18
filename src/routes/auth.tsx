@@ -44,10 +44,17 @@ function AuthPage() {
   >(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/app" });
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+      // If the visitor arrived via an invite link, sign out the current session
+      // so they can create the new invited account instead of being sent to /app.
+      if (token) {
+        await supabase.auth.signOut();
+        return;
+      }
+      navigate({ to: "/app" });
     });
-  }, [navigate]);
+  }, [navigate, token]);
 
   useEffect(() => {
     if (!token) { setTokenStatus(null); return; }
