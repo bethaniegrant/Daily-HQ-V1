@@ -210,6 +210,17 @@ function AuthPage() {
                     Already purchased? Check your email for an invite link.
                   </p>
                 </div>
+              ) : pendingConfirm ? (
+                <div className="mt-4 space-y-3 p-4 border rounded-md text-center bg-muted/30">
+                  <p className="text-sm font-medium">Check your email to finish setup</p>
+                  <p className="text-sm text-muted-foreground">
+                    We sent a confirmation link to <span className="font-medium">{pendingConfirm}</span>.
+                    Click it to activate your account, then you'll be signed in automatically.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Don't see it? Check spam, or wait a minute and try again.
+                  </p>
+                </div>
               ) : (
                 <form onSubmit={signUp} className="space-y-3 mt-4">
                   <div><Label>Display name</Label><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>
