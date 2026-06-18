@@ -1018,6 +1018,12 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     const count = medDoneCount((d.medChecks[tk] || {})[m.id], t);
     return { kind: "med", id: m.id, label: (m.n || "Medication") + (m.dose ? ` · ${m.dose}` : "") + (t > 1 ? ` (${count}/${t})` : ""), done, color: PLUM, onToggle: () => toggleMed(m) };
   });
+  const billRows = dayBundle(d, dt).bills.map((b, idx) => ({
+    id: `${b.section}:${b.n}:${idx}`,
+    label: `${b.n || "Bill"}${b.a ? ` · $${money(b.a)}` : ""}`,
+    section: b.section,
+    color: b.color || AMBER,
+  }));
   const all = [...habitRows, ...todoRows, ...medRows];
   const doneCount = all.filter((r) => r.done).length;
 
@@ -1042,8 +1048,21 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
         <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: AMBER }}>Open →</span>
       </button>
 
+      {billRows.length > 0 && (
+        <div style={{ display: "grid", gap: 6 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED }}>Bills due</div>
+          {billRows.map((b) => (
+            <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: PAPER, border: `1px solid ${LINE}`, borderRadius: 8 }}>
+              <span style={{ width: 7, height: 7, borderRadius: 999, background: b.color, flexShrink: 0 }} />
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: TEXT, fontWeight: 700 }}>{b.label}</span>
+              <span style={{ border: `1px solid ${AMBER}`, borderRadius: 3, padding: "1px 5px", fontSize: 9, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", color: AMBER, whiteSpace: "nowrap" }}>↻ Monthly</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {all.length === 0 ? (
-        <div style={{ fontSize: 13, color: MUTED, fontStyle: "italic", fontFamily: "'DM Serif Display',serif", padding: "10px 4px" }}>Nothing scheduled. Add habits, to-dos, or meds to begin.</div>
+        <div style={{ fontSize: 13, color: MUTED, fontStyle: "italic", fontFamily: "'DM Serif Display',serif", padding: "10px 4px" }}>{billRows.length ? "" : "Nothing scheduled. Add habits, to-dos, meds, or bill due dates to begin."}</div>
       ) : (
         <div style={{ display: "grid", gap: 6 }}>
           {all.map((r) => (
