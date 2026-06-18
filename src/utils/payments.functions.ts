@@ -15,7 +15,7 @@ export const createDailyHqCheckout = createServerFn({ method: 'POST' })
     try {
       const stripe = createStripeClient(data.environment);
 
-      const prices = await stripe.prices.list({ lookup_keys: ['dailyhq_access_onetime'] });
+      const prices = await stripe.prices.list({ lookup_keys: ['dailyhq_access_onetime_v15'] });
       if (!prices.data.length) throw new Error('Price not found');
       const stripePrice = prices.data[0];
 
