@@ -267,6 +267,14 @@ function App() {
     }
   }, [now, synced]); // eslint-disable-line
 
+  // one-time migration: rename legacy "Errands" checklist block → "To Do"
+  useEffect(() => {
+    if (!synced) return;
+    const needs = (d.blocks || []).some((b) => b.type === "checklist" && (b.title || "").trim().toLowerCase() === "errands");
+    if (!needs) return;
+    setD((p) => ({ ...p, blocks: p.blocks.map((b) => (b.type === "checklist" && (b.title || "").trim().toLowerCase() === "errands") ? { ...b, title: "To Do" } : b) }));
+  }, [synced]); // eslint-disable-line
+
   const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
 
   // listen for parent (app shell) messages — Home, admin context, etc.
