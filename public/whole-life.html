@@ -320,7 +320,7 @@ function App() {
     view = { home: <Home {...common} />, money: <Budget {...common} back={() => go("home")} />, health: <HealthHub {...common} />, plan: <PlanHub {...common} />, spaces: <SpacesHub {...common} />, more: <MoreHub {...common} /> }[tab];
   } else if (page.startsWith("block:")) {
     const b = d.blocks.find((x) => x.id === page.split(":")[1]);
-    view = b ? (b.type === "mood" ? <MoodEditor block={b} {...common} /> : b.type === "events" ? <EventsEditor block={b} {...common} /> : <BlockEditor block={b} {...common} />) : <PlanHub {...common} />;
+    view = b ? (b.type === "mood" ? <MoodEditor block={b} {...common} /> : b.type === "tracker" ? <TrackerEditor block={b} {...common} /> : b.type === "events" ? <EventsEditor block={b} {...common} /> : <BlockEditor block={b} {...common} />) : <PlanHub {...common} />;
   } else if (page.startsWith("workout:")) {
     const w = d.workouts.find((x) => x.id === page.split(":")[1]);
     view = w ? <WorkoutEditor workout={w} {...common} /> : <HealthHub {...common} />;
