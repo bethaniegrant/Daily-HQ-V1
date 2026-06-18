@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -122,7 +122,9 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="items-center text-center">
-          <img src={logoUrl} alt="Bethanie Rose" className="h-20 w-auto mb-2" />
+          <Link to="/" aria-label="Back to homepage" className="inline-block transition-opacity hover:opacity-80">
+            <img src={logoUrl} alt="Bethanie Rose" className="h-20 w-auto mb-2" />
+          </Link>
           <CardTitle>Daily HQ</CardTitle>
           <CardDescription>
             {token

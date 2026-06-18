@@ -333,6 +333,7 @@ function App() {
     ...customCats.map((c) => ({ label: c.charAt(0).toUpperCase() + c.slice(1), items: blocksFor(c) })),
     { label: "Account", items: [
       ...(isAdmin ? [{ icon: GridIcon, color: BLUE, title: "Admin", onClick: () => { closeMenu(); openAdmin(); } }] : []),
+      { icon: GridIcon, color: SAGE, title: "Main website", onClick: () => { closeMenu(); try { window.parent && window.parent.postMessage({ type: "shell:navigate", to: "/" }, "*"); } catch (_) {} } },
       { icon: XIcon, color: PLUM, title: "Sign out", onClick: () => { closeMenu(); signOutFromShell(); } },
     ]},
   ];
