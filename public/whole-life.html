@@ -657,10 +657,11 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
   allBudgetSecs.forEach((sec) => {
     (d.budget[sec.key] || []).forEach((r) => {
       let day = parseInt(r.due, 10);
-      if (!(day >= 1 && day <= 31) || !r.n) return;
+      if (!(day >= 1 && day <= 31)) return;
+      if (!r.n && !r.a) return;
       if (day > monthLen) day = monthLen; // e.g. due 31 in Feb → last day
       billsByDay[day] = billsByDay[day] || [];
-      billsByDay[day].push({ n: r.n, color: sec.color, a: r.a, section: sec.label });
+      billsByDay[day].push({ n: r.n || "(unnamed)", color: sec.color, a: r.a, section: sec.label });
     });
   });
 
@@ -805,9 +806,10 @@ function dayBundle(d, dt) {
   allBudgetSecs2.forEach((sec) => {
     (d.budget[sec.key] || []).forEach((r) => {
       let day = parseInt(r.due, 10);
-      if (!(day >= 1 && day <= 31) || !r.n) return;
+      if (!(day >= 1 && day <= 31)) return;
+      if (!r.n && !r.a) return;
       if (day > monthLen2) day = monthLen2;
-      if (day === dayNum) bills.push({ n: r.n, a: r.a, color: sec.color, section: sec.label, recurring: true });
+      if (day === dayNum) bills.push({ n: r.n || "(unnamed)", a: r.a, color: sec.color, section: sec.label, recurring: true });
     });
   });
   const weekdayShort = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()];
