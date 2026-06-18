@@ -2046,18 +2046,26 @@ function Meals({ d, setD, back }) {
 // ═══ CUSTOM BLOCKS (preview, add menu, editors, mood) ═════════════
 function BlockPreview({ block, onClick, now }) {
   const meta = BLOCK_META[block.type];
+  if (!meta) return null;
   let summary = "";
   if (block.type === "mood") summary = `${Object.keys(block.days).length} of ${daysInMonth(now)} days`;
+  else if (block.type === "tracker") {
+    const k = block.kind || "daily";
+    if (k === "daily") summary = `${Object.keys(block.days || {}).length} of ${daysInMonth(now)} days`;
+    else summary = `${(block.entries || []).length} entr${(block.entries || []).length === 1 ? "y" : "ies"}`;
+  }
   else if (block.type === "notes") summary = block.items ? block.items.slice(0, 50) : "Empty note";
   else if (block.type === "events") { const upcoming = (block.events || []).filter((e) => e.date && e.date >= dayKey(now)).length; summary = upcoming ? `${upcoming} upcoming` : `${(block.events || []).length} event${(block.events || []).length === 1 ? "" : "s"}`; }
   else { const total = block.items.filter((i) => (i.t || "").trim()).length; if (block.type === "checklist") { const done = block.items.filter((i) => i.done).length; summary = `${done} of ${total} done`; } else summary = `${total} item${total === 1 ? "" : "s"}`; }
+  const trackerLabel = block.type === "tracker" ? (TRACKER_KINDS[block.kind || "daily"] || {}).label : null;
   return (
     <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${meta.color}`, borderRadius: 4, padding: "15px 16px", display: "flex", alignItems: "center", gap: 14 }}>
       <div style={{ width: 38, height: 38, borderRadius: 3, background: meta.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><meta.icon c={meta.color} s={19} /></div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{block.title}</div>
-        <div style={{ fontSize: 12, color: MUTED }}>{meta.label} · {summary}</div>
+        <div style={{ fontSize: 12, color: MUTED }}>{trackerLabel ? `Tracker · ${trackerLabel}` : meta.label} · {summary}</div>
         {block.type === "mood" && <div style={{ display: "flex", gap: 4, marginTop: 6 }}>{block.moods.slice(0, 5).map((m) => <div key={m.id} style={{ width: 14, height: 14, borderRadius: 3, background: m.color }} />)}</div>}
+        {block.type === "tracker" && (block.kind || "daily") === "daily" && <div style={{ display: "flex", gap: 4, marginTop: 6 }}>{(block.options || []).slice(0, 5).map((m) => <div key={m.id} style={{ width: 14, height: 14, borderRadius: 3, background: m.color }} />)}</div>}
       </div>
       <ChevIcon c={MUTED} />
     </div>
@@ -2069,10 +2077,16 @@ function getCategories(d) {
   const custom = [...new Set(d.blocks.map((b) => b.category || "plan").filter((c) => !BUILTIN_CATEGORIES.includes(c)))];
   return [...BUILTIN_CATEGORIES, ...custom];
 }
-function makeBlock(type, category, title) {
-  const t = (title || "").trim() || ({ checklist: "New checklist", list: "New list", schedule: "New schedule", notes: "New note", mood: "New mood tracker", events: "Calendar" }[type]);
+function makeBlock(type, category, title, opts) {
+  const t = (title || "").trim() || ({ checklist: "New checklist", list: "New list", schedule: "New schedule", notes: "New note", mood: "New mood tracker", tracker: "New tracker", events: "Calendar" }[type]);
   const base = { id: uid(), type, category, title: t };
   if (type === "mood") return { ...base, monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} };
+  if (type === "tracker") {
+    const kind = (opts && opts.kind) || "daily";
+    if (kind === "daily") return { ...base, kind, monthStamp: monthKey(), options: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }], days: {} };
+    if (kind === "rated") return { ...base, kind, scale: 5, entries: [] };
+    if (kind === "notes") return { ...base, kind, entries: [] };
+  }
   if (type === "notes") return { ...base, items: "" };
   if (type === "schedule") return { ...base, items: [{ time: "", t: "" }] };
   if (type === "events") return { ...base, events: [], googleSync: { connected: false, lastSyncAt: null, calendarId: "primary" } };
