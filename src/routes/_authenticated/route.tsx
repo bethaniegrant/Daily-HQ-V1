@@ -31,8 +31,8 @@ export const Route = createFileRoute("/_authenticated")({
     try {
       const pending = sessionStorage.getItem("pending_invite_token");
       if (pending) {
+        await redeemInviteToken({ data: { token: pending } });
         sessionStorage.removeItem("pending_invite_token");
-        await redeemInviteToken({ data: { token: pending } }).catch(() => {});
       }
     } catch {}
 
