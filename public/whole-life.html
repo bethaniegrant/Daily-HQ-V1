@@ -277,6 +277,22 @@ function App() {
     setD((p) => ({ ...p, blocks: p.blocks.map((b) => (b.type === "checklist" && (b.title || "").trim().toLowerCase() === "errands") ? { ...b, title: "To Do" } : b) }));
   }, [synced]); // eslint-disable-line
 
+  // daily rollover: unchecked To Do items carry forward to the next day; checked items are cleared.
+  useEffect(() => {
+    if (!synced) return;
+    const today = dayKey(now);
+    if (d.todoDayStamp === today) return;
+    setD((p) => ({
+      ...p,
+      todoDayStamp: today,
+      blocks: (p.blocks || []).map((b) =>
+        b.type === "checklist" && /to ?do/i.test(b.title || "")
+          ? { ...b, items: (b.items || []).filter((it) => !it.done) }
+          : b
+      ),
+    }));
+  }, [now, synced]); // eslint-disable-line
+
   const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
 
   // listen for parent (app shell) messages — Home, admin context, etc.
