@@ -650,15 +650,17 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
   const todayK = dayKey(now);
   const dayShells = ["S", "M", "T", "W", "T", "F", "S"];
 
-  // bills due map: day-of-month -> [{ n, color }]
+  // bills due map: day-of-month -> [{ n, color }] — recurs every month, clamps to month length
   const billsByDay = {};
-  BUDGET_SECTIONS.forEach((sec) => {
+  const monthLen = daysInMonth(cursor);
+  const allBudgetSecs = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])];
+  allBudgetSecs.forEach((sec) => {
     (d.budget[sec.key] || []).forEach((r) => {
-      const day = parseInt(r.due, 10);
-      if (day >= 1 && day <= 31 && r.n) {
-        billsByDay[day] = billsByDay[day] || [];
-        billsByDay[day].push({ n: r.n, color: sec.color, a: r.a });
-      }
+      let day = parseInt(r.due, 10);
+      if (!(day >= 1 && day <= 31) || !r.n) return;
+      if (day > monthLen) day = monthLen; // e.g. due 31 in Feb → last day
+      billsByDay[day] = billsByDay[day] || [];
+      billsByDay[day].push({ n: r.n, color: sec.color, a: r.a, section: sec.label });
     });
   });
 
