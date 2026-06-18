@@ -253,7 +253,7 @@ function App() {
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
   const isDesktop = useIsDesktop();
 
-  const [tab, setTab] = useState("home");     // home | money | health | plan | more
+  const [tab, setTab] = useState("home");     // home | money | health | plan | spaces | more
   const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -317,7 +317,7 @@ function App() {
   // resolve current page
   let view;
   if (page === null) {
-    view = { home: <Home {...common} />, money: <Budget {...common} back={() => go("home")} />, health: <HealthHub {...common} />, plan: <PlanHub {...common} />, more: <MoreHub {...common} /> }[tab];
+    view = { home: <Home {...common} />, money: <Budget {...common} back={() => go("home")} />, health: <HealthHub {...common} />, plan: <PlanHub {...common} />, spaces: <SpacesHub {...common} />, more: <MoreHub {...common} /> }[tab];
   } else if (page.startsWith("block:")) {
     const b = d.blocks.find((x) => x.id === page.split(":")[1]);
     view = b ? (b.type === "mood" ? <MoodEditor block={b} {...common} /> : b.type === "events" ? <EventsEditor block={b} {...common} /> : <BlockEditor block={b} {...common} />) : <PlanHub {...common} />;
@@ -479,6 +479,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             {navBtn("Today", () => go("home"))}
             {navBtn("Health", () => go("health"))}
             {navBtn("Plan", () => go("plan"))}
+            {navBtn("Spaces", () => go("spaces"))}
             {isDesktop && navBtn("Money", () => go("money"))}
             <button onClick={openMenu} aria-label="Menu" className="pop" style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.2)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
