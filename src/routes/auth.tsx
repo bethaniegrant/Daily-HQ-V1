@@ -33,6 +33,7 @@ function AuthPage() {
   const { token } = useSearch({ from: "/auth" });
   const validateFn = useServerFn(validateInviteToken);
   const redeemFn = useServerFn(redeemInviteToken);
+  const confirmFn = useServerFn(confirmInvitedEmail);
 
   const [tab, setTab] = useState(token ? "signup" : "signin");
   const [email, setEmail] = useState("");
