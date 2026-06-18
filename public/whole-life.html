@@ -312,7 +312,7 @@ function App() {
   const signOutFromShell = () => { try { window.parent && window.parent.postMessage({ type: "shell:signOut" }, "*"); } catch (_) {} };
   const openAdmin = () => { try { window.parent && window.parent.postMessage({ type: "shell:navigate", to: "/admin" }, "*"); } catch (_) {} };
 
-  const common = { d, setD, now, go, back: () => setPage(null), openMenu: () => setMenuOpen(true), isDesktop, displayName };
+  const common = { d, setD, now, go, back: () => { if (page) setPage(null); else go("home"); }, openMenu: () => setMenuOpen(true), isDesktop, displayName };
 
   // resolve current page
   let view;
