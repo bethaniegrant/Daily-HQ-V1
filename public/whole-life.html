@@ -355,7 +355,7 @@ function App() {
       ...blocksFor("plan"),
     ]},
     { label: "More", items: [
-      { icon: GridIcon, color: SAGE, title: "Add a space", onClick: () => navGo("plan") },
+      { icon: GridIcon, color: SAGE, title: "Add a space", onClick: () => navGo("spaces") },
       ...blocksFor("more"),
     ]},
     ...customCats.map((c) => ({ label: c.charAt(0).toUpperCase() + c.slice(1), items: blocksFor(c) })),
