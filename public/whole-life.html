@@ -996,7 +996,7 @@ function SidePanel({ d, setD, go, isDesktop, selectedDay, setSelectedDay, view, 
       {expanded && (
         <div style={{ padding: "16px 16px 18px", flex: 1, overflow: "auto", maxHeight: isDesktop ? 640 : "none" }}>
           {view === "day"
-            ? <DayOverviewBody d={d} setD={setD} dt={selectedDay} go={go} />
+            ? <TodayList d={d} setD={setD} dt={selectedDay} go={go} isDesktop={isDesktop} />
             : <InlineWeekPanel d={d} setD={setD} go={go} anchor={selectedDay} isDesktop={isDesktop} onPickDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
           }
         </div>
