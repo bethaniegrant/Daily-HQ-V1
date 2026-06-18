@@ -123,7 +123,7 @@ function TopNav({ signedIn }: { signedIn: boolean }) {
           to={signedIn ? "/app" : "/purchase"}
           className="stone-cta-accent shrink-0 rounded-full px-5 py-3 text-[13px] font-medium inline-flex items-center gap-1.5"
         >
-          {signedIn ? "Open Daily HQ" : "Get access — $10"}
+          {signedIn ? "Open Daily HQ" : "Get access — $15"}
           <ArrowUpRight className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -170,7 +170,7 @@ function Hero({ signedIn }: { signedIn: boolean }) {
               to={signedIn ? "/app" : "/purchase"}
               className="stone-cta rounded-full px-6 py-3.5 text-[14px] font-medium inline-flex items-center gap-2"
             >
-              {signedIn ? "Open your HQ" : "Get access — $10"}
+              {signedIn ? "Open your HQ" : "Get access — $15"}
               <ArrowUpRight className="w-4 h-4" />
             </Link>
             <a
@@ -740,7 +740,7 @@ function Access() {
               Daily HQ — lifetime
             </div>
             <div className="mt-4 flex items-end gap-2">
-              <div className="font-display text-6xl text-[color:var(--stone-on-dark)]">$10</div>
+              <div className="font-display text-6xl text-[color:var(--stone-on-dark)]">$15</div>
               <span className="text-[13px] pb-3 text-[color:var(--stone-on-dark-soft)]">
                 one-time · +local tax
               </span>
@@ -760,7 +760,7 @@ function Access() {
               to="/purchase"
               className="mt-8 stone-cta-accent rounded-full px-6 py-3.5 text-[14px] font-medium inline-flex items-center justify-center gap-2"
             >
-              Purchase now — $10
+              Purchase now — $15
               <ArrowUpRight className="w-4 h-4" />
             </Link>
             <p className="mt-3 text-center text-[11px] text-[color:var(--stone-on-dark-soft)]">
