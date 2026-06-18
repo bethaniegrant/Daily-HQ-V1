@@ -206,6 +206,7 @@ const seed = () => ({
   ],
   workoutDone: {}, // { dayKey: { workoutId: { exId: true } } }
   goals: [{ n: "", done: false }, { n: "", done: false }, { n: "", done: false }],
+  yearlyGoals: [],
   meals: { Mon: {}, Tue: {}, Wed: {}, Thu: {}, Fri: {}, Sat: {}, Sun: {} },
   shopping: [{ t: "", done: false }],
   intention: "Steady",
@@ -324,7 +325,7 @@ function App() {
     const w = d.workouts.find((x) => x.id === page.split(":")[1]);
     view = w ? <WorkoutEditor workout={w} {...common} /> : <HealthHub {...common} />;
   } else {
-    view = { budget: <Budget {...common} />, habits: <Habits {...common} />, goals: <Goals {...common} />, meals: <Meals {...common} />, meds: <Meds {...common} />, workouts: <Workouts {...common} /> }[page] || <Home {...common} />;
+    view = { budget: <Budget {...common} />, habits: <Habits {...common} />, goals: <Goals {...common} />, yearly: <YearlyGoals {...common} />, meals: <Meals {...common} />, meds: <Meds {...common} />, workouts: <Workouts {...common} /> }[page] || <Home {...common} />;
   }
 
   const closeMenu = () => setMenuOpen(false);
@@ -350,6 +351,7 @@ function App() {
     { label: "Plan", items: [
       { icon: LeafIcon, color: SAGE, title: "Habits", onClick: () => navGo("plan", "habits") },
       { icon: StarIcon, color: AMBER, title: "Monthly Goals", onClick: () => navGo("plan", "goals") },
+      { icon: StarIcon, color: AMBER, title: "Yearly Goals", onClick: () => navGo("plan", "yearly") },
       ...blocksFor("plan"),
     ]},
     { label: "More", items: [
@@ -563,6 +565,26 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
         </div>
       </section>
 
+      {/* Monthly goals snapshot */}
+      <section style={{ padding: isDesktop ? "30px 32px 0" : "26px 18px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 4px 10px" }}>
+          <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Monthly goals</span>
+          <span className="pop" onClick={() => go("plan", "goals")} style={{ fontSize: 10, fontWeight: 700, color: AMBER, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>Edit</span>
+        </div>
+        <div style={{ display: "grid", gap: 8 }}>
+          {d.goals.map((g, i) => {
+            const empty = !g.n.trim();
+            return (
+              <div key={i} className="pop" onClick={() => go("plan", "goals")} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                <div style={{ width: 26, height: 26, borderRadius: 3, border: `2px solid ${AMBER}`, background: g.done ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "'DM Serif Display',serif", fontWeight: 700, color: g.done ? "#fff" : AMBER, fontSize: 12 }}>{g.done ? <CheckIcon c="#fff" s={14} /> : i + 1}</div>
+                <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: empty ? MUTED : INK, fontStyle: empty ? "italic" : "normal", textDecoration: g.done ? "line-through" : "none" }}>{empty ? `Set goal ${i + 1}` : g.n}</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+
       <footer style={{ display: "flex", justifyContent: "center", gap: 14, padding: "8px 0 28px", opacity: .4 }}>
         <span style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: TEXT, fontWeight: 700 }}>Encrypted</span>
         <span style={{ width: 3, height: 3, borderRadius: 999, background: MUTED, alignSelf: "center" }} />
@@ -620,10 +642,12 @@ function HealthHub({ d, now, go }) {
 }
 function PlanHub({ d, setD, go }) {
   const goalsSet = d.goals.filter((g) => g.n.trim()).length;
+  const yearlySet = (d.yearlyGoals || []).filter((g) => g.n.trim()).length;
   return (
     <Hub title="Plan" sub="Shape your days">
       <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
+      <ToolRow icon={StarIcon} color={AMBER} title="Yearly Goals" sub="The bigger arc" stat={yearlySet ? `${yearlySet}` : ""} onClick={() => go("plan", "yearly")} />
       <SectionMini text="Your spaces" />
       {d.blocks.map((b) => <BlockPreview key={b.id} block={b} onClick={() => go("plan", "block:" + b.id)} now={new Date()} />)}
       <AddBlockMenu d={d} setD={setD} go={go} />
@@ -1885,6 +1909,35 @@ function Goals({ d, setD, back }) {
         ))}
       </div>
       <p style={tip}>Three goals. Not ten. Focus is a kindness to your future self.</p>
+    </Screen>
+  );
+}
+
+function YearlyGoals({ d, setD, back }) {
+  const list = d.yearlyGoals || [];
+  const update = (next) => setD({ ...d, yearlyGoals: next });
+  const toggle = (i) => update(list.map((g, j) => j === i ? { ...g, done: !g.done } : g));
+  const rename = (i, v) => update(list.map((g, j) => j === i ? { ...g, n: v } : g));
+  const add = () => update([...list, { n: "", done: false }]);
+  const remove = (i) => update(list.filter((_, j) => j !== i));
+  const year = new Date().getFullYear();
+  return (
+    <Screen title="Yearly Goals" sub={`The arc of ${year}`} back={back} accent={AMBER}>
+      <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 20px", marginBottom: 14 }}>
+        <label style={{ ...lbl, color: MIST }}>Word of the year</label>
+        <input value={d.yearIntention || ""} onChange={(e) => setD({ ...d, yearIntention: e.target.value })} placeholder="e.g. Build" style={{ border: "none", fontSize: 26, fontFamily: "'DM Serif Display',serif", fontWeight: 600, width: "100%", background: "none", color: PAPER }} />
+      </div>
+      <div style={{ display: "grid", gap: 10 }}>
+        {list.map((g, i) => (
+          <div key={i} style={{ background: CARD, borderRadius: 4, padding: "16px 17px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${LINE}` }}>
+            <div className="pop" onClick={() => toggle(i)} style={{ width: 30, height: 30, borderRadius: 3, border: `2px solid ${AMBER}`, background: g.done ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "'DM Serif Display',serif", fontWeight: 700, color: g.done ? "#fff" : AMBER, fontSize: 14 }}>{g.done ? <CheckIcon c="#fff" s={16} /> : i + 1}</div>
+            <input value={g.n} onChange={(e) => rename(i, e.target.value)} placeholder={`Goal ${i + 1}`} style={{ border: "none", flex: 1, fontSize: 16, fontWeight: 600, background: "none" }} />
+            <div className="pop" onClick={() => remove(i)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={14} /></div>
+          </div>
+        ))}
+      </div>
+      <button onClick={add} style={addBtn}>+ Add a yearly goal</button>
+      <p style={tip}>Add as many as you'd like — but the fewer, the truer.</p>
     </Screen>
   );
 }

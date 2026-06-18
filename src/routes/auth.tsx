@@ -188,7 +188,7 @@ function AuthPage() {
                     className="w-full"
                     onClick={() => navigate({ to: "/purchase" })}
                   >
-                    Get access — $15
+                    Get Access Now
                   </Button>
                   <p className="text-xs text-muted-foreground">
                     Already purchased? Check your email for an invite link.
