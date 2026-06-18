@@ -717,91 +717,56 @@ function Testimonials() {
 /* -------------------------------------------------------------------------- */
 
 function Access() {
-  const tiers = [
-    {
-      name: "Invite",
-      price: "Free",
-      desc: "Single-user invite, full HQ access during the founding window.",
-      features: ["Personal HQ", "All daily surfaces", "Private by default"],
-      cta: "Request access",
-      highlight: false,
-    },
-    {
-      name: "Standard",
-      price: "$9",
-      per: "/month",
-      desc: "Ongoing access after the founding window, billed quietly.",
-      features: ["Everything in Invite", "Priority quiet support", "Early access to new modes"],
-      cta: "Join the list",
-      highlight: true,
-    },
-    {
-      name: "Founder",
-      price: "Custom",
-      desc: "Lifetime seat, founder badge, and a quarterly call with the maker.",
-      features: ["Lifetime access", "Founder badge", "Quarterly maker call"],
-      cta: "Talk to us",
-      highlight: false,
-    },
+  const features = [
+    "Lifetime access — no subscription",
+    "Every daily surface: money, health, habits, meds, workouts, weekly plans",
+    "Private by default — encrypted, no ads, no data sold",
+    "Founding-window pricing, locked in forever",
   ];
   return (
     <section id="access" className="py-24 md:py-32 bg-[color:var(--stone-bg-2)]/70 border-y border-[color:var(--stone-line)]">
       <div className="mx-auto max-w-6xl px-5 md:px-6">
         <SectionHead
           eyebrow="Access"
-          title={<>Access that scales with you. Quietly.</>}
-          subtitle="Daily HQ is invite-only by design. Pricing exists to keep it small, sustainable, and free of investors that would push the product anywhere it shouldn't go."
+          title={<>One quiet price. <em className="not-italic text-[color:var(--stone-accent)]">Yours for life.</em></>}
+          subtitle="Daily HQ is invite-only by design. One small one-time payment unlocks your private HQ — no subscription, no upsells, no investors pulling the product somewhere it shouldn't go."
         />
-        <div className="mt-14 grid md:grid-cols-3 gap-5">
-          {tiers.map((t) => (
-            <div
-              key={t.name}
-              className={`relative p-7 md:p-8 rounded-3xl flex flex-col ${
-                t.highlight
-                  ? "stone-dark-surface border border-[color:var(--stone-dark-line)] shadow-[0_30px_60px_-30px_oklch(0.22_0.012_55/0.4)]"
-                  : "stone-card-elev"
-              }`}
-            >
-              {t.highlight && (
-                <span className="absolute -top-3 left-7 stone-cta-accent text-[10.5px] uppercase tracking-widest px-3 py-1 rounded-full">
-                  Most chosen
-                </span>
-              )}
-              <div className={`text-[11px] uppercase tracking-widest ${t.highlight ? "text-[color:var(--stone-on-dark-soft)]" : "text-[color:var(--stone-ink-mute)]"}`}>
-                {t.name}
-              </div>
-              <div className="mt-4 flex items-end gap-1">
-                <div className={`font-display text-5xl ${t.highlight ? "text-[color:var(--stone-on-dark)]" : "text-[color:var(--stone-ink)]"}`}>
-                  {t.price}
-                </div>
-                {t.per && (
-                  <span className={`text-[13px] pb-2 ${t.highlight ? "text-[color:var(--stone-on-dark-soft)]" : "text-[color:var(--stone-ink-mute)]"}`}>
-                    {t.per}
-                  </span>
-                )}
-              </div>
-              <p className={`mt-3 text-[13.5px] leading-relaxed ${t.highlight ? "text-[color:var(--stone-on-dark-soft)]" : "text-[color:var(--stone-ink-soft)]"}`}>
-                {t.desc}
-              </p>
-              <ul className={`mt-6 space-y-2 text-[13.5px] flex-1 ${t.highlight ? "text-[color:var(--stone-on-dark-soft)]" : "text-[color:var(--stone-ink-soft)]"}`}>
-                {t.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-[color:var(--stone-accent-2)]" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <a
-                href="#contact"
-                className={`mt-7 inline-flex items-center justify-center gap-1.5 rounded-full px-5 py-3 text-[13px] font-medium ${
-                  t.highlight ? "stone-cta-accent" : "stone-cta"
-                }`}
-              >
-                {t.cta}
-                <ArrowUpRight className="w-3.5 h-3.5" />
-              </a>
+        <div className="mt-14 mx-auto max-w-xl">
+          <div className="relative p-8 md:p-10 rounded-3xl stone-dark-surface border border-[color:var(--stone-dark-line)] shadow-[0_30px_60px_-30px_oklch(0.22_0.012_55/0.4)] flex flex-col">
+            <span className="absolute -top-3 left-7 stone-cta-accent text-[10.5px] uppercase tracking-widest px-3 py-1 rounded-full">
+              Founding price
+            </span>
+            <div className="text-[11px] uppercase tracking-widest text-[color:var(--stone-on-dark-soft)]">
+              Daily HQ — lifetime
             </div>
-          ))}
+            <div className="mt-4 flex items-end gap-2">
+              <div className="font-display text-6xl text-[color:var(--stone-on-dark)]">$10</div>
+              <span className="text-[13px] pb-3 text-[color:var(--stone-on-dark-soft)]">
+                one-time · +local tax
+              </span>
+            </div>
+            <p className="mt-3 text-[13.5px] leading-relaxed text-[color:var(--stone-on-dark-soft)]">
+              Pay once. Get a private invite link to create your account and open your HQ.
+            </p>
+            <ul className="mt-6 space-y-2 text-[13.5px] text-[color:var(--stone-on-dark-soft)]">
+              {features.map((f) => (
+                <li key={f} className="flex items-start gap-2">
+                  <Check className="w-3.5 h-3.5 mt-1 text-[color:var(--stone-accent-2)] shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Link
+              to="/purchase"
+              className="mt-8 stone-cta-accent rounded-full px-6 py-3.5 text-[14px] font-medium inline-flex items-center justify-center gap-2"
+            >
+              Purchase now — $10
+              <ArrowUpRight className="w-4 h-4" />
+            </Link>
+            <p className="mt-3 text-center text-[11px] text-[color:var(--stone-on-dark-soft)]">
+              Secure checkout via Stripe. Local sales tax (where applicable) added at checkout.
+            </p>
+          </div>
         </div>
       </div>
     </section>
