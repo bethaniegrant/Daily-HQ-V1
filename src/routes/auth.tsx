@@ -95,9 +95,13 @@ function AuthPage() {
     });
     if (error) { setLoading(false); return toast.error(error.message); }
 
-    // If no session was returned, try signing in immediately (works when email
-    // confirmation is off). If that succeeds we can redeem & continue.
+    // If no session was returned, this account needs email confirmation. For
+    // invited users we auto-confirm via a token-gated server fn, then sign in.
     let session = data.session;
+    if (!session && token && tokenStatus?.state === "valid") {
+      try { await confirmFn({ data: { token, email } }); }
+      catch (e: any) { setLoading(false); return toast.error(e.message); }
+    }
     if (!session) {
       const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
       session = signInData.session ?? null;
