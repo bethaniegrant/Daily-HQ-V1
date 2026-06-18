@@ -1694,15 +1694,19 @@ function Budget({ d, setD, back }) {
                   <div className="pop" onClick={() => delGoal(g.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
-                    <span style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em" }}>SAVED</span>
-                    <span style={{ color: MUTED, fontSize: 13, marginLeft: 6 }}>$</span>
-                    <input inputMode="decimal" value={g.saved} onChange={(e) => setGoal(g.id, { saved: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em", marginBottom: 4 }}>SAVED</div>
+                    <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
+                      <span style={{ color: MUTED, fontSize: 13 }}>$</span>
+                      <input inputMode="decimal" value={g.saved} onChange={(e) => setGoal(g.id, { saved: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                    </div>
                   </div>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
-                    <span style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em" }}>GOAL</span>
-                    <span style={{ color: MUTED, fontSize: 13, marginLeft: 6 }}>$</span>
-                    <input inputMode="decimal" value={g.target} onChange={(e) => setGoal(g.id, { target: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em", marginBottom: 4 }}>GOAL</div>
+                    <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
+                      <span style={{ color: MUTED, fontSize: 13 }}>$</span>
+                      <input inputMode="decimal" value={g.target} onChange={(e) => setGoal(g.id, { target: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                    </div>
                   </div>
                 </div>
                 <div style={{ height: 8, background: PAPER, borderRadius: 999, overflow: "hidden", border: `1px solid ${LINE}` }}>
