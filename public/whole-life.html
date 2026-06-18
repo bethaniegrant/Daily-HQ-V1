@@ -2443,8 +2443,14 @@ const BLOCK_META = {
   list: { label: "List", desc: "Simple bullet lines", color: AMBER, icon: (p) => <ListIcon {...p} /> },
   schedule: { label: "Schedule", desc: "Time + task", color: "#6E8597", icon: (p) => <ClockIcon {...p} /> },
   events: { label: "Calendar", desc: "Dated events, syncable", color: "#6E8597", icon: (p) => <CalendarIcon {...p} /> },
+  tracker: { label: "Tracker", desc: "Books, sleep, ratings, mood…", color: "#9C7E96", icon: (p) => <TrendIcon {...p} /> },
   mood: { label: "Mood Tracker", desc: "Color a day, monthly", color: "#9C7E96", icon: (p) => <HeartIcon {...p} /> },
   notes: { label: "Notes", desc: "Free writing", color: "#7E8C6E", icon: (p) => <NoteIcon {...p} /> },
+};
+const TRACKER_KINDS = {
+  daily: { label: "Daily color", desc: "Pick a color/option per day (mood, energy, sleep quality)" },
+  rated: { label: "Rated list", desc: "Books, movies, restaurants — rate 1–5 with a note" },
+  notes: { label: "Subject + notes", desc: "A line per subject with notes (journal, log)" },
 };
 
 // ═══ ICONS ════════════════════════════════════════════════════════
