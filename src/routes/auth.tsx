@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
-import { validateInviteToken, redeemInviteToken } from "@/lib/api/admin.functions";
+import { validateInviteToken, redeemInviteToken, confirmInvitedEmail } from "@/lib/api/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,7 @@ function AuthPage() {
   const { token } = useSearch({ from: "/auth" });
   const validateFn = useServerFn(validateInviteToken);
   const redeemFn = useServerFn(redeemInviteToken);
+  const confirmFn = useServerFn(confirmInvitedEmail);
 
   const [tab, setTab] = useState(token ? "signup" : "signin");
   const [email, setEmail] = useState("");
@@ -94,9 +95,13 @@ function AuthPage() {
     });
     if (error) { setLoading(false); return toast.error(error.message); }
 
-    // If no session was returned, try signing in immediately (works when email
-    // confirmation is off). If that succeeds we can redeem & continue.
+    // If no session was returned, this account needs email confirmation. For
+    // invited users we auto-confirm via a token-gated server fn, then sign in.
     let session = data.session;
+    if (!session && token && tokenStatus?.state === "valid") {
+      try { await confirmFn({ data: { token, email } }); }
+      catch (e: any) { setLoading(false); return toast.error(e.message); }
+    }
     if (!session) {
       const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
       session = signInData.session ?? null;

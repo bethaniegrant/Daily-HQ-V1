@@ -196,6 +196,43 @@ export const validateInviteToken = createServerFn({ method: "POST" })
     return { valid: true as const, email: row.email };
   });
 
+// ---------- PUBLIC: auto-confirm an invited user's email ----------
+// Gated by a valid, unredeemed invite token. Looks up the user by email and
+// flips email_confirmed via the Auth Admin API so invited signups can skip
+// the confirmation step. Paid signups (no invite token) are unaffected.
+export const confirmInvitedEmail = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string().min(10), email: z.string().email() }))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("invite_tokens")
+      .select("id, email, expires_at, redeemed_at")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Invalid invite link");
+    if (row.redeemed_at) throw new Error("This invite link has already been used");
+    if (new Date(row.expires_at).getTime() < Date.now()) throw new Error("This invite link has expired");
+    if (row.email && row.email.toLowerCase() !== data.email.toLowerCase()) {
+      throw new Error("This invite is for a different email address");
+    }
+
+    let userId: string | null = null;
+    for (let page = 1; page <= 10 && !userId; page++) {
+      const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
+      if (listErr) throw new Error(listErr.message);
+      const match = list.users.find((u) => (u.email ?? "").toLowerCase() === data.email.toLowerCase());
+      if (match) userId = match.id;
+      if (list.users.length < 200) break;
+    }
+    if (!userId) throw new Error("Account not found");
+
+    const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { email_confirm: true });
+    if (updErr) throw new Error(updErr.message);
+    return { ok: true };
+  });
+
+
 // ---------- PUBLIC: redeem token after signup ----------
 export const redeemInviteToken = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
