@@ -6,8 +6,10 @@
 <meta name="theme-color" content="#EDE3D5" />
 <title>Whole Life Planner</title>
 <style>
-  html, body { margin: 0; padding: 0; background: #EDE3D5; }
-  #root { min-height: 100vh; }
+  html, body { margin: 0; padding: 0; background: #EDE3D5; overflow-x: hidden; max-width: 100vw; }
+  #root { min-height: 100vh; overflow-x: hidden; max-width: 100vw; }
+  * { word-wrap: break-word; overflow-wrap: anywhere; }
+  input, textarea { max-width: 100%; box-sizing: border-box; }
 </style>
 <!-- React + Babel from CDN so this runs with no build step.
      For production you'd compile this instead of using the in-browser Babel transformer. -->
