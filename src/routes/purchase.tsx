@@ -8,10 +8,10 @@ export const Route = createFileRoute('/purchase')({
   ssr: false,
   head: () => ({
     meta: [
-      { title: 'Get Daily HQ — $10 one-time' },
+      { title: 'Get Daily HQ — $15 one-time' },
       {
         name: 'description',
-        content: 'Lifetime access to Daily HQ — your private daily operating system. One-time $10.',
+        content: 'Lifetime access to Daily HQ — your private daily operating system. One-time $15.',
       },
     ],
   }),
@@ -36,7 +36,7 @@ function PurchasePage() {
           </Link>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight">Get Daily HQ</h1>
           <p className="mt-3 text-muted-foreground">
-            One-time $10 — lifetime access. After purchase you'll get a private link to create your account.
+            One-time $15 — lifetime access. After purchase you'll get a private link to create your account.
           </p>
           {signedIn && (
             <p className="mt-3 text-sm text-amber-700">
