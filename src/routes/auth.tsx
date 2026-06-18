@@ -42,6 +42,7 @@ function AuthPage() {
   const [tokenStatus, setTokenStatus] = useState<
     { state: "checking" } | { state: "valid"; email: string | null } | { state: "invalid"; reason: string } | null
   >(null);
+  const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
