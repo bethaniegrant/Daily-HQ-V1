@@ -239,15 +239,21 @@ export const redeemInviteToken = createServerFn({ method: "POST" })
   .inputValidator(z.object({ token: z.string().min(10) }))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: userData, error: userErr } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    if (userErr) throw new Error(userErr.message);
+    const userEmail = userData.user?.email?.toLowerCase() ?? null;
     const { data: row, error } = await supabaseAdmin
       .from("invite_tokens")
-      .select("id, expires_at, redeemed_at")
+      .select("id, email, expires_at, redeemed_at")
       .eq("token", data.token)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Invalid invite link");
     if (row.redeemed_at) throw new Error("This invite link has already been used");
     if (new Date(row.expires_at).getTime() < Date.now()) throw new Error("This invite link has expired");
+    if (row.email && row.email.toLowerCase() !== userEmail) {
+      throw new Error("This invite is for a different email address");
+    }
 
     const { error: updErr } = await supabaseAdmin
       .from("invite_tokens")
@@ -256,4 +262,40 @@ export const redeemInviteToken = createServerFn({ method: "POST" })
       .is("redeemed_at", null); // race-safe
     if (updErr) throw new Error(updErr.message);
     return { ok: true };
+  });
+
+// ---------- AUTHENTICATED: app access gate ----------
+export const getCurrentUserAppAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const [{ data: profile, error: profileErr }, { data: roles, error: rolesErr }, { count: inviteCount, error: inviteErr }] =
+      await Promise.all([
+        supabaseAdmin
+          .from("profiles")
+          .select("access_revoked, email_verified_deadline")
+          .eq("id", context.userId)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", context.userId),
+        supabaseAdmin
+          .from("invite_tokens")
+          .select("*", { count: "exact", head: true })
+          .eq("redeemed_by", context.userId),
+      ]);
+
+    if (profileErr) throw new Error(profileErr.message);
+    if (rolesErr) throw new Error(rolesErr.message);
+    if (inviteErr) throw new Error(inviteErr.message);
+
+    const isAdmin = !!roles?.some((r) => r.role === "admin");
+    return {
+      isAdmin,
+      hasInviteAccess: (inviteCount ?? 0) > 0,
+      accessRevoked: !!profile?.access_revoked,
+      emailVerifiedDeadline: profile?.email_verified_deadline ?? null,
+    };
   });
