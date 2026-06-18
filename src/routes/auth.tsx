@@ -164,6 +164,12 @@ function AuthPage() {
             className="w-full mb-3"
             onClick={async () => {
               setLoading(true);
+              // Stash a valid invite token so the gate redeems it after the
+              // Google redirect — otherwise invited Google sign-ins are
+              // bounced to /purchase because no entitlement is on file.
+              if (token && tokenStatus?.state === "valid") {
+                try { sessionStorage.setItem("pending_invite_token", token); } catch {}
+              }
               const result = await lovable.auth.signInWithOAuth("google", {
                 redirect_uri: `${window.location.origin}/app`,
                 extraParams: { prompt: "select_account" },
