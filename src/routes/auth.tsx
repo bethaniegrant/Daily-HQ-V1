@@ -42,6 +42,7 @@ function AuthPage() {
   const [tokenStatus, setTokenStatus] = useState<
     { state: "checking" } | { state: "valid"; email: string | null } | { state: "invalid"; reason: string } | null
   >(null);
+  const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -93,8 +94,15 @@ function AuthPage() {
     });
     if (error) { setLoading(false); return toast.error(error.message); }
 
-    // Try to redeem an invite now if a session exists (no email confirmation required)
-    if (data.session) {
+    // If no session was returned, try signing in immediately (works when email
+    // confirmation is off). If that succeeds we can redeem & continue.
+    let session = data.session;
+    if (!session) {
+      const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+      session = signInData.session ?? null;
+    }
+
+    if (session) {
       if (token && tokenStatus?.state === "valid") {
         try { await redeemFn({ data: { token } }); }
         catch (e: any) { toast.error(e.message); setLoading(false); return; }
@@ -102,14 +110,15 @@ function AuthPage() {
       setLoading(false);
       toast.success("Welcome to Daily HQ!");
       navigate({ to: "/app" });
-    } else {
-      setLoading(false);
-      // Stash invite token so we can redeem after email confirmation
-      if (token && tokenStatus?.state === "valid") {
-        try { sessionStorage.setItem("pending_invite_token", token); } catch {}
-      }
-      toast.success("Check your email to confirm your account");
+      return;
     }
+
+    // Still no session → email confirmation is required.
+    setLoading(false);
+    if (token && tokenStatus?.state === "valid") {
+      try { sessionStorage.setItem("pending_invite_token", token); } catch {}
+    }
+    setPendingConfirm(email);
   }
 
   async function forgot(e: React.FormEvent) {
@@ -199,6 +208,17 @@ function AuthPage() {
                   </Button>
                   <p className="text-xs text-muted-foreground">
                     Already purchased? Check your email for an invite link.
+                  </p>
+                </div>
+              ) : pendingConfirm ? (
+                <div className="mt-4 space-y-3 p-4 border rounded-md text-center bg-muted/30">
+                  <p className="text-sm font-medium">Check your email to finish setup</p>
+                  <p className="text-sm text-muted-foreground">
+                    We sent a confirmation link to <span className="font-medium">{pendingConfirm}</span>.
+                    Click it to activate your account, then you'll be signed in automatically.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Don't see it? Check spam, or wait a minute and try again.
                   </p>
                 </div>
               ) : (
