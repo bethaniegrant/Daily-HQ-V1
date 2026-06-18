@@ -1694,15 +1694,19 @@ function Budget({ d, setD, back }) {
                   <div className="pop" onClick={() => delGoal(g.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
-                    <span style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em" }}>SAVED</span>
-                    <span style={{ color: MUTED, fontSize: 13, marginLeft: 6 }}>$</span>
-                    <input inputMode="decimal" value={g.saved} onChange={(e) => setGoal(g.id, { saved: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em", marginBottom: 4 }}>SAVED</div>
+                    <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
+                      <span style={{ color: MUTED, fontSize: 13 }}>$</span>
+                      <input inputMode="decimal" value={g.saved} onChange={(e) => setGoal(g.id, { saved: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                    </div>
                   </div>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
-                    <span style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em" }}>GOAL</span>
-                    <span style={{ color: MUTED, fontSize: 13, marginLeft: 6 }}>$</span>
-                    <input inputMode="decimal" value={g.target} onChange={(e) => setGoal(g.id, { target: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em", marginBottom: 4 }}>GOAL</div>
+                    <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
+                      <span style={{ color: MUTED, fontSize: 13 }}>$</span>
+                      <input inputMode="decimal" value={g.target} onChange={(e) => setGoal(g.id, { target: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "9px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
+                    </div>
                   </div>
                 </div>
                 <div style={{ height: 8, background: PAPER, borderRadius: 999, overflow: "hidden", border: `1px solid ${LINE}` }}>
@@ -2278,10 +2282,10 @@ function habitStreaks(d, habitId, now) {
   return { current, best };
 }
 const BUDGET_SECTIONS = [
-  { key: "fixed", label: "Fixed expenses", hint: "Rent, car, insurance, subscriptions", color: "#6E8597" },
-  { key: "variable", label: "Variable spending", hint: "Groceries, gas, dining, fun", color: "#C8783C" },
-  { key: "savings", label: "Savings & sinking funds", hint: "Emergency fund, future costs", color: "#5A6B4D" },
-  { key: "debt", label: "Debt payments", hint: "Cards, loans", color: "#9C7E96" },
+  { key: "fixed", label: "Fixed expenses", hint: "Rent, car, insurance, subscriptions, etc.", color: "#6E8597" },
+  { key: "variable", label: "Variable spending", hint: "Groceries, gas, dining, fun, etc.", color: "#C8783C" },
+  { key: "savings", label: "Savings & sinking funds", hint: "Emergency fund, future costs, etc.", color: "#5A6B4D" },
+  { key: "debt", label: "Debt payments", hint: "Cards, loans, etc.", color: "#9C7E96" },
 ];
 const sectionTotal = (d, key) => (d.budget[key] || []).reduce((s, r) => s + (Number(r.a) || 0), 0);
 const budgetSpent = (d) => Object.values(d.budget || {}).reduce((s, arr) => s + (Array.isArray(arr) ? arr.reduce((a, r) => a + (Number(r.a) || 0), 0) : 0), 0);
