@@ -649,9 +649,23 @@ function PlanHub({ d, setD, go }) {
       <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Yearly Goals" sub="The bigger arc" stat={yearlySet ? `${yearlySet}` : ""} onClick={() => go("plan", "yearly")} />
-      <SectionMini text="Your spaces" />
-      {d.blocks.map((b) => <BlockPreview key={b.id} block={b} onClick={() => go("plan", "block:" + b.id)} now={new Date()} />)}
+      <ToolRow icon={GridIcon} color={MIST} title="Your Spaces" sub="Checklists, lists, notes, more" stat={d.blocks.length ? `${d.blocks.length}` : ""} onClick={() => go("spaces")} />
+    </Hub>
+  );
+}
+function SpacesHub({ d, setD, go }) {
+  const cats = getCategories(d);
+  const byCat = cats.map((c) => ({ c, blocks: d.blocks.filter((b) => (b.category || "plan") === c) })).filter((g) => g.blocks.length > 0);
+  return (
+    <Hub title="Spaces" sub="Everything you've built">
       <AddBlockMenu d={d} setD={setD} go={go} />
+      {byCat.length === 0 && <Note>No spaces yet. Add one above — a checklist, list, schedule, note, mood tracker, or calendar.</Note>}
+      {byCat.map((g) => (
+        <div key={g.c} style={{ display: "grid", gap: 8 }}>
+          <SectionMini text={CATEGORY_LABEL[g.c] || g.c} />
+          {g.blocks.map((b) => <BlockPreview key={b.id} block={b} onClick={() => go("plan", "block:" + b.id)} now={new Date()} />)}
+        </div>
+      ))}
     </Hub>
   );
 }
@@ -659,7 +673,7 @@ function MoreHub({ d, setD, go }) {
   return (
     <Hub title="More" sub="Settings and extras">
       <Note>This is where account, install help, reminders, themes and backup will live in the full app. For now it's a placeholder.</Note>
-      <ToolRow icon={GridIcon} color={SAGE} title="Add a space" sub="Checklist, list, schedule, notes, mood" onClick={() => go("plan")} />
+      <ToolRow icon={GridIcon} color={SAGE} title="Add a space" sub="Checklist, list, schedule, notes, mood" onClick={() => go("spaces")} />
       
     </Hub>
   );
