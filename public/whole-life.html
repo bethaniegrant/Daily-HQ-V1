@@ -253,7 +253,7 @@ function App() {
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
   const isDesktop = useIsDesktop();
 
-  const [tab, setTab] = useState("home");     // home | money | health | plan | more
+  const [tab, setTab] = useState("home");     // home | money | health | plan | spaces | more
   const [page, setPage] = useState(null);     // null = hub; else tool id (may be "block:<id>" or "workout:<id>")
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -317,7 +317,7 @@ function App() {
   // resolve current page
   let view;
   if (page === null) {
-    view = { home: <Home {...common} />, money: <Budget {...common} back={() => go("home")} />, health: <HealthHub {...common} />, plan: <PlanHub {...common} />, more: <MoreHub {...common} /> }[tab];
+    view = { home: <Home {...common} />, money: <Budget {...common} back={() => go("home")} />, health: <HealthHub {...common} />, plan: <PlanHub {...common} />, spaces: <SpacesHub {...common} />, more: <MoreHub {...common} /> }[tab];
   } else if (page.startsWith("block:")) {
     const b = d.blocks.find((x) => x.id === page.split(":")[1]);
     view = b ? (b.type === "mood" ? <MoodEditor block={b} {...common} /> : b.type === "events" ? <EventsEditor block={b} {...common} /> : <BlockEditor block={b} {...common} />) : <PlanHub {...common} />;
@@ -355,7 +355,7 @@ function App() {
       ...blocksFor("plan"),
     ]},
     { label: "More", items: [
-      { icon: GridIcon, color: SAGE, title: "Add a space", onClick: () => navGo("plan") },
+      { icon: GridIcon, color: SAGE, title: "Add a space", onClick: () => navGo("spaces") },
       ...blocksFor("more"),
     ]},
     ...customCats.map((c) => ({ label: c.charAt(0).toUpperCase() + c.slice(1), items: blocksFor(c) })),
@@ -479,6 +479,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             {navBtn("Today", () => go("home"))}
             {navBtn("Health", () => go("health"))}
             {navBtn("Plan", () => go("plan"))}
+            {navBtn("Spaces", () => go("spaces"))}
             {isDesktop && navBtn("Money", () => go("money"))}
             <button onClick={openMenu} aria-label="Menu" className="pop" style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.2)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
@@ -648,9 +649,23 @@ function PlanHub({ d, setD, go }) {
       <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Yearly Goals" sub="The bigger arc" stat={yearlySet ? `${yearlySet}` : ""} onClick={() => go("plan", "yearly")} />
-      <SectionMini text="Your spaces" />
-      {d.blocks.map((b) => <BlockPreview key={b.id} block={b} onClick={() => go("plan", "block:" + b.id)} now={new Date()} />)}
+      <ToolRow icon={GridIcon} color={MIST} title="Your Spaces" sub="Checklists, lists, notes, more" stat={d.blocks.length ? `${d.blocks.length}` : ""} onClick={() => go("spaces")} />
+    </Hub>
+  );
+}
+function SpacesHub({ d, setD, go }) {
+  const cats = getCategories(d);
+  const byCat = cats.map((c) => ({ c, blocks: d.blocks.filter((b) => (b.category || "plan") === c) })).filter((g) => g.blocks.length > 0);
+  return (
+    <Hub title="Spaces" sub="Everything you've built">
       <AddBlockMenu d={d} setD={setD} go={go} />
+      {byCat.length === 0 && <Note>No spaces yet. Add one above — a checklist, list, schedule, note, mood tracker, or calendar.</Note>}
+      {byCat.map((g) => (
+        <div key={g.c} style={{ display: "grid", gap: 8 }}>
+          <SectionMini text={CATEGORY_LABEL[g.c] || g.c} />
+          {g.blocks.map((b) => <BlockPreview key={b.id} block={b} onClick={() => go("plan", "block:" + b.id)} now={new Date()} />)}
+        </div>
+      ))}
     </Hub>
   );
 }
@@ -658,7 +673,7 @@ function MoreHub({ d, setD, go }) {
   return (
     <Hub title="More" sub="Settings and extras">
       <Note>This is where account, install help, reminders, themes and backup will live in the full app. For now it's a placeholder.</Note>
-      <ToolRow icon={GridIcon} color={SAGE} title="Add a space" sub="Checklist, list, schedule, notes, mood" onClick={() => go("plan")} />
+      <ToolRow icon={GridIcon} color={SAGE} title="Add a space" sub="Checklist, list, schedule, notes, mood" onClick={() => go("spaces")} />
       
     </Hub>
   );
@@ -2054,35 +2069,43 @@ function AddBlockMenu({ d, setD, go }) {
     const b = makeBlock(type, finalCat, title);
     setD({ ...d, blocks: [...d.blocks, b] });
     reset();
-    go("plan", "block:" + b.id);
   };
-  if (!open) return <button onClick={() => setOpen(true)} style={{ ...addBtn, marginTop: 12 }}>+ Add a space</button>;
   return (
-    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", marginTop: 12 }}>
-      <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>New space</div>
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "10px 12px", fontSize: 14, fontWeight: 600, marginBottom: 10 }} />
-      <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>TYPE</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
-        {Object.entries(BLOCK_META).map(([k, m]) => (
-          <div key={k} className="pop" onClick={() => setType(k)} style={{ border: `1.5px solid ${type === k ? m.color : LINE}`, background: type === k ? m.color + "1A" : "transparent", borderRadius: 4, padding: "9px 11px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-            <m.icon c={m.color} s={16} />
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{m.label}</span>
+    <>
+      <button onClick={() => setOpen(true)} style={{ ...addBtn, marginTop: 0 }}>+ Add a space</button>
+      {open && (
+        <div onClick={reset} style={{ position: "fixed", inset: 0, background: "rgba(22,32,28,.55)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 6, padding: "20px", width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 30px 80px -20px rgba(22,32,28,.5)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>New space</div>
+              <div className="pop" onClick={reset} style={{ cursor: "pointer", opacity: .5 }}><XIcon c={MUTED} s={16} /></div>
+            </div>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "10px 12px", fontSize: 14, fontWeight: 600, marginBottom: 10 }} />
+            <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>TYPE</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+              {Object.entries(BLOCK_META).map(([k, m]) => (
+                <div key={k} className="pop" onClick={() => setType(k)} style={{ border: `1.5px solid ${type === k ? m.color : LINE}`, background: type === k ? m.color + "1A" : "transparent", borderRadius: 4, padding: "9px 11px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                  <m.icon c={m.color} s={16} />
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{m.label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>CATEGORY (where it appears in the menu)</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+              {cats.map((c) => (
+                <div key={c} className="pop" onClick={() => setCat(c)} style={{ border: `1.5px solid ${cat === c ? INK : LINE}`, background: cat === c ? INK : "transparent", color: cat === c ? PAPER : INK, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, textTransform: "capitalize" }}>{CATEGORY_LABEL[c] || c}</div>
+              ))}
+              <div className="pop" onClick={() => setCat("__new")} style={{ border: `1.5px dashed ${cat === "__new" ? INK : LINE}`, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: cat === "__new" ? INK : MUTED }}>+ New</div>
+            </div>
+            {cat === "__new" && <input value={customCat} onChange={(e) => setCustomCat(e.target.value)} placeholder="Category name" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13, fontWeight: 600, marginBottom: 10 }} />}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={reset} style={{ flex: 1, background: "none", border: `1.5px solid ${LINE}`, color: MUTED, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer" }}>Cancel</button>
+              <button onClick={create} disabled={cat === "__new" && !customCat.trim()} style={{ flex: 1, background: INK, border: "none", color: PAPER, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer", opacity: cat === "__new" && !customCat.trim() ? .4 : 1 }}>Save</button>
+            </div>
           </div>
-        ))}
-      </div>
-      <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>CATEGORY (where it appears in the menu)</div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-        {cats.map((c) => (
-          <div key={c} className="pop" onClick={() => setCat(c)} style={{ border: `1.5px solid ${cat === c ? INK : LINE}`, background: cat === c ? INK : "transparent", color: cat === c ? PAPER : INK, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, textTransform: "capitalize" }}>{CATEGORY_LABEL[c] || c}</div>
-        ))}
-        <div className="pop" onClick={() => setCat("__new")} style={{ border: `1.5px dashed ${cat === "__new" ? INK : LINE}`, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: cat === "__new" ? INK : MUTED }}>+ New</div>
-      </div>
-      {cat === "__new" && <input value={customCat} onChange={(e) => setCustomCat(e.target.value)} placeholder="Category name" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13, fontWeight: 600, marginBottom: 10 }} />}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={reset} style={{ flex: 1, background: "none", border: `1.5px solid ${LINE}`, color: MUTED, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer" }}>Cancel</button>
-        <button onClick={create} disabled={cat === "__new" && !customCat.trim()} style={{ flex: 1, background: INK, border: "none", color: PAPER, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer", opacity: cat === "__new" && !customCat.trim() ? .4 : 1 }}>Create</button>
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
 
