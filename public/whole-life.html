@@ -800,10 +800,14 @@ function dayBundle(d, dt) {
   const moodId = sameMonth && moodBlock && moodBlock.days ? moodBlock.days[dayNum] : null;
   const mood = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
   const bills = [];
-  BUDGET_SECTIONS.forEach((sec) => {
+  const monthLen2 = daysInMonth(dt);
+  const allBudgetSecs2 = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])];
+  allBudgetSecs2.forEach((sec) => {
     (d.budget[sec.key] || []).forEach((r) => {
-      const day = parseInt(r.due, 10);
-      if (day === dayNum && r.n) bills.push({ n: r.n, a: r.a, color: sec.color, section: sec.label });
+      let day = parseInt(r.due, 10);
+      if (!(day >= 1 && day <= 31) || !r.n) return;
+      if (day > monthLen2) day = monthLen2;
+      if (day === dayNum) bills.push({ n: r.n, a: r.a, color: sec.color, section: sec.label, recurring: true });
     });
   });
   const weekdayShort = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()];
