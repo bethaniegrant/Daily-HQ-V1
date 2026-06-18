@@ -126,7 +126,7 @@ function TopNav({ signedIn }: { signedIn: boolean }) {
           to={signedIn ? "/app" : "/purchase"}
           className="stone-cta-accent shrink-0 rounded-full px-5 py-3 text-[13px] font-medium inline-flex items-center gap-1.5"
         >
-          {signedIn ? "Open Daily HQ" : "Get access — $15"}
+          {signedIn ? "Open Daily HQ" : "Get Access Now"}
           <ArrowUpRight className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -173,7 +173,7 @@ function Hero({ signedIn }: { signedIn: boolean }) {
               to={signedIn ? "/app" : "/purchase"}
               className="stone-cta rounded-full px-6 py-3.5 text-[14px] font-medium inline-flex items-center gap-2"
             >
-              {signedIn ? "Open your HQ" : "Get access — $15"}
+              {signedIn ? "Open your HQ" : "Get Access Now"}
               <ArrowUpRight className="w-4 h-4" />
             </Link>
             <a
