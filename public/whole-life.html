@@ -565,6 +565,26 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
         </div>
       </section>
 
+      {/* Monthly goals snapshot */}
+      <section style={{ padding: isDesktop ? "30px 32px 0" : "26px 18px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 4px 10px" }}>
+          <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Monthly goals</span>
+          <span className="pop" onClick={() => go("plan", "goals")} style={{ fontSize: 10, fontWeight: 700, color: AMBER, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>Edit</span>
+        </div>
+        <div style={{ display: "grid", gap: 8 }}>
+          {d.goals.map((g, i) => {
+            const empty = !g.n.trim();
+            return (
+              <div key={i} className="pop" onClick={() => go("plan", "goals")} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                <div style={{ width: 26, height: 26, borderRadius: 3, border: `2px solid ${AMBER}`, background: g.done ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "'DM Serif Display',serif", fontWeight: 700, color: g.done ? "#fff" : AMBER, fontSize: 12 }}>{g.done ? <CheckIcon c="#fff" s={14} /> : i + 1}</div>
+                <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: empty ? MUTED : INK, fontStyle: empty ? "italic" : "normal", textDecoration: g.done ? "line-through" : "none" }}>{empty ? `Set goal ${i + 1}` : g.n}</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+
       <footer style={{ display: "flex", justifyContent: "center", gap: 14, padding: "8px 0 28px", opacity: .4 }}>
         <span style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: TEXT, fontWeight: 700 }}>Encrypted</span>
         <span style={{ width: 3, height: 3, borderRadius: 999, background: MUTED, alignSelf: "center" }} />
