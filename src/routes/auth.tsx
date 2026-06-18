@@ -60,6 +60,7 @@ function AuthPage() {
 
   useEffect(() => {
     if (!token) { setTokenStatus(null); return; }
+    try { sessionStorage.setItem("pending_invite_token", token); } catch {}
     setTokenStatus({ state: "checking" });
     validateFn({ data: { token } }).then((res) => {
       if (res.valid) {
@@ -67,6 +68,7 @@ function AuthPage() {
         if (res.email) setEmail(res.email);
         setTab("signup");
       } else {
+        try { sessionStorage.removeItem("pending_invite_token"); } catch {}
         setTokenStatus({ state: "invalid", reason: res.reason });
       }
     });
@@ -78,6 +80,10 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) return toast.error(error.message);
+    if (token && tokenStatus?.state === "valid") {
+      try { await redeemFn({ data: { token } }); }
+      catch (e: any) { return toast.error(e.message); }
+    }
     toast.success("Signed in");
     navigate({ to: "/app" });
   }
