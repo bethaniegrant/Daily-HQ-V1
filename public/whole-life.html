@@ -2095,17 +2095,20 @@ function makeBlock(type, category, title, opts) {
 function AddBlockMenu({ d, setD, go }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState("checklist");
+  const [trackerKind, setTrackerKind] = useState("daily");
   const [title, setTitle] = useState("");
   const [cat, setCat] = useState("plan");
   const [customCat, setCustomCat] = useState("");
   const cats = getCategories(d);
-  const reset = () => { setOpen(false); setType("checklist"); setTitle(""); setCat("plan"); setCustomCat(""); };
+  const reset = () => { setOpen(false); setType("checklist"); setTrackerKind("daily"); setTitle(""); setCat("plan"); setCustomCat(""); };
   const create = () => {
     const finalCat = (cat === "__new" ? customCat.trim().toLowerCase() : cat) || "plan";
-    const b = makeBlock(type, finalCat, title);
+    const b = makeBlock(type, finalCat, title, { kind: trackerKind });
     setD({ ...d, blocks: [...d.blocks, b] });
     reset();
   };
+  // Hide legacy `mood` from the menu — superseded by Tracker (daily kind).
+  const menuTypes = Object.entries(BLOCK_META).filter(([k]) => k !== "mood");
   return (
     <>
       <button onClick={() => setOpen(true)} style={{ ...addBtn, marginTop: 0 }}>+ Add a space</button>
@@ -2119,13 +2122,26 @@ function AddBlockMenu({ d, setD, go }) {
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "10px 12px", fontSize: 14, fontWeight: 600, marginBottom: 10 }} />
             <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>TYPE</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
-              {Object.entries(BLOCK_META).map(([k, m]) => (
+              {menuTypes.map(([k, m]) => (
                 <div key={k} className="pop" onClick={() => setType(k)} style={{ border: `1.5px solid ${type === k ? m.color : LINE}`, background: type === k ? m.color + "1A" : "transparent", borderRadius: 4, padding: "9px 11px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                   <m.icon c={m.color} s={16} />
                   <span style={{ fontSize: 13, fontWeight: 700 }}>{m.label}</span>
                 </div>
               ))}
             </div>
+            {type === "tracker" && (
+              <>
+                <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>TRACKER STYLE</div>
+                <div style={{ display: "grid", gap: 6, marginBottom: 12 }}>
+                  {Object.entries(TRACKER_KINDS).map(([k, m]) => (
+                    <div key={k} className="pop" onClick={() => setTrackerKind(k)} style={{ border: `1.5px solid ${trackerKind === k ? BLOCK_META.tracker.color : LINE}`, background: trackerKind === k ? BLOCK_META.tracker.color + "14" : "transparent", borderRadius: 4, padding: "10px 12px", cursor: "pointer" }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>{m.label}</div>
+                      <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>{m.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>CATEGORY (where it appears in the menu)</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
               {cats.map((c) => (
