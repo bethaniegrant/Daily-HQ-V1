@@ -23,6 +23,9 @@ import {
   Phone,
   MousePointer2,
 } from "lucide-react";
+import screenHome from "@/assets/screen-home.jpg";
+import screenMoney from "@/assets/screen-money.jpg";
+import screenPlan from "@/assets/screen-plan.jpg";
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -68,7 +71,7 @@ function Landing() {
       <Features />
       <Solutions />
       <ReclaimCalculator />
-      <Testimonials />
+      <Screens />
       <Access />
       <FAQ />
       <ContactCTA />
@@ -663,46 +666,39 @@ function Slider({
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Testimonials                                                              */
+/*  Screens                                                                   */
 /* -------------------------------------------------------------------------- */
 
-function Testimonials() {
-  const items = [
-    {
-      name: "Sarah Chen", role: "Founder, Bloom Studio",
-      quote: "I finally stopped opening five different apps every morning. My week has a shape again — and it's mine.",
-    },
-    {
-      name: "Marcus Rivera", role: "Coach, Harbor Athletics",
-      quote: "It feels like the planner a friend made for me. Quiet, private, and it earns its place every day.",
-    },
-    {
-      name: "Jessica Tran", role: "Operator, Lumen Group",
-      quote: "Money, meds, workouts — one surface, and none of it is being sold. That's worth more than the subscription.",
-    },
+function Screens() {
+  const shots = [
+    { src: screenHome, title: "Home", body: "Your morning at a glance — cash, steps, habits, workouts and meds, all on one quiet surface." },
+    { src: screenMoney, title: "Money", body: "Daily flow, envelopes and the number that tells you you're okay this week." },
+    { src: screenPlan, title: "Weekly plan", body: "Habits, anchor rituals and themed days, laid out the way you actually live." },
   ];
   return (
     <section className="py-24 md:py-32">
       <div className="mx-auto max-w-6xl px-5 md:px-6">
         <SectionHead
-          eyebrow="Quiet praise"
-          title={<>The early circle.</>}
-          subtitle="A small invite list of operators, parents and recoverers who've been running their week on Daily HQ for months."
+          eyebrow="A look inside"
+          title={<>What your <em className="not-italic text-[color:var(--stone-accent)]">HQ</em> looks like.</>}
+          subtitle="Soft, paper-warm surfaces designed to be glanced at and closed. Mockups shown — your real HQ adapts to the rituals you actually keep."
         />
         <div className="mt-14 grid md:grid-cols-3 gap-5">
-          {items.map((t) => (
-            <figure key={t.name} className="stone-card-elev p-7 flex flex-col">
-              <blockquote className="font-display text-xl leading-snug text-[color:var(--stone-ink)]">
-                "{t.quote}"
-              </blockquote>
-              <figcaption className="mt-6 flex items-center gap-3 pt-5 border-t border-[color:var(--stone-line)]">
-                <span className="w-10 h-10 rounded-full bg-[color:var(--stone-accent-soft)] text-[color:var(--stone-accent)] flex items-center justify-center font-display text-base">
-                  {t.name[0]}
-                </span>
-                <div className="text-[13px]">
-                  <div className="text-[color:var(--stone-ink)] font-medium">{t.name}</div>
-                  <div className="text-[color:var(--stone-ink-mute)]">{t.role}</div>
-                </div>
+          {shots.map((s) => (
+            <figure key={s.title} className="stone-card-elev p-5 flex flex-col">
+              <div className="rounded-2xl overflow-hidden border border-[color:var(--stone-line)] bg-[color:var(--stone-bg-2)]">
+                <img
+                  src={s.src}
+                  alt={`${s.title} screen preview`}
+                  loading="lazy"
+                  width={768}
+                  height={960}
+                  className="block w-full h-auto"
+                />
+              </div>
+              <figcaption className="mt-5 px-1">
+                <div className="font-display text-xl text-[color:var(--stone-ink)]">{s.title}</div>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-[color:var(--stone-ink-soft)]">{s.body}</p>
               </figcaption>
             </figure>
           ))}
