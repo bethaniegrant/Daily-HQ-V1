@@ -209,7 +209,7 @@ const seed = () => ({
   intention: "Steady",
   dayNotes: {}, // { dayKey: string }
   blocks: [
-    { id: uid(), type: "checklist", category: "plan", title: "Errands", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }] },
+    { id: uid(), type: "checklist", category: "plan", title: "To Do", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }] },
     { id: uid(), type: "mood", category: "health", title: "Mood", monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} },
   ],
 });
