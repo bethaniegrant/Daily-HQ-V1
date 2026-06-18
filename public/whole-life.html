@@ -649,17 +649,39 @@ function PlanHub({ d, setD, go }) {
       <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Yearly Goals" sub="The bigger arc" stat={yearlySet ? `${yearlySet}` : ""} onClick={() => go("plan", "yearly")} />
-      <ToolRow icon={GridIcon} color={MIST} title="Your Spaces" sub="Checklists, lists, notes, more" stat={d.blocks.length ? `${d.blocks.length}` : ""} onClick={() => go("spaces")} />
     </Hub>
   );
 }
 function SpacesHub({ d, setD, go }) {
+  const goalsSet = d.goals.filter((g) => g.n.trim()).length;
+  const yearlySet = (d.yearlyGoals || []).filter((g) => g.n.trim()).length;
+  const todayK = dayKey(new Date());
+  const medsTaken = d.meds.filter((m) => medFullyTaken((d.medChecks[todayK] || {})[m.id], medTimes(m))).length;
+  const allBudgetSecs = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])];
   const cats = getCategories(d);
   const byCat = cats.map((c) => ({ c, blocks: d.blocks.filter((b) => (b.category || "plan") === c) })).filter((g) => g.blocks.length > 0);
   return (
-    <Hub title="Spaces" sub="Everything you've built">
+    <Hub title="Your Spaces" sub="Everything you've built">
+      <SectionMini text="Money" />
+      <ToolRow icon={WalletIcon} color={AMBER} title="Budget" sub="Paycheck, savings, debt" onClick={() => go("money", "budget")} />
+      {allBudgetSecs.map((sec) => (
+        <ToolRow key={sec.key} icon={WalletIcon} color={sec.color} title={sec.label} sub={sec.hint || ""} stat={(d.budget[sec.key] || []).length ? `${(d.budget[sec.key] || []).length}` : ""} onClick={() => go("money", "budget")} />
+      ))}
+
+      <SectionMini text="Health" />
+      <ToolRow icon={PillIcon} color={PLUM} title="Medications" sub="Daily doses" stat={d.meds.length ? `${medsTaken}/${d.meds.length}` : ""} onClick={() => go("health", "meds")} />
+      <ToolRow icon={DumbbellIcon} color={BLUE} title="Workouts" sub="Build and log training" stat={`${d.workouts.length}`} onClick={() => go("health", "workouts")} />
+      <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping" stat={`${daysPlanned(d)}/7`} onClick={() => go("health", "meals")} />
+      <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("plan", mb ? "block:" + mb.id : null); }} />
+
+      <SectionMini text="Plan" />
+      <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
+      <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
+      <ToolRow icon={StarIcon} color={AMBER} title="Yearly Goals" sub="The bigger arc" stat={yearlySet ? `${yearlySet}` : ""} onClick={() => go("plan", "yearly")} />
+
+      <SectionMini text="Custom Spaces" />
       <AddBlockMenu d={d} setD={setD} go={go} />
-      {byCat.length === 0 && <Note>No spaces yet. Add one above — a checklist, list, schedule, note, mood tracker, or calendar.</Note>}
+      {byCat.length === 0 && <Note>No custom spaces yet. Add one above — a checklist, list, schedule, note, mood tracker, or calendar.</Note>}
       {byCat.map((g) => (
         <div key={g.c} style={{ display: "grid", gap: 8 }}>
           <SectionMini text={CATEGORY_LABEL[g.c] || g.c} />
