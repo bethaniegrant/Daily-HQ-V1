@@ -2164,6 +2164,137 @@ function AddBlockMenu({ d, setD, go }) {
 
 
 // Because AddBlockMenu needs setD, we implement Plan hub's add inline:
+function TrackerEditor({ block, d, setD, now, back }) {
+  const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
+  const del = () => { if (confirm("Delete this tracker?")) { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); } };
+  const kind = block.kind || "daily";
+  const meta = BLOCK_META.tracker;
+  const kindLabel = (TRACKER_KINDS[kind] || {}).label || "Tracker";
+  return (
+    <div className="fade">
+      <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><meta.icon c={MIST} s={13} /> Tracker · {kindLabel}</div></div>
+          <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
+        </div>
+        <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this tracker" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'DM Serif Display',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
+      </div>
+      <div style={{ padding: "20px 18px 50px" }}>
+        {kind === "daily" && <TrackerDaily block={block} update={update} now={now} />}
+        {kind === "rated" && <TrackerRated block={block} update={update} />}
+        {kind === "notes" && <TrackerNotes block={block} update={update} />}
+      </div>
+    </div>
+  );
+}
+function TrackerDaily({ block, update, now }) {
+  const [selected, setSelected] = useState(now.getDate());
+  const [editOpts, setEditOpts] = useState(false);
+  const dim = daysInMonth(now), pad = firstWeekday(now);
+  const today = now.getDate();
+  const options = block.options || [];
+  const days = block.days || {};
+  const setDay = (day, id) => { const nd = { ...days }; if (nd[day] === id) delete nd[day]; else nd[day] = id; update({ days: nd }); };
+  const byId = (id) => options.find((m) => m.id === id);
+  const setOpt = (i, patch) => update({ options: options.map((m, j) => j === i ? { ...m, ...patch } : m) });
+  const addOpt = () => update({ options: [...options, { id: uid(), label: "New", color: PALETTE[options.length % PALETTE.length] }] });
+  const delOpt = (i) => update({ options: options.filter((_, j) => j !== i) });
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginBottom: 8 }}>{["S", "M", "T", "W", "T", "F", "S"].map((w, i) => <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: MUTED }}>{w}</div>)}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
+        {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
+        {Array.from({ length: dim }).map((_, i) => {
+          const day = i + 1, opt = days[day] ? byId(days[day]) : null, isToday = day === today, isSel = day === selected;
+          return <div key={day} className="pop" onClick={() => setSelected(day)} style={{ aspectRatio: "1", borderRadius: 4, background: opt ? opt.color : CARD, border: isSel ? `2px solid ${INK}` : isToday ? `2px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: 4 }}><span style={{ fontSize: 11, fontWeight: 700, color: opt ? "#fff" : MUTED }}>{day}</span></div>;
+        })}
+      </div>
+      <div style={{ marginTop: 20, background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700, color: TEXT }}>{now.toLocaleDateString("en-US", { month: "short" })} {selected}</div>
+          <div className="pop" onClick={() => setEditOpts(!editOpts)} style={{ fontSize: 12, fontWeight: 700, color: SAGE, cursor: "pointer" }}>{editOpts ? "Done" : "Edit options"}</div>
+        </div>
+        {!editOpts ? (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
+            {options.map((m) => { const active = days[selected] === m.id; return <div key={m.id} className="pop" onClick={() => setDay(selected, m.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", borderRadius: 4, background: active ? m.color : m.color + "1A", border: `1.5px solid ${m.color}`, color: active ? "#fff" : INK, fontWeight: 700, fontSize: 14 }}><div style={{ width: 13, height: 13, borderRadius: 3, background: active ? "#fff" : m.color }} />{m.label}</div>; })}
+            {options.length === 0 && <div style={{ fontSize: 13, color: MUTED }}>Add options first — tap "Edit options".</div>}
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: 9 }}>
+            {options.map((m, i) => (
+              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <label style={{ position: "relative", width: 34, height: 34, borderRadius: 4, background: m.color, flexShrink: 0, cursor: "pointer", border: `1px solid ${LINE}` }}><input type="color" value={m.color} onChange={(e) => setOpt(i, { color: e.target.value })} style={{ opacity: 0, position: "absolute", inset: 0, cursor: "pointer" }} /></label>
+                <input value={m.label} onChange={(e) => setOpt(i, { label: e.target.value })} placeholder="Option name" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 4, padding: "9px 11px", fontSize: 14, fontWeight: 600 }} />
+                <div className="pop" onClick={() => delOpt(i)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={15} /></div>
+              </div>
+            ))}
+            <button onClick={addOpt} style={{ ...addBtn, marginTop: 4 }}>+ Add an option</button>
+          </div>
+        )}
+      </div>
+      <p style={tip}>Tap a day, then choose an option. Great for mood, sleep quality, energy, focus — anything you color in daily.</p>
+    </>
+  );
+}
+function TrackerRated({ block, update }) {
+  const entries = block.entries || [];
+  const scale = block.scale || 5;
+  const setEntry = (i, patch) => update({ entries: entries.map((e, j) => j === i ? { ...e, ...patch } : e) });
+  const addEntry = () => update({ entries: [...entries, { id: uid(), name: "", rating: 0, note: "" }] });
+  const delEntry = (i) => update({ entries: entries.filter((_, j) => j !== i) });
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, letterSpacing: ".12em" }}>SCALE</div>
+        <select value={scale} onChange={(e) => update({ scale: parseInt(e.target.value, 10) })} style={{ border: `1px solid ${LINE}`, borderRadius: 4, padding: "6px 10px", fontSize: 13, fontWeight: 600, background: CARD }}>
+          {[3, 5, 10].map((n) => <option key={n} value={n}>{n}-point</option>)}
+        </select>
+      </div>
+      <div style={{ display: "grid", gap: 10 }}>
+        {entries.map((e, i) => (
+          <div key={e.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <input value={e.name} onChange={(ev) => setEntry(i, { name: ev.target.value })} placeholder="Title (book, movie, place…)" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 700 }} />
+              <div className="pop" onClick={() => delEntry(i)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={15} /></div>
+            </div>
+            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+              {Array.from({ length: scale }).map((_, n) => {
+                const v = n + 1, on = (e.rating || 0) >= v;
+                return <div key={n} className="pop" onClick={() => setEntry(i, { rating: e.rating === v ? 0 : v })} style={{ cursor: "pointer" }}><StarIcon c={on ? "#D9B16A" : LINE} s={22} /></div>;
+              })}
+              <div style={{ marginLeft: 8, fontSize: 12, color: MUTED, alignSelf: "center", fontWeight: 600 }}>{e.rating || 0}/{scale}</div>
+            </div>
+            <textarea value={e.note || ""} onChange={(ev) => setEntry(i, { note: ev.target.value })} placeholder="Notes (optional)" style={{ width: "100%", minHeight: 50, border: `1px solid ${LINE}`, borderRadius: 3, padding: "8px 10px", fontSize: 13, lineHeight: 1.5, background: PAPER, resize: "vertical" }} />
+          </div>
+        ))}
+      </div>
+      <button onClick={addEntry} style={addBtn}>+ Add an entry</button>
+    </>
+  );
+}
+function TrackerNotes({ block, update }) {
+  const entries = block.entries || [];
+  const setEntry = (i, patch) => update({ entries: entries.map((e, j) => j === i ? { ...e, ...patch } : e) });
+  const addEntry = () => update({ entries: [...entries, { id: uid(), subject: "", note: "" }] });
+  const delEntry = (i) => update({ entries: entries.filter((_, j) => j !== i) });
+  return (
+    <>
+      <div style={{ display: "grid", gap: 10 }}>
+        {entries.map((e, i) => (
+          <div key={e.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <input value={e.subject} onChange={(ev) => setEntry(i, { subject: ev.target.value })} placeholder="Subject line" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 700 }} />
+              <div className="pop" onClick={() => delEntry(i)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={15} /></div>
+            </div>
+            <textarea value={e.note || ""} onChange={(ev) => setEntry(i, { note: ev.target.value })} placeholder="Notes…" style={{ width: "100%", minHeight: 70, border: `1px solid ${LINE}`, borderRadius: 3, padding: "8px 10px", fontSize: 13, lineHeight: 1.5, background: PAPER, resize: "vertical" }} />
+          </div>
+        ))}
+      </div>
+      <button onClick={addEntry} style={addBtn}>+ Add a subject</button>
+    </>
+  );
+}
 function MoodEditor({ block, d, setD, now, back }) {
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
