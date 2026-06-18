@@ -2278,10 +2278,10 @@ function habitStreaks(d, habitId, now) {
   return { current, best };
 }
 const BUDGET_SECTIONS = [
-  { key: "fixed", label: "Fixed expenses", hint: "Rent, car, insurance, subscriptions", color: "#6E8597" },
-  { key: "variable", label: "Variable spending", hint: "Groceries, gas, dining, fun", color: "#C8783C" },
-  { key: "savings", label: "Savings & sinking funds", hint: "Emergency fund, future costs", color: "#5A6B4D" },
-  { key: "debt", label: "Debt payments", hint: "Cards, loans", color: "#9C7E96" },
+  { key: "fixed", label: "Fixed expenses", hint: "Rent, car, insurance, subscriptions, etc.", color: "#6E8597" },
+  { key: "variable", label: "Variable spending", hint: "Groceries, gas, dining, fun, etc.", color: "#C8783C" },
+  { key: "savings", label: "Savings & sinking funds", hint: "Emergency fund, future costs, etc.", color: "#5A6B4D" },
+  { key: "debt", label: "Debt payments", hint: "Cards, loans, etc.", color: "#9C7E96" },
 ];
 const sectionTotal = (d, key) => (d.budget[key] || []).reduce((s, r) => s + (Number(r.a) || 0), 0);
 const budgetSpent = (d) => Object.values(d.budget || {}).reduce((s, arr) => s + (Array.isArray(arr) ? arr.reduce((a, r) => a + (Number(r.a) || 0), 0) : 0), 0);
