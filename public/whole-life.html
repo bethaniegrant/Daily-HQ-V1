@@ -1061,9 +1061,9 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
         </div>
       )}
 
-      {all.length === 0 ? (
-        <div style={{ fontSize: 13, color: MUTED, fontStyle: "italic", fontFamily: "'DM Serif Display',serif", padding: "10px 4px" }}>{billRows.length ? "" : "Nothing scheduled. Add habits, to-dos, meds, or bill due dates to begin."}</div>
-      ) : (
+      {all.length === 0 && billRows.length === 0 ? (
+        <div style={{ fontSize: 13, color: MUTED, fontStyle: "italic", fontFamily: "'DM Serif Display',serif", padding: "10px 4px" }}>Nothing scheduled. Add habits, to-dos, meds, or bill due dates to begin.</div>
+      ) : all.length > 0 ? (
         <div style={{ display: "grid", gap: 6 }}>
           {all.map((r) => (
             <label key={r.kind + ":" + r.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "4px 2px" }}>
@@ -1083,7 +1083,7 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
             </label>
           ))}
         </div>
-      )}
+      ) : null}
 
       <div style={{ display: "flex", gap: 14, justifyContent: "flex-end" }}>
         <button onClick={() => go("plan", "habits")} className="pop" style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: AMBER, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>Habits</button>
