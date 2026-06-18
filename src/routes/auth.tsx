@@ -94,8 +94,15 @@ function AuthPage() {
     });
     if (error) { setLoading(false); return toast.error(error.message); }
 
-    // Try to redeem an invite now if a session exists (no email confirmation required)
-    if (data.session) {
+    // If no session was returned, try signing in immediately (works when email
+    // confirmation is off). If that succeeds we can redeem & continue.
+    let session = data.session;
+    if (!session) {
+      const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+      session = signInData.session ?? null;
+    }
+
+    if (session) {
       if (token && tokenStatus?.state === "valid") {
         try { await redeemFn({ data: { token } }); }
         catch (e: any) { toast.error(e.message); setLoading(false); return; }
@@ -103,14 +110,15 @@ function AuthPage() {
       setLoading(false);
       toast.success("Welcome to Daily HQ!");
       navigate({ to: "/app" });
-    } else {
-      setLoading(false);
-      // Stash invite token so we can redeem after email confirmation
-      if (token && tokenStatus?.state === "valid") {
-        try { sessionStorage.setItem("pending_invite_token", token); } catch {}
-      }
-      toast.success("Check your email to confirm your account");
+      return;
     }
+
+    // Still no session → email confirmation is required.
+    setLoading(false);
+    if (token && tokenStatus?.state === "valid") {
+      try { sessionStorage.setItem("pending_invite_token", token); } catch {}
+    }
+    setPendingConfirm(email);
   }
 
   async function forgot(e: React.FormEvent) {
