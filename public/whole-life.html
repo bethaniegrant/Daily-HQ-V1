@@ -1692,12 +1692,19 @@ function Budget({ d, setD, back }) {
             </div>
           </div>
           <div style={{ display: "grid", gap: 7 }}>
+            {(d.budget[sec.key] || []).length > 0 && (
+              <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", fontSize: 10, fontWeight: 700, letterSpacing: ".12em", color: MUTED, textTransform: "uppercase" }}>
+                <div style={{ flex: "1 1 120px", minWidth: 0 }}>Item</div>
+                <div style={{ width: 78, textAlign: "center" }}>Due</div>
+                <div style={{ width: 96, textAlign: "center" }}>Amount</div>
+                <div style={{ width: 15 }} />
+              </div>
+            )}
             {(d.budget[sec.key] || []).map((r) => (
               <div key={r.id} style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
                 <input value={r.n} onChange={(e) => setRow(sec.key, r.id, "n", e.target.value)} placeholder="What for" style={{ flex: "1 1 120px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 500 }} />
                 <div title="Day of month due (1–31)" style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 8px", width: 78, background: PAPER }}>
-                  <span style={{ color: MUTED, fontSize: 11, fontWeight: 700, letterSpacing: ".08em" }}>DUE</span>
-                  <input inputMode="numeric" maxLength={2} value={r.due || ""} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0,2); setRow(sec.key, r.id, "due", v); }} placeholder="—" style={{ border: "none", width: "100%", textAlign: "right", padding: "9px 0 9px 4px", fontSize: 13, fontWeight: 700, background: "none" }} />
+                  <input inputMode="numeric" maxLength={2} value={r.due || ""} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0,2); setRow(sec.key, r.id, "due", v); }} placeholder="—" style={{ border: "none", width: "100%", textAlign: "center", padding: "9px 0", fontSize: 13, fontWeight: 700, background: "none" }} />
                 </div>
                 <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", width: 96 }}><span style={{ color: MUTED, fontSize: 13 }}>$</span><input inputMode="decimal" value={r.a} onChange={(e) => setRow(sec.key, r.id, "a", e.target.value)} placeholder="0" style={{ border: "none", width: "100%", textAlign: "right", padding: "9px 0 9px 4px", fontSize: 14, fontWeight: 600, background: "none" }} /></div>
                 <div className="pop" onClick={() => delRow(sec.key, r.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
