@@ -611,6 +611,15 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
           <HubLink icon={WalletIcon} color={AMBER} title="Money" sub="Budget · debt · savings" onClick={() => go("money")} />
           <HubLink icon={HeartIcon} color={PLUM} title="Health" sub="Meds · workouts · meals · mood" onClick={() => go("health")} />
           <HubLink icon={StarIcon} color={SAGE} title="Plan" sub="Habits · goals · your spaces" onClick={() => go("plan")} />
+          {(() => {
+            const builtin = ["money", "health", "plan", "more"];
+            const customCats = [...new Set((d.blocks || []).map((b) => b.category || "plan").filter((c) => !builtin.includes(c)))];
+            return customCats.map((c) => {
+              const count = d.blocks.filter((b) => (b.category || "plan") === c).length;
+              const label = c.charAt(0).toUpperCase() + c.slice(1);
+              return <HubLink key={c} icon={GridIcon} color={MIST} title={label} sub={`${count} ${count === 1 ? "space" : "spaces"}`} onClick={() => go("spaces")} />;
+            });
+          })()}
         </div>
       </section>
 
