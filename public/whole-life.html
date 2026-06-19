@@ -305,6 +305,14 @@ function App() {
     setD((p) => ({ ...p, blocks: p.blocks.map((b) => (b.type === "checklist" && (b.title || "").trim().toLowerCase() === "errands") ? { ...b, title: "To Do" } : b) }));
   }, [synced]); // eslint-disable-line
 
+  // one-time migration: mood blocks belong in Health
+  useEffect(() => {
+    if (!synced) return;
+    const needs = (d.blocks || []).some((b) => b.type === "mood" && (b.category || "plan") !== "health");
+    if (!needs) return;
+    setD((p) => ({ ...p, blocks: p.blocks.map((b) => b.type === "mood" ? { ...b, category: "health" } : b) }));
+  }, [synced]); // eslint-disable-line
+
   // daily rollover: unchecked To Do items carry forward to the next day; checked items are cleared.
   useEffect(() => {
     if (!synced) return;
