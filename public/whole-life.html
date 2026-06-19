@@ -587,7 +587,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             const today = mb && mb.days && mb.days[now.getDate()];
             const moodToday = today && mb.moods.find((m) => m.id === today);
             return (
-              <Tile accent={PLUM} icon={HeartIcon} title="Mood" big={moodToday ? moodToday.label : (logged ? `${logged}` : "Log")} sub={moodToday ? "today" : (logged ? "days this month" : "tap to begin")} onClick={() => go("plan", mb ? "block:" + mb.id : null)} />
+              <Tile accent={PLUM} icon={HeartIcon} title="Mood" big={moodToday ? moodToday.label : (logged ? `${logged}` : "Log")} sub={moodToday ? "today" : (logged ? "days this month" : "tap to begin")} onClick={() => go("health", mb ? "block:" + mb.id : null)} />
             );
           })()}
         </div>
