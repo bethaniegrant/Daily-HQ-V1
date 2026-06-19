@@ -358,7 +358,9 @@ function App() {
   const closeMenu = () => setMenuOpen(false);
   const navGo = (t, p = null) => { go(t, p); closeMenu(); };
   const moodBlock = d.blocks.find((b) => b.type === "mood");
-  const blocksFor = (c) => d.blocks.filter((b) => (b.category || "plan") === c).map((b) => ({ icon: GridIcon, color: MIST, title: b.title || "Untitled space", onClick: () => navGo("plan", "block:" + b.id) }));
+  const builtinTabs = ["money", "health", "plan", "more"];
+  const tabForCat = (c) => (builtinTabs.includes(c) ? c : "plan");
+  const blocksFor = (c) => d.blocks.filter((b) => (b.category || "plan") === c).map((b) => ({ icon: GridIcon, color: MIST, title: b.title || "Untitled space", onClick: () => navGo(tabForCat(b.category || "plan"), "block:" + b.id) }));
   const builtin = ["money", "health", "plan", "more"];
   const customCats = [...new Set(d.blocks.map((b) => b.category || "plan").filter((c) => !builtin.includes(c)))];
 
