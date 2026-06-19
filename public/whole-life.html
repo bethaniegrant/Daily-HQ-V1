@@ -667,7 +667,7 @@ function MoneyHub({ d, go }) {
     </Hub>
   );
 }
-function HealthHub({ d, now, go }) {
+function HealthHub({ d, setD, now, go }) {
   const medsTaken = d.meds.filter((m) => medFullyTaken((d.medChecks[dayKey(now)] || {})[m.id], medTimes(m))).length;
   return (
     <Hub title="Health" sub="Care for the basics">
@@ -678,6 +678,7 @@ function HealthHub({ d, now, go }) {
       {d.blocks.filter((b) => (b.category || "plan") === "health" && b.type !== "mood").map((b) => (
         <ToolRow key={b.id} icon={GridIcon} color={MIST} title={b.title || "Untitled space"} onClick={() => go("health", "block:" + b.id)} />
       ))}
+      <AddBlockMenu d={d} setD={setD} go={go} defaultCat="health" lockCat label="Add to Health" />
     </Hub>
   );
 }
@@ -695,6 +696,7 @@ function PlanHub({ d, setD, go }) {
       {d.blocks.filter((b) => (b.category || "plan") === "plan" && !(b.type === "checklist" && /to ?do/i.test(b.title || ""))).map((b) => (
         <ToolRow key={b.id} icon={GridIcon} color={MIST} title={b.title || "Untitled space"} onClick={() => go("plan", "block:" + b.id)} />
       ))}
+      <AddBlockMenu d={d} setD={setD} go={go} defaultCat="plan" lockCat label="Add to Plan" />
     </Hub>
   );
 }
@@ -2144,17 +2146,17 @@ function makeBlock(type, category, title, opts) {
   if (type === "events") return { ...base, events: [], googleSync: { connected: false, lastSyncAt: null, calendarId: "primary" } };
   return { ...base, items: [{ t: "", done: false }] };
 }
-function AddBlockMenu({ d, setD, go }) {
+function AddBlockMenu({ d, setD, go, defaultCat, lockCat, label }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState("checklist");
   const [trackerKind, setTrackerKind] = useState("daily");
   const [title, setTitle] = useState("");
-  const [cat, setCat] = useState("plan");
+  const [cat, setCat] = useState(defaultCat || "plan");
   const [customCat, setCustomCat] = useState("");
   const cats = getCategories(d);
-  const reset = () => { setOpen(false); setType("checklist"); setTrackerKind("daily"); setTitle(""); setCat("plan"); setCustomCat(""); };
+  const reset = () => { setOpen(false); setType("checklist"); setTrackerKind("daily"); setTitle(""); setCat(defaultCat || "plan"); setCustomCat(""); };
   const create = () => {
-    const finalCat = (cat === "__new" ? customCat.trim().toLowerCase() : cat) || "plan";
+    const finalCat = (cat === "__new" ? customCat.trim().toLowerCase() : cat) || (defaultCat || "plan");
     const b = makeBlock(type, finalCat, title, { kind: trackerKind });
     setD({ ...d, blocks: [...d.blocks, b] });
     reset();
@@ -2163,7 +2165,7 @@ function AddBlockMenu({ d, setD, go }) {
   const menuTypes = Object.entries(BLOCK_META).filter(([k]) => k !== "mood");
   return (
     <>
-      <button onClick={() => setOpen(true)} style={{ ...addBtn, marginTop: 0 }}>+ Add a space</button>
+      <button onClick={() => setOpen(true)} style={{ ...addBtn, marginTop: 0 }}>+ {label || "Add a space"}</button>
       {open && (
         <div onClick={reset} style={{ position: "fixed", inset: 0, background: "rgba(22,32,28,.55)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 6, padding: "20px", width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 30px 80px -20px rgba(22,32,28,.5)" }}>
@@ -2194,14 +2196,18 @@ function AddBlockMenu({ d, setD, go }) {
                 </div>
               </>
             )}
-            <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>CATEGORY (where it appears in the menu)</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-              {cats.map((c) => (
-                <div key={c} className="pop" onClick={() => setCat(c)} style={{ border: `1.5px solid ${cat === c ? INK : LINE}`, background: cat === c ? INK : "transparent", color: cat === c ? PAPER : INK, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, textTransform: "capitalize" }}>{CATEGORY_LABEL[c] || c}</div>
-              ))}
-              <div className="pop" onClick={() => setCat("__new")} style={{ border: `1.5px dashed ${cat === "__new" ? INK : LINE}`, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: cat === "__new" ? INK : MUTED }}>+ New</div>
-            </div>
-            {cat === "__new" && <input value={customCat} onChange={(e) => setCustomCat(e.target.value)} placeholder="Category name" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13, fontWeight: 600, marginBottom: 10 }} />}
+            {!lockCat && (
+              <>
+                <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 6 }}>CATEGORY (where it appears in the menu)</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                  {cats.map((c) => (
+                    <div key={c} className="pop" onClick={() => setCat(c)} style={{ border: `1.5px solid ${cat === c ? INK : LINE}`, background: cat === c ? INK : "transparent", color: cat === c ? PAPER : INK, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, textTransform: "capitalize" }}>{CATEGORY_LABEL[c] || c}</div>
+                  ))}
+                  <div className="pop" onClick={() => setCat("__new")} style={{ border: `1.5px dashed ${cat === "__new" ? INK : LINE}`, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: cat === "__new" ? INK : MUTED }}>+ New</div>
+                </div>
+                {cat === "__new" && <input value={customCat} onChange={(e) => setCustomCat(e.target.value)} placeholder="Category name" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13, fontWeight: 600, marginBottom: 10 }} />}
+              </>
+            )}
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={reset} style={{ flex: 1, background: "none", border: `1.5px solid ${LINE}`, color: MUTED, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer" }}>Cancel</button>
               <button onClick={create} disabled={cat === "__new" && !customCat.trim()} style={{ flex: 1, background: INK, border: "none", color: PAPER, fontWeight: 700, fontSize: 14, padding: "12px", borderRadius: 4, cursor: "pointer", opacity: cat === "__new" && !customCat.trim() ? .4 : 1 }}>Save</button>
