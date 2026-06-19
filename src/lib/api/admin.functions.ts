@@ -27,22 +27,26 @@ export const adminGetStats = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ count: userCount }, { count: tokenCount }, { count: paidCount }, { data: recentSignups }] =
-      await Promise.all([
-        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
-        supabaseAdmin
-          .from("invite_tokens")
-          .select("*", { count: "exact", head: true })
-          .is("redeemed_at", null),
-        supabaseAdmin
-          .from("purchases")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "paid"),
-        supabaseAdmin
-          .from("profiles")
-          .select("created_at")
-          .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString()),
-      ]);
+    const [
+      { count: userCount },
+      { count: tokenCount },
+      { count: paidCount },
+      { data: recentSignups },
+    ] = await Promise.all([
+      supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
+      supabaseAdmin
+        .from("invite_tokens")
+        .select("*", { count: "exact", head: true })
+        .is("redeemed_at", null),
+      supabaseAdmin
+        .from("purchases")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "paid"),
+      supabaseAdmin
+        .from("profiles")
+        .select("created_at")
+        .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString()),
+    ]);
 
     return {
       totalUsers: userCount ?? 0,
@@ -190,7 +194,8 @@ export const validateInviteToken = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) return { valid: false, reason: "Invalid invite link" as const };
-    if (row.redeemed_at) return { valid: false, reason: "This invite link has already been used" as const };
+    if (row.redeemed_at)
+      return { valid: false, reason: "This invite link has already been used" as const };
     if (new Date(row.expires_at).getTime() < Date.now())
       return { valid: false, reason: "This invite link has expired" as const };
     return { valid: true as const, email: row.email };
@@ -200,6 +205,88 @@ export const validateInviteToken = createServerFn({ method: "POST" })
 // Gated by a valid, unredeemed invite token. Looks up the user by email and
 // flips email_confirmed via the Auth Admin API so invited signups can skip
 // the confirmation step. Paid signups (no invite token) are unaffected.
+export const createInvitedAccount = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      token: z.string().min(10),
+      email: z.string().email(),
+      password: z.string().min(6),
+      displayName: z.string().max(120).optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("invite_tokens")
+      .select("id, email, expires_at, redeemed_at, redeemed_by")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Invalid invite link");
+    if (row.redeemed_at) throw new Error("This invite link has already been used");
+    if (new Date(row.expires_at).getTime() < Date.now())
+      throw new Error("This invite link has expired");
+    if (row.email && row.email.toLowerCase() !== data.email.toLowerCase()) {
+      throw new Error("This invite is for a different email address");
+    }
+
+    let userId: string | null = null;
+    for (let page = 1; page <= 10 && !userId; page++) {
+      const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
+      if (listErr) throw new Error(listErr.message);
+      const match = list.users.find(
+        (u) => (u.email ?? "").toLowerCase() === data.email.toLowerCase(),
+      );
+      if (match) userId = match.id;
+      if (list.users.length < 200) break;
+    }
+
+    const createdNewUser = !userId;
+
+    if (userId) {
+      const { error: updUserErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email_confirm: true,
+        user_metadata: { display_name: data.displayName || data.email.split("@")[0] },
+      });
+      if (updUserErr) throw new Error(updUserErr.message);
+    } else {
+      const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email: data.email,
+        password: data.password,
+        email_confirm: true,
+        user_metadata: { display_name: data.displayName || data.email.split("@")[0] },
+      });
+      if (createErr) throw new Error(createErr.message);
+      userId = created.user.id;
+    }
+
+    const [{ error: profileErr }, { error: roleErr }] = await Promise.all([
+      supabaseAdmin.from("profiles").upsert({
+        id: userId,
+        display_name: data.displayName || data.email.split("@")[0],
+        access_revoked: false,
+        email_verified_deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      }),
+      supabaseAdmin
+        .from("user_roles")
+        .upsert({ user_id: userId, role: "user" }, { onConflict: "user_id,role" }),
+    ]);
+    if (profileErr) throw new Error(profileErr.message);
+    if (roleErr) throw new Error(roleErr.message);
+
+    const { error: claimErr } = await supabaseAdmin
+      .from("invite_tokens")
+      .update({ redeemed_at: new Date().toISOString(), redeemed_by: userId })
+      .eq("id", row.id)
+      .is("redeemed_at", null);
+    if (claimErr) throw new Error(claimErr.message);
+
+    return { ok: true, created: createdNewUser };
+  });
+
 export const confirmInvitedEmail = createServerFn({ method: "POST" })
   .inputValidator(z.object({ token: z.string().min(10), email: z.string().email() }))
   .handler(async ({ data }) => {
@@ -212,26 +299,44 @@ export const confirmInvitedEmail = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Invalid invite link");
     if (row.redeemed_at) throw new Error("This invite link has already been used");
-    if (new Date(row.expires_at).getTime() < Date.now()) throw new Error("This invite link has expired");
+    if (new Date(row.expires_at).getTime() < Date.now())
+      throw new Error("This invite link has expired");
     if (row.email && row.email.toLowerCase() !== data.email.toLowerCase()) {
       throw new Error("This invite is for a different email address");
     }
 
     let userId: string | null = null;
     for (let page = 1; page <= 10 && !userId; page++) {
-      const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
+      const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
       if (listErr) throw new Error(listErr.message);
-      const match = list.users.find((u) => (u.email ?? "").toLowerCase() === data.email.toLowerCase());
+      const match = list.users.find(
+        (u) => (u.email ?? "").toLowerCase() === data.email.toLowerCase(),
+      );
       if (match) userId = match.id;
       if (list.users.length < 200) break;
     }
     if (!userId) throw new Error("Account not found");
 
-    const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { email_confirm: true });
+    const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      email_confirm: true,
+    });
     if (updErr) throw new Error(updErr.message);
+
+    // Claim the invite here as well as after sign-in. This makes invited
+    // email signups resilient to auth-session propagation delays between
+    // account creation, auto-confirmation, and the protected app gate.
+    const { error: claimErr } = await supabaseAdmin
+      .from("invite_tokens")
+      .update({ redeemed_at: new Date().toISOString(), redeemed_by: userId })
+      .eq("id", row.id)
+      .is("redeemed_at", null);
+    if (claimErr) throw new Error(claimErr.message);
+
     return { ok: true };
   });
-
 
 // ---------- PUBLIC: redeem token after signup ----------
 export const redeemInviteToken = createServerFn({ method: "POST" })
@@ -239,18 +344,24 @@ export const redeemInviteToken = createServerFn({ method: "POST" })
   .inputValidator(z.object({ token: z.string().min(10) }))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: userData, error: userErr } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    const { data: userData, error: userErr } = await supabaseAdmin.auth.admin.getUserById(
+      context.userId,
+    );
     if (userErr) throw new Error(userErr.message);
     const userEmail = userData.user?.email?.toLowerCase() ?? null;
     const { data: row, error } = await supabaseAdmin
       .from("invite_tokens")
-      .select("id, email, expires_at, redeemed_at")
+      .select("id, email, expires_at, redeemed_at, redeemed_by")
       .eq("token", data.token)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Invalid invite link");
-    if (row.redeemed_at) throw new Error("This invite link has already been used");
-    if (new Date(row.expires_at).getTime() < Date.now()) throw new Error("This invite link has expired");
+    if (row.redeemed_at) {
+      if (row.redeemed_by === context.userId) return { ok: true };
+      throw new Error("This invite link has already been used");
+    }
+    if (new Date(row.expires_at).getTime() < Date.now())
+      throw new Error("This invite link has expired");
     if (row.email && row.email.toLowerCase() !== userEmail) {
       throw new Error("This invite is for a different email address");
     }
@@ -270,22 +381,22 @@ export const getCurrentUserAppAccess = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ data: profile, error: profileErr }, { data: roles, error: rolesErr }, { count: inviteCount, error: inviteErr }] =
-      await Promise.all([
-        supabaseAdmin
-          .from("profiles")
-          .select("access_revoked, email_verified_deadline")
-          .eq("id", context.userId)
-          .maybeSingle(),
-        supabaseAdmin
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", context.userId),
-        supabaseAdmin
-          .from("invite_tokens")
-          .select("*", { count: "exact", head: true })
-          .eq("redeemed_by", context.userId),
-      ]);
+    const [
+      { data: profile, error: profileErr },
+      { data: roles, error: rolesErr },
+      { count: inviteCount, error: inviteErr },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select("access_revoked, email_verified_deadline")
+        .eq("id", context.userId)
+        .maybeSingle(),
+      supabaseAdmin.from("user_roles").select("role").eq("user_id", context.userId),
+      supabaseAdmin
+        .from("invite_tokens")
+        .select("*", { count: "exact", head: true })
+        .eq("redeemed_by", context.userId),
+    ]);
 
     if (profileErr) throw new Error(profileErr.message);
     if (rolesErr) throw new Error(rolesErr.message);
