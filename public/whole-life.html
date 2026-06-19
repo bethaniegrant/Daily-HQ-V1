@@ -676,11 +676,17 @@ function HealthHub({ d, now, go }) {
 function PlanHub({ d, setD, go }) {
   const goalsSet = d.goals.filter((g) => g.n.trim()).length;
   const yearlySet = (d.yearlyGoals || []).filter((g) => g.n.trim()).length;
+  const todoBlock = d.blocks.find((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
+  const todoOpen = todoBlock ? (todoBlock.items || []).filter((it) => !it.done).length : 0;
   return (
     <Hub title="Plan" sub="Shape your days">
+      {todoBlock && <ToolRow icon={GridIcon} color={AMBER} title="To Do" sub="Today's checklist" stat={todoOpen ? `${todoOpen}` : ""} onClick={() => go("plan", "block:" + todoBlock.id)} />}
       <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Yearly Goals" sub="The bigger arc" stat={yearlySet ? `${yearlySet}` : ""} onClick={() => go("plan", "yearly")} />
+      {d.blocks.filter((b) => (b.category || "plan") === "plan" && !(b.type === "checklist" && /to ?do/i.test(b.title || ""))).map((b) => (
+        <ToolRow key={b.id} icon={GridIcon} color={MIST} title={b.title || "Untitled space"} onClick={() => go("plan", "block:" + b.id)} />
+      ))}
     </Hub>
   );
 }
