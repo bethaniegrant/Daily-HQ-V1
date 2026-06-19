@@ -277,14 +277,12 @@ export const createInvitedAccount = createServerFn({ method: "POST" })
     if (profileErr) throw new Error(profileErr.message);
     if (roleErr) throw new Error(roleErr.message);
 
-    if (createdNewUser) {
-      const { error: claimErr } = await supabaseAdmin
-        .from("invite_tokens")
-        .update({ redeemed_at: new Date().toISOString(), redeemed_by: userId })
-        .eq("id", row.id)
-        .is("redeemed_at", null);
-      if (claimErr) throw new Error(claimErr.message);
-    }
+    const { error: claimErr } = await supabaseAdmin
+      .from("invite_tokens")
+      .update({ redeemed_at: new Date().toISOString(), redeemed_by: userId })
+      .eq("id", row.id)
+      .is("redeemed_at", null);
+    if (claimErr) throw new Error(claimErr.message);
 
     return { ok: true, created: createdNewUser };
   });
