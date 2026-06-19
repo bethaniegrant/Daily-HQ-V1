@@ -372,7 +372,7 @@ function App() {
       { icon: PillIcon, color: PLUM, title: "Medications", onClick: () => navGo("health", "meds") },
       { icon: DumbbellIcon, color: BLUE, title: "Workouts", onClick: () => navGo("health", "workouts") },
       { icon: PlateIcon, color: SAGE, title: "Meal Plan", onClick: () => navGo("health", "meals") },
-      { icon: HeartIcon, color: PLUM, title: "Mood", onClick: () => navGo("plan", moodBlock ? "block:" + moodBlock.id : null) },
+      { icon: HeartIcon, color: PLUM, title: "Mood", onClick: () => navGo("health", moodBlock ? "block:" + moodBlock.id : null) },
       ...blocksFor("health").filter((it) => !moodBlock || it.title !== moodBlock.title),
     ]},
     { label: "Plan", items: [
