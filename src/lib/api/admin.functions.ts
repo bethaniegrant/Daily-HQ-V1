@@ -233,6 +233,8 @@ export const createInvitedAccount = createServerFn({ method: "POST" })
       if (list.users.length < 200) break;
     }
 
+    const createdNewUser = !userId;
+
     if (userId) {
       const { error: updUserErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         email_confirm: true,
@@ -250,14 +252,28 @@ export const createInvitedAccount = createServerFn({ method: "POST" })
       userId = created.user.id;
     }
 
-    const { error: claimErr } = await supabaseAdmin
-      .from("invite_tokens")
-      .update({ redeemed_at: new Date().toISOString(), redeemed_by: userId })
-      .eq("id", row.id)
-      .is("redeemed_at", null);
-    if (claimErr) throw new Error(claimErr.message);
+    const [{ error: profileErr }, { error: roleErr }] = await Promise.all([
+      supabaseAdmin.from("profiles").upsert({
+        id: userId,
+        display_name: data.displayName || data.email.split("@")[0],
+        access_revoked: false,
+        email_verified_deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      }),
+      supabaseAdmin.from("user_roles").upsert({ user_id: userId, role: "user" }, { onConflict: "user_id,role" }),
+    ]);
+    if (profileErr) throw new Error(profileErr.message);
+    if (roleErr) throw new Error(roleErr.message);
 
-    return { ok: true };
+    if (createdNewUser) {
+      const { error: claimErr } = await supabaseAdmin
+        .from("invite_tokens")
+        .update({ redeemed_at: new Date().toISOString(), redeemed_by: userId })
+        .eq("id", row.id)
+        .is("redeemed_at", null);
+      if (claimErr) throw new Error(claimErr.message);
+    }
+
+    return { ok: true, created: createdNewUser };
   });
 
 export const confirmInvitedEmail = createServerFn({ method: "POST" })
