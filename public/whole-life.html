@@ -518,8 +518,11 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
     <div className="fade" style={{ background: PAPER, minHeight: "100vh" }}>
       {/* Pill nav */}
       <div style={{ position: "sticky", top: 0, zIndex: 30, padding: isDesktop ? "20px 32px 8px" : "14px 16px 6px", background: `linear-gradient(${PAPER} 70%, rgba(236,230,220,0))` }}>
-        <nav style={{ background: INK, borderRadius: 999, padding: "10px 16px 10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <nav style={{ background: INK, borderRadius: 999, padding: "10px 16px 10px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={openMenu} aria-label="Menu" className="pop" style={{ width: 32, height: 32, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.2)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+            </button>
             <img src={LOGO_URL} alt="Bethanie Rose" style={{ width: 28, height: 28, borderRadius: 999, background: PAPER, padding: 2, objectFit: "contain" }} />
             <span style={{ color: PAPER, fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 15, letterSpacing: "-.01em" }}>Daily <span style={{ color: AMBER }}>HQ</span></span>
           </span>
@@ -529,9 +532,6 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             {navBtn("Plan", () => go("plan"))}
             {navBtn("Spaces", () => go("spaces"))}
             {isDesktop && navBtn("Money", () => go("money"))}
-            <button onClick={openMenu} aria-label="Menu" className="pop" style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.2)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-            </button>
           </div>
         </nav>
       </div>
