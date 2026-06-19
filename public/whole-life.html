@@ -667,7 +667,7 @@ function MoneyHub({ d, go }) {
     </Hub>
   );
 }
-function HealthHub({ d, now, go }) {
+function HealthHub({ d, setD, now, go }) {
   const medsTaken = d.meds.filter((m) => medFullyTaken((d.medChecks[dayKey(now)] || {})[m.id], medTimes(m))).length;
   return (
     <Hub title="Health" sub="Care for the basics">
@@ -678,6 +678,7 @@ function HealthHub({ d, now, go }) {
       {d.blocks.filter((b) => (b.category || "plan") === "health" && b.type !== "mood").map((b) => (
         <ToolRow key={b.id} icon={GridIcon} color={MIST} title={b.title || "Untitled space"} onClick={() => go("health", "block:" + b.id)} />
       ))}
+      <AddBlockMenu d={d} setD={setD} go={go} defaultCat="health" lockCat label="Add to Health" />
     </Hub>
   );
 }
