@@ -20,6 +20,10 @@ import { toast } from "sonner";
 
 const searchSchema = z.object({ token: z.string().optional() });
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Something went wrong";
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   validateSearch: searchSchema,
@@ -72,7 +76,9 @@ function AuthPage() {
     }
     try {
       sessionStorage.setItem("pending_invite_token", token);
-    } catch {}
+    } catch {
+      // Ignore storage restrictions.
+    }
     setTokenStatus({ state: "checking" });
     validateFn({ data: { token } }).then((res) => {
       if (res.valid) {
@@ -82,7 +88,9 @@ function AuthPage() {
       } else {
         try {
           sessionStorage.removeItem("pending_invite_token");
-        } catch {}
+        } catch {
+          // Ignore storage restrictions.
+        }
         setTokenStatus({ state: "invalid", reason: res.reason });
       }
     });
@@ -97,8 +105,8 @@ function AuthPage() {
     if (token && tokenStatus?.state === "valid") {
       try {
         await redeemFn({ data: { token } });
-      } catch (e: any) {
-        return toast.error(e.message);
+      } catch (error) {
+        return toast.error(getErrorMessage(error));
       }
     }
     toast.success("Signed in");
@@ -112,9 +120,9 @@ function AuthPage() {
     if (token && tokenStatus?.state === "valid") {
       try {
         await createInvitedAccountFn({ data: { token, email, password, displayName } });
-      } catch (e: any) {
+      } catch (error) {
         setLoading(false);
-        return toast.error(e.message);
+        return toast.error(getErrorMessage(error));
       }
 
       const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
@@ -127,7 +135,9 @@ function AuthPage() {
         return toast.error("Account created, but sign-in did not complete. Please sign in.");
       try {
         sessionStorage.removeItem("pending_invite_token");
-      } catch {}
+      } catch {
+        // Ignore storage restrictions.
+      }
       toast.success("Welcome to Daily HQ!");
       navigate({ to: "/app" });
       return;
@@ -156,8 +166,8 @@ function AuthPage() {
       if (token && tokenStatus?.state === "valid") {
         try {
           await redeemFn({ data: { token } });
-        } catch (e: any) {
-          toast.error(e.message);
+        } catch (error) {
+          toast.error(getErrorMessage(error));
           setLoading(false);
           return;
         }
@@ -224,7 +234,9 @@ function AuthPage() {
               if (token && tokenStatus?.state === "valid") {
                 try {
                   sessionStorage.setItem("pending_invite_token", token);
-                } catch {}
+                } catch {
+                  // Ignore storage restrictions.
+                }
               }
               const result = await lovable.auth.signInWithOAuth("google", {
                 redirect_uri: `${window.location.origin}/app`,
