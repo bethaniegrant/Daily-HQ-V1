@@ -101,14 +101,16 @@ function AuthPage() {
     });
     if (error) { setLoading(false); return toast.error(error.message); }
 
-    // If no session was returned, this account needs email confirmation. For
-    // invited users we auto-confirm via a token-gated server fn, then sign in.
     let session = data.session;
+
+    // Invited users skip email confirmation — auto-confirm then sign in.
     if (!session && token && tokenStatus?.state === "valid") {
       try { await confirmFn({ data: { token, email } }); }
       catch (e: any) { setLoading(false); return toast.error(e.message); }
-    }
-    if (!session) {
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInErr) { setLoading(false); return toast.error(signInErr.message); }
+      session = signInData.session ?? null;
+    } else if (!session) {
       const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
       session = signInData.session ?? null;
     }
@@ -124,11 +126,8 @@ function AuthPage() {
       return;
     }
 
-    // Still no session → email confirmation is required.
+    // No session and no invite → uninvited signup needs email confirmation.
     setLoading(false);
-    if (token && tokenStatus?.state === "valid") {
-      try { sessionStorage.setItem("pending_invite_token", token); } catch {}
-    }
     setPendingConfirm(email);
   }
 
