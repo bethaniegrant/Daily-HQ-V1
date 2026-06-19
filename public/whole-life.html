@@ -305,6 +305,14 @@ function App() {
     setD((p) => ({ ...p, blocks: p.blocks.map((b) => (b.type === "checklist" && (b.title || "").trim().toLowerCase() === "errands") ? { ...b, title: "To Do" } : b) }));
   }, [synced]); // eslint-disable-line
 
+  // one-time migration: mood blocks belong in Health
+  useEffect(() => {
+    if (!synced) return;
+    const needs = (d.blocks || []).some((b) => b.type === "mood" && (b.category || "plan") !== "health");
+    if (!needs) return;
+    setD((p) => ({ ...p, blocks: p.blocks.map((b) => b.type === "mood" ? { ...b, category: "health" } : b) }));
+  }, [synced]); // eslint-disable-line
+
   // daily rollover: unchecked To Do items carry forward to the next day; checked items are cleared.
   useEffect(() => {
     if (!synced) return;
@@ -358,7 +366,9 @@ function App() {
   const closeMenu = () => setMenuOpen(false);
   const navGo = (t, p = null) => { go(t, p); closeMenu(); };
   const moodBlock = d.blocks.find((b) => b.type === "mood");
-  const blocksFor = (c) => d.blocks.filter((b) => (b.category || "plan") === c).map((b) => ({ icon: GridIcon, color: MIST, title: b.title || "Untitled space", onClick: () => navGo("plan", "block:" + b.id) }));
+  const builtinTabs = ["money", "health", "plan", "more"];
+  const tabForCat = (c) => (builtinTabs.includes(c) ? c : "plan");
+  const blocksFor = (c) => d.blocks.filter((b) => (b.category || "plan") === c).map((b) => ({ icon: GridIcon, color: MIST, title: b.title || "Untitled space", onClick: () => navGo(tabForCat(b.category || "plan"), "block:" + b.id) }));
   const builtin = ["money", "health", "plan", "more"];
   const customCats = [...new Set(d.blocks.map((b) => b.category || "plan").filter((c) => !builtin.includes(c)))];
 
@@ -372,7 +382,7 @@ function App() {
       { icon: PillIcon, color: PLUM, title: "Medications", onClick: () => navGo("health", "meds") },
       { icon: DumbbellIcon, color: BLUE, title: "Workouts", onClick: () => navGo("health", "workouts") },
       { icon: PlateIcon, color: SAGE, title: "Meal Plan", onClick: () => navGo("health", "meals") },
-      { icon: HeartIcon, color: PLUM, title: "Mood", onClick: () => navGo("plan", moodBlock ? "block:" + moodBlock.id : null) },
+      { icon: HeartIcon, color: PLUM, title: "Mood", onClick: () => navGo("health", moodBlock ? "block:" + moodBlock.id : null) },
       ...blocksFor("health").filter((it) => !moodBlock || it.title !== moodBlock.title),
     ]},
     { label: "Plan", items: [
@@ -577,7 +587,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             const today = mb && mb.days && mb.days[now.getDate()];
             const moodToday = today && mb.moods.find((m) => m.id === today);
             return (
-              <Tile accent={PLUM} icon={HeartIcon} title="Mood" big={moodToday ? moodToday.label : (logged ? `${logged}` : "Log")} sub={moodToday ? "today" : (logged ? "days this month" : "tap to begin")} onClick={() => go("plan", mb ? "block:" + mb.id : null)} />
+              <Tile accent={PLUM} icon={HeartIcon} title="Mood" big={moodToday ? moodToday.label : (logged ? `${logged}` : "Log")} sub={moodToday ? "today" : (logged ? "days this month" : "tap to begin")} onClick={() => go("health", mb ? "block:" + mb.id : null)} />
             );
           })()}
         </div>
@@ -664,18 +674,27 @@ function HealthHub({ d, now, go }) {
       <ToolRow icon={PillIcon} color={PLUM} title="Medications" sub="Track your daily doses" stat={d.meds.length ? `${medsTaken}/${d.meds.length}` : ""} onClick={() => go("health", "meds")} />
       <ToolRow icon={DumbbellIcon} color={BLUE} title="Workouts" sub="Build and log your training" stat={`${d.workouts.length}`} onClick={() => go("health", "workouts")} />
       <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping list" stat={`${daysPlanned(d)}/7`} onClick={() => go("health", "meals")} />
-      <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("plan", mb ? "block:" + mb.id : null); }} />
+      <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("health", mb ? "block:" + mb.id : null); }} />
+      {d.blocks.filter((b) => (b.category || "plan") === "health" && b.type !== "mood").map((b) => (
+        <ToolRow key={b.id} icon={GridIcon} color={MIST} title={b.title || "Untitled space"} onClick={() => go("health", "block:" + b.id)} />
+      ))}
     </Hub>
   );
 }
 function PlanHub({ d, setD, go }) {
   const goalsSet = d.goals.filter((g) => g.n.trim()).length;
   const yearlySet = (d.yearlyGoals || []).filter((g) => g.n.trim()).length;
+  const todoBlock = d.blocks.find((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
+  const todoOpen = todoBlock ? (todoBlock.items || []).filter((it) => !it.done).length : 0;
   return (
     <Hub title="Plan" sub="Shape your days">
+      {todoBlock && <ToolRow icon={GridIcon} color={AMBER} title="To Do" sub="Today's checklist" stat={todoOpen ? `${todoOpen}` : ""} onClick={() => go("plan", "block:" + todoBlock.id)} />}
       <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Yearly Goals" sub="The bigger arc" stat={yearlySet ? `${yearlySet}` : ""} onClick={() => go("plan", "yearly")} />
+      {d.blocks.filter((b) => (b.category || "plan") === "plan" && !(b.type === "checklist" && /to ?do/i.test(b.title || ""))).map((b) => (
+        <ToolRow key={b.id} icon={GridIcon} color={MIST} title={b.title || "Untitled space"} onClick={() => go("plan", "block:" + b.id)} />
+      ))}
     </Hub>
   );
 }
@@ -699,7 +718,7 @@ function SpacesHub({ d, setD, go }) {
       <ToolRow icon={PillIcon} color={PLUM} title="Medications" sub="Daily doses" stat={d.meds.length ? `${medsTaken}/${d.meds.length}` : ""} onClick={() => go("health", "meds")} />
       <ToolRow icon={DumbbellIcon} color={BLUE} title="Workouts" sub="Build and log training" stat={`${d.workouts.length}`} onClick={() => go("health", "workouts")} />
       <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping" stat={`${daysPlanned(d)}/7`} onClick={() => go("health", "meals")} />
-      <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("plan", mb ? "block:" + mb.id : null); }} />
+      <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("health", mb ? "block:" + mb.id : null); }} />
 
       <SectionMini text="Plan" />
       <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
@@ -1125,7 +1144,7 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
       )}
 
       <button
-        onClick={() => go("plan", moodBlock ? "block:" + moodBlock.id : null)}
+        onClick={() => go("health", moodBlock ? "block:" + moodBlock.id : null)}
         className="pop"
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "none", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "left" }}
       >
