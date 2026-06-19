@@ -200,6 +200,66 @@ export const validateInviteToken = createServerFn({ method: "POST" })
 // Gated by a valid, unredeemed invite token. Looks up the user by email and
 // flips email_confirmed via the Auth Admin API so invited signups can skip
 // the confirmation step. Paid signups (no invite token) are unaffected.
+export const createInvitedAccount = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      token: z.string().min(10),
+      email: z.string().email(),
+      password: z.string().min(6),
+      displayName: z.string().max(120).optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("invite_tokens")
+      .select("id, email, expires_at, redeemed_at, redeemed_by")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Invalid invite link");
+    if (row.redeemed_at) throw new Error("This invite link has already been used");
+    if (new Date(row.expires_at).getTime() < Date.now()) throw new Error("This invite link has expired");
+    if (row.email && row.email.toLowerCase() !== data.email.toLowerCase()) {
+      throw new Error("This invite is for a different email address");
+    }
+
+    let userId: string | null = null;
+    for (let page = 1; page <= 10 && !userId; page++) {
+      const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
+      if (listErr) throw new Error(listErr.message);
+      const match = list.users.find((u) => (u.email ?? "").toLowerCase() === data.email.toLowerCase());
+      if (match) userId = match.id;
+      if (list.users.length < 200) break;
+    }
+
+    if (userId) {
+      const { error: updUserErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email_confirm: true,
+        user_metadata: { display_name: data.displayName || data.email.split("@")[0] },
+      });
+      if (updUserErr) throw new Error(updUserErr.message);
+    } else {
+      const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email: data.email,
+        password: data.password,
+        email_confirm: true,
+        user_metadata: { display_name: data.displayName || data.email.split("@")[0] },
+      });
+      if (createErr) throw new Error(createErr.message);
+      userId = created.user.id;
+    }
+
+    const { error: claimErr } = await supabaseAdmin
+      .from("invite_tokens")
+      .update({ redeemed_at: new Date().toISOString(), redeemed_by: userId })
+      .eq("id", row.id)
+      .is("redeemed_at", null);
+    if (claimErr) throw new Error(claimErr.message);
+
+    return { ok: true };
+  });
+
 export const confirmInvitedEmail = createServerFn({ method: "POST" })
   .inputValidator(z.object({ token: z.string().min(10), email: z.string().email() }))
   .handler(async ({ data }) => {
