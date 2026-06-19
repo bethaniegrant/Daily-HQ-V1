@@ -229,6 +229,17 @@ export const confirmInvitedEmail = createServerFn({ method: "POST" })
 
     const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { email_confirm: true });
     if (updErr) throw new Error(updErr.message);
+
+    // Claim the invite here as well as after sign-in. This makes invited
+    // email signups resilient to auth-session propagation delays between
+    // account creation, auto-confirmation, and the protected app gate.
+    const { error: claimErr } = await supabaseAdmin
+      .from("invite_tokens")
+      .update({ redeemed_at: new Date().toISOString(), redeemed_by: userId })
+      .eq("id", row.id)
+      .is("redeemed_at", null);
+    if (claimErr) throw new Error(claimErr.message);
+
     return { ok: true };
   });
 
@@ -244,12 +255,15 @@ export const redeemInviteToken = createServerFn({ method: "POST" })
     const userEmail = userData.user?.email?.toLowerCase() ?? null;
     const { data: row, error } = await supabaseAdmin
       .from("invite_tokens")
-      .select("id, email, expires_at, redeemed_at")
+      .select("id, email, expires_at, redeemed_at, redeemed_by")
       .eq("token", data.token)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Invalid invite link");
-    if (row.redeemed_at) throw new Error("This invite link has already been used");
+    if (row.redeemed_at) {
+      if (row.redeemed_by === context.userId) return { ok: true };
+      throw new Error("This invite link has already been used");
+    }
     if (new Date(row.expires_at).getTime() < Date.now()) throw new Error("This invite link has expired");
     if (row.email && row.email.toLowerCase() !== userEmail) {
       throw new Error("This invite is for a different email address");
