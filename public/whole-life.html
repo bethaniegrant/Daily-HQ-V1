@@ -710,7 +710,7 @@ function SpacesHub({ d, setD, go }) {
       <ToolRow icon={PillIcon} color={PLUM} title="Medications" sub="Daily doses" stat={d.meds.length ? `${medsTaken}/${d.meds.length}` : ""} onClick={() => go("health", "meds")} />
       <ToolRow icon={DumbbellIcon} color={BLUE} title="Workouts" sub="Build and log training" stat={`${d.workouts.length}`} onClick={() => go("health", "workouts")} />
       <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping" stat={`${daysPlanned(d)}/7`} onClick={() => go("health", "meals")} />
-      <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("plan", mb ? "block:" + mb.id : null); }} />
+      <ToolRow icon={HeartIcon} color={"#9C7E96"} title="Mood" sub="Color your month" onClick={() => { const mb = d.blocks.find((b) => b.type === "mood"); go("health", mb ? "block:" + mb.id : null); }} />
 
       <SectionMini text="Plan" />
       <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
