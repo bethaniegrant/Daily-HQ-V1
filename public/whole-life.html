@@ -695,6 +695,7 @@ function PlanHub({ d, setD, go }) {
       {d.blocks.filter((b) => (b.category || "plan") === "plan" && !(b.type === "checklist" && /to ?do/i.test(b.title || ""))).map((b) => (
         <ToolRow key={b.id} icon={GridIcon} color={MIST} title={b.title || "Untitled space"} onClick={() => go("plan", "block:" + b.id)} />
       ))}
+      <AddBlockMenu d={d} setD={setD} go={go} defaultCat="plan" lockCat label="Add to Plan" />
     </Hub>
   );
 }
