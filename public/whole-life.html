@@ -2144,17 +2144,17 @@ function makeBlock(type, category, title, opts) {
   if (type === "events") return { ...base, events: [], googleSync: { connected: false, lastSyncAt: null, calendarId: "primary" } };
   return { ...base, items: [{ t: "", done: false }] };
 }
-function AddBlockMenu({ d, setD, go }) {
+function AddBlockMenu({ d, setD, go, defaultCat, lockCat, label }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState("checklist");
   const [trackerKind, setTrackerKind] = useState("daily");
   const [title, setTitle] = useState("");
-  const [cat, setCat] = useState("plan");
+  const [cat, setCat] = useState(defaultCat || "plan");
   const [customCat, setCustomCat] = useState("");
   const cats = getCategories(d);
-  const reset = () => { setOpen(false); setType("checklist"); setTrackerKind("daily"); setTitle(""); setCat("plan"); setCustomCat(""); };
+  const reset = () => { setOpen(false); setType("checklist"); setTrackerKind("daily"); setTitle(""); setCat(defaultCat || "plan"); setCustomCat(""); };
   const create = () => {
-    const finalCat = (cat === "__new" ? customCat.trim().toLowerCase() : cat) || "plan";
+    const finalCat = (cat === "__new" ? customCat.trim().toLowerCase() : cat) || (defaultCat || "plan");
     const b = makeBlock(type, finalCat, title, { kind: trackerKind });
     setD({ ...d, blocks: [...d.blocks, b] });
     reset();
@@ -2163,7 +2163,7 @@ function AddBlockMenu({ d, setD, go }) {
   const menuTypes = Object.entries(BLOCK_META).filter(([k]) => k !== "mood");
   return (
     <>
-      <button onClick={() => setOpen(true)} style={{ ...addBtn, marginTop: 0 }}>+ Add a space</button>
+      <button onClick={() => setOpen(true)} style={{ ...addBtn, marginTop: 0 }}>+ {label || "Add a space"}</button>
       {open && (
         <div onClick={reset} style={{ position: "fixed", inset: 0, background: "rgba(22,32,28,.55)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 6, padding: "20px", width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 30px 80px -20px rgba(22,32,28,.5)" }}>
