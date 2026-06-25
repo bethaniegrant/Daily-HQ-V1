@@ -383,6 +383,22 @@ const applyCategorySeeds = (doc, categories) => {
 // Default factory used by useState(seed) — every new visitor starts empty + un-onboarded.
 const seed = () => emptyDoc();
 
+const LOGO_URL = "/__l5e/assets-v1/9dac1cfe-e63c-454c-a03e-d189e841f1f5/bethanie-rose-logo-v2.png";
+
+const MEAL_SLOTS = [
+  { key: "breakfast", label: "Breakfast" },
+  { key: "lunch", label: "Lunch" },
+  { key: "dinner", label: "Dinner" },
+  { key: "snacks", label: "Snacks" },
+];
+// Normalize a day's meal entry — supports legacy string (treated as dinner) or object.
+const mealsFor = (entry) => {
+  if (!entry) return {};
+  if (typeof entry === "string") return entry.trim() ? { dinner: entry } : {};
+  return entry;
+};
+
+
 
 const dayHasMeal = (entry) => {
   const m = mealsFor(entry);
