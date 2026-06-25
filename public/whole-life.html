@@ -537,6 +537,7 @@ function App() {
       ...(isAdmin ? [{ icon: GridIcon, color: BLUE, title: "Admin", onClick: () => { closeMenu(); openAdmin(); } }] : []),
       { icon: GridIcon, color: SAGE, title: "Appearance", onClick: () => { closeMenu(); setAppearanceOpen(true); } },
       { icon: GridIcon, color: SAGE, title: "Main website", onClick: () => { closeMenu(); try { window.parent && window.parent.postMessage({ type: "shell:navigate", to: "/" }, "*"); } catch (_) {} } },
+      { icon: GridIcon, color: AMBER, title: "Reset account (preview onboarding)", onClick: () => { if (confirm("Reset your local planner data and restart onboarding? This only clears this device.")) { try { Object.keys(localStorage).filter(k => k.startsWith("whole-life") || k.startsWith("planner")).forEach(k => localStorage.removeItem(k)); } catch(_){} location.reload(); } } },
       { icon: XIcon, color: PLUM, title: "Sign out", onClick: () => { closeMenu(); signOutFromShell(); } },
     ]},
   ];
