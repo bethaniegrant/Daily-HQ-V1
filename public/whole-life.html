@@ -970,7 +970,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{dateLine}</span>
           </div>
           <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: isDesktop ? 64 : 38, fontWeight: 600, lineHeight: 1.05, letterSpacing: "-.02em", margin: "10px 0 8px", color: TEXT }}>
-            {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>{((displayName || "").trim().split(/\s+/)[0] || "").charAt(0).toUpperCase() || "•"}.</span>
+            {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>{firstName}.</span>
           </h1>
           <p style={{ fontSize: isDesktop ? 16 : 14, color: MUTED, lineHeight: 1.5, maxWidth: 520, margin: 0 }}>
             {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""}
