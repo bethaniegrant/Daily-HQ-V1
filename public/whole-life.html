@@ -938,7 +938,8 @@ function dayBundle(d, dt) {
   const mood = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
   const bills = [];
   const monthLen2 = daysInMonth(dt);
-  const allBudgetSecs2 = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])];
+  const allBudgetSecs2 = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])]
+    .filter((sec) => sec.key === "fixed" || sec.key === "debt");
   allBudgetSecs2.forEach((sec) => {
     (d.budget[sec.key] || []).forEach((r) => {
       let day = parseInt(r.due, 10);
