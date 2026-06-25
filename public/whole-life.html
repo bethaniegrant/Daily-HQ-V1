@@ -1615,6 +1615,14 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     day[m.id] = taken ? medDoseArr(null, t) : Array(t).fill(true);
     setD({ ...d, medChecks: { ...d.medChecks, [tk]: day } });
   };
+  const toggleMedDose = (m, i) => {
+    const t = medTimes(m);
+    const day = { ...(d.medChecks[tk] || {}) };
+    const arr = medDoseArr(day[m.id], t);
+    arr[i] = !arr[i];
+    day[m.id] = arr;
+    setD({ ...d, medChecks: { ...d.medChecks, [tk]: day } });
+  };
   const delEvent = (blockId, eventId) => setD({
     ...d,
     blocks: d.blocks.map((b) => b.id === blockId ? { ...b, events: (b.events || []).filter((e) => e.id !== eventId) } : b),
@@ -1627,11 +1635,14 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     ...oneoffs.map((o) => ({ kind: "habit", id: o.id, label: o.n, done: !!o.done, color: SAGE, onToggle: () => toggleOneoff(o.id) })),
   ] : [];
   const todoRows = bundle.todos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx) }));
-  const medRows = isToday ? d.meds.map((m) => {
+  const medRows = isToday ? d.meds.flatMap((m) => {
     const t = medTimes(m);
-    const done = medFullyTaken((d.medChecks[tk] || {})[m.id], t);
-    const count = medDoneCount((d.medChecks[tk] || {})[m.id], t);
-    return { kind: "med", id: m.id, label: (m.n || "Medication") + (m.dose ? ` · ${m.dose}` : "") + (t > 1 ? ` (${count}/${t})` : ""), done, color: PLUM, onToggle: () => toggleMed(m) };
+    const arr = medDoseArr((d.medChecks[tk] || {})[m.id], t);
+    const base = (m.n || "Medication") + (m.dose ? ` · ${m.dose}` : "");
+    if (t <= 1) {
+      return [{ kind: "med", id: m.id, label: base, done: arr[0], color: PLUM, onToggle: () => toggleMedDose(m, 0) }];
+    }
+    return arr.map((v, i) => ({ kind: "med", id: m.id + ":" + i, label: `${base} · Dose ${i + 1} of ${t}`, done: !!v, color: PLUM, onToggle: () => toggleMedDose(m, i) }));
   }) : [];
   const billRows = bundle.bills.map((b, idx) => ({
     id: `${b.section}:${b.n}:${idx}`,
