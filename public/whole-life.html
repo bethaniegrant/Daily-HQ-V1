@@ -1376,25 +1376,29 @@ function SidePanel({ d, setD, go, isDesktop, selectedDay, setSelectedDay, view, 
           )}
         </div>
         {expanded && (
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.08)", borderRadius: 999, padding: 3, flex: 1 }}>
-              {tabBtn("day", "Day")}
-              {tabBtn("week", "Week")}
-            </div>
-            <button onClick={() => setAddOpen((v) => !v)} className="pop" style={{ background: addOpen ? PAPER : AMBER, border: "none", color: INK, borderRadius: 999, padding: "8px 14px", fontSize: 10, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>{addOpen ? "Close" : "+ Add"}</button>
+          <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.08)", borderRadius: 999, padding: 3 }}>
+            {tabBtn("day", "Day")}
+            {tabBtn("week", "Week")}
           </div>
-        )}
-        {expanded && addOpen && (
-          <QuickAddForm d={d} setD={setD} defaultDate={dayKey(selectedDay)} onDone={() => setAddOpen(false)} />
         )}
       </div>
 
       {expanded && (
-        <div style={{ padding: "16px 16px 18px", flex: 1, overflow: "auto", maxHeight: isDesktop ? 640 : "none" }}>
+        <div style={{ padding: "16px 16px 12px", flex: 1, overflow: "auto", maxHeight: isDesktop ? 640 : "none" }}>
           {view === "day"
             ? <TodayList d={d} setD={setD} dt={selectedDay} go={go} isDesktop={isDesktop} />
             : <InlineWeekPanel d={d} setD={setD} go={go} anchor={selectedDay} isDesktop={isDesktop} onPickDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
           }
+        </div>
+      )}
+
+      {expanded && (
+        <div style={{ borderTop: `1px solid ${LINE}`, background: INK, color: PAPER, padding: "12px 16px 14px" }}>
+          {!addOpen ? (
+            <button onClick={() => setAddOpen(true)} className="pop" style={{ width: "100%", background: AMBER, border: "none", color: INK, borderRadius: 999, padding: "10px 14px", fontSize: 11, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: "pointer" }}>+ Add to do or event</button>
+          ) : (
+            <QuickAddForm d={d} setD={setD} defaultDate={dayKey(new Date())} onDone={() => setAddOpen(false)} />
+          )}
         </div>
       )}
     </div>
