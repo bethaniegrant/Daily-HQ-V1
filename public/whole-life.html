@@ -428,6 +428,36 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [d, setD] = useState(seed);
   const { ready: synced, displayName } = useCloudSync(d, setD);
+  const [themeVersion, setThemeVersion] = useState(0);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [addCatsOpen, setAddCatsOpen] = useState(false);
+
+  // Apply theme tokens whenever the chosen theme changes.
+  useEffect(() => {
+    applyTheme(d.theme || "sage");
+    setThemeVersion((v) => v + 1);
+  }, [d.theme]);
+
+  // Existing-user migration: if their doc has data but no onboarded flag, mark them done.
+  useEffect(() => {
+    if (!synced) return;
+    if (d.onboarded === true) return;
+    const hasData = (d.blocks && d.blocks.length > 0)
+      || (d.meds && d.meds.length > 0)
+      || (d.habitDefs && d.habitDefs.length > 0)
+      || (d.workouts && d.workouts.length > 0)
+      || (d.pay && String(d.pay).trim() !== "")
+      || ((d.intention || "").trim() !== "" && (d.intention || "").trim() !== "Steady" ? true : false);
+    if (hasData) {
+      setD((p) => ({
+        ...p,
+        onboarded: true,
+        username: p.username || displayName || "",
+        theme: p.theme || "sage",
+        enabledCategories: { money: true, health: true, plan: true, trackers: true, ...(p.enabledCategories || {}) },
+      }));
+    }
+  }, [synced, displayName]); // eslint-disable-line
 
   // monthly reset: wipe habit checks, one-offs, med checks, workout logs, mood grids
   useEffect(() => {
