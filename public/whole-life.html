@@ -544,32 +544,35 @@ function App() {
   const builtin = ["money", "health", "plan", "more"];
   const customCats = [...new Set(d.blocks.map((b) => b.category || "plan").filter((c) => !builtin.includes(c)))];
 
+  const enabledCats = d.enabledCategories || { money: true, health: true, plan: true, trackers: true };
   const MENU_GROUPS = [
     { label: "", items: [{ icon: HomeIcon, color: SAGE, title: "Home", onClick: () => navGo("home") }] },
-    { label: "Money", items: [
+    ...(enabledCats.money ? [{ label: "Money", items: [
       { icon: WalletIcon, color: AMBER, title: "Budget", onClick: () => navGo("money", "budget") },
       ...blocksFor("money"),
-    ]},
-    { label: "Health", items: [
+    ]}] : []),
+    ...(enabledCats.health ? [{ label: "Health", items: [
       { icon: PillIcon, color: PLUM, title: "Medications", onClick: () => navGo("health", "meds") },
       { icon: DumbbellIcon, color: BLUE, title: "Workouts", onClick: () => navGo("health", "workouts") },
       { icon: PlateIcon, color: SAGE, title: "Meal Plan", onClick: () => navGo("health", "meals") },
       { icon: HeartIcon, color: PLUM, title: "Mood", onClick: () => navGo("health", moodBlock ? "block:" + moodBlock.id : null) },
       ...blocksFor("health").filter((it) => !moodBlock || it.title !== moodBlock.title),
-    ]},
-    { label: "Plan", items: [
+    ]}] : []),
+    ...(enabledCats.plan ? [{ label: "Plan", items: [
       { icon: LeafIcon, color: SAGE, title: "Habits", onClick: () => navGo("plan", "habits") },
       { icon: StarIcon, color: AMBER, title: "Monthly Goals", onClick: () => navGo("plan", "goals") },
       { icon: StarIcon, color: AMBER, title: "Yearly Goals", onClick: () => navGo("plan", "yearly") },
       ...blocksFor("plan"),
-    ]},
+    ]}] : []),
     { label: "More", items: [
       { icon: GridIcon, color: SAGE, title: "Add a space", onClick: () => navGo("spaces") },
+      { icon: GridIcon, color: AMBER, title: "Add more categories", onClick: () => { closeMenu(); setAddCatsOpen(true); } },
       ...blocksFor("more"),
     ]},
     ...customCats.map((c) => ({ label: c.charAt(0).toUpperCase() + c.slice(1), items: blocksFor(c) })),
     { label: "Account", items: [
       ...(isAdmin ? [{ icon: GridIcon, color: BLUE, title: "Admin", onClick: () => { closeMenu(); openAdmin(); } }] : []),
+      { icon: GridIcon, color: SAGE, title: "Appearance", onClick: () => { closeMenu(); setAppearanceOpen(true); } },
       { icon: GridIcon, color: SAGE, title: "Main website", onClick: () => { closeMenu(); try { window.parent && window.parent.postMessage({ type: "shell:navigate", to: "/" }, "*"); } catch (_) {} } },
       { icon: XIcon, color: PLUM, title: "Sign out", onClick: () => { closeMenu(); signOutFromShell(); } },
     ]},
