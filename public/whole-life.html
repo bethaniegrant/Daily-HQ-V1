@@ -154,10 +154,48 @@ function useCloudSync(d, setD) {
 // New this round: Meds tracker + Workout builder.
 // Per-day habits/meds, monthly reset (local tz), streaks, custom spaces.
 
-const INK = "#1B3652", TEXT = "#2A2018", PAPER = "#EDE3D5", CARD = "#FDFAF4",
-      SAGE = "#7d8a5e", SAGEHI = "#9aa777", LINE = "#DDD5C8",
-      MUTED = "#9A9082", AMBER = "#C4717A", MIST = "#B8C8D8",
-      BLUE = "#7a8a93", PLUM = "#9a7e8e";
+// Color tokens are mutable so we can swap themes at runtime.
+// All UI reads these as ordinary identifiers and re-renders when App bumps themeVersion.
+let INK = "#1B3652", TEXT = "#2A2018", PAPER = "#EDE3D5", CARD = "#FDFAF4",
+    SAGE = "#7d8a5e", SAGEHI = "#9aa777", LINE = "#DDD5C8",
+    MUTED = "#9A9082", AMBER = "#C4717A", MIST = "#B8C8D8",
+    BLUE = "#7a8a93", PLUM = "#9a7e8e";
+
+const THEMES = {
+  sage:   { label: "Sage",    desc: "Earthy green + cream (default)",
+    INK: "#1B3652", TEXT: "#2A2018", PAPER: "#EDE3D5", CARD: "#FDFAF4",
+    SAGE: "#7d8a5e", SAGEHI: "#9aa777", LINE: "#DDD5C8",
+    MUTED: "#9A9082", AMBER: "#C4717A", MIST: "#B8C8D8",
+    BLUE: "#7a8a93", PLUM: "#9a7e8e" },
+  plum:   { label: "Plum",    desc: "Berry + warm cream",
+    INK: "#3A1F3A", TEXT: "#2A1F2A", PAPER: "#F2E8E0", CARD: "#FDF8F2",
+    SAGE: "#8C6A8E", SAGEHI: "#A584A6", LINE: "#E0D2D4",
+    MUTED: "#8E8089", AMBER: "#B85268", MIST: "#D8C8D2",
+    BLUE: "#7E7A92", PLUM: "#7A4E68" },
+  ocean:  { label: "Ocean",   desc: "Slate blue + sand",
+    INK: "#1E3A4C", TEXT: "#1F2A33", PAPER: "#E8E4DA", CARD: "#FAFAF5",
+    SAGE: "#5C8AA6", SAGEHI: "#7AA3BC", LINE: "#D2D8D8",
+    MUTED: "#8A9098", AMBER: "#D89464", MIST: "#B8CAD6",
+    BLUE: "#4A7088", PLUM: "#7A8AA0" },
+  sunset: { label: "Sunset",  desc: "Terracotta + warm neutrals",
+    INK: "#3A2218", TEXT: "#2E1F18", PAPER: "#F2E5D2", CARD: "#FDF6EA",
+    SAGE: "#B5704A", SAGEHI: "#CC8B62", LINE: "#E3D4C0",
+    MUTED: "#9A8472", AMBER: "#C8542E", MIST: "#D8C2A8",
+    BLUE: "#8C7060", PLUM: "#A8624E" },
+  mono:   { label: "Mono",    desc: "Charcoal + ivory, minimal",
+    INK: "#1F1F1F", TEXT: "#2A2A2A", PAPER: "#F2EEE8", CARD: "#FCFAF6",
+    SAGE: "#5A5A5A", SAGEHI: "#777", LINE: "#D8D4CE",
+    MUTED: "#8A8A88", AMBER: "#3A3A3A", MIST: "#C4C0BA",
+    BLUE: "#6E6E6E", PLUM: "#4A4A4A" },
+};
+const THEME_KEYS = ["sage", "plum", "ocean", "sunset", "mono"];
+function applyTheme(name) {
+  const t = THEMES[name] || THEMES.sage;
+  INK = t.INK; TEXT = t.TEXT; PAPER = t.PAPER; CARD = t.CARD;
+  SAGE = t.SAGE; SAGEHI = t.SAGEHI; LINE = t.LINE;
+  MUTED = t.MUTED; AMBER = t.AMBER; MIST = t.MIST;
+  BLUE = t.BLUE; PLUM = t.PLUM;
+}
 
 const WORKOUT_CATS = [
   { id: "push",   label: "Push day", color: "#C8783C" },
