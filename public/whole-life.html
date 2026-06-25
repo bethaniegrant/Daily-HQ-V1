@@ -255,10 +255,68 @@ const seed = () => ({
   ],
   workoutDone: {},
   goals: [{ n: "Drink 8 cups of water", done: false }, { n: "Walk 30 minutes", done: true }, { n: "Read before bed", done: false }],
-  yearlyGoals: [
-    { id: uid(), n: "Save $5,000", done: false },
-    { id: uid(), n: "Run a 5K", done: false },
-    { id: uid(), n: "Read 12 books", done: false },
+// ─── Per-category seed helpers ───────────────────────────────────
+// Empty shell — what every new account starts with before onboarding.
+const emptyDoc = () => ({
+  onboarded: false,
+  username: "",
+  theme: "sage",
+  enabledCategories: { money: false, health: false, plan: false, trackers: false },
+  pay: "",
+  budget: { fixed: [], variable: [], savings: [], debt: [] },
+  savingsGoals: [],
+  monthStamp: monthKey(),
+  habitDefs: [],
+  habitChecks: {}, habitOneoffs: {},
+  meds: [],
+  medChecks: {},
+  workouts: [],
+  workoutDone: {},
+  goals: [{ n: "", done: false }, { n: "", done: false }, { n: "", done: false }],
+  yearlyGoals: [],
+  meals: { Mon: {}, Tue: {}, Wed: {}, Thu: {}, Fri: {}, Sat: {}, Sun: {} },
+  shopping: [],
+  intention: "",
+  dayNotes: {},
+  blocks: [],
+});
+
+const seedMoney = (doc) => ({
+  ...doc,
+  pay: "3200",
+  budget: {
+    fixed: [
+      { id: uid(), n: "Rent", a: "1200", due: "1" },
+      { id: uid(), n: "Car payment", a: "320", due: "5" },
+      { id: uid(), n: "Internet", a: "60", due: "12" },
+      { id: uid(), n: "Phone", a: "45", due: "18" },
+    ],
+    variable: [
+      { id: uid(), n: "Groceries", a: "400", due: "" },
+      { id: uid(), n: "Gas", a: "150", due: "" },
+      { id: uid(), n: "Dining out", a: "120", due: "" },
+    ],
+    savings: [{ id: uid(), n: "Retirement", a: "200", due: "" }],
+    debt: [{ id: uid(), n: "Credit card", a: "150", due: "20" }],
+  },
+  savingsGoals: [
+    { id: uid(), n: "Emergency fund", target: "5000", saved: "1200", color: "#7d8a5e" },
+    { id: uid(), n: "Vacation", target: "2000", saved: "450", color: "#C4717A" },
+  ],
+});
+
+const seedHealth = (doc) => ({
+  ...doc,
+  meds: [
+    { id: uid(), n: "Vitamin D", dose: "1000 IU", times: 1 },
+    { id: uid(), n: "Magnesium", dose: "200 mg", times: 1 },
+  ],
+  workouts: [
+    { id: uid(), n: "Push day", cat: "push",   ex: [{ id: uid(), n: "Bench press",    sets: "3", reps: "8",  w: "135" }, { id: uid(), n: "Shoulder press", sets: "3", reps: "10", w: "65" }] },
+    { id: uid(), n: "Pull day", cat: "pull",   ex: [{ id: uid(), n: "Pull-ups",       sets: "3", reps: "8",  w: "" }, { id: uid(), n: "Bent-over row",  sets: "3", reps: "10", w: "95" }] },
+    { id: uid(), n: "Leg day",  cat: "leg",    ex: [{ id: uid(), n: "Squats",         sets: "4", reps: "6",  w: "185" }] },
+    { id: uid(), n: "Core",     cat: "core",   ex: [{ id: uid(), n: "Plank",          sets: "3", reps: "45s", w: "" }] },
+    { id: uid(), n: "Cardio",   cat: "cardio", ex: [{ id: uid(), n: "Run / bike",     sets: "1", reps: "20m", w: "" }] },
   ],
   meals: {
     Mon: { breakfast: "Oatmeal & berries", lunch: "Chicken salad", dinner: "Salmon & rice", snacks: "Apple" },
@@ -272,29 +330,60 @@ const seed = () => ({
     { t: "Olive oil", done: true },
     { t: "Bananas", done: false },
   ],
-  intention: "Steady",
-  dayNotes: {},
   blocks: [
-    { id: uid(), type: "checklist", category: "plan", title: "To Do", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }, { t: "Schedule dentist", done: false }] },
+    ...doc.blocks,
     { id: uid(), type: "mood", category: "health", title: "Mood", monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} },
   ],
 });
 
+const seedPlan = (doc) => ({
+  ...doc,
+  habitDefs: [{ id: uid(), n: "Move my body" }, { id: uid(), n: "Drink water" }, { id: uid(), n: "Read 10 min" }],
+  goals: [{ n: "Drink 8 cups of water", done: false }, { n: "Walk 30 minutes", done: true }, { n: "Read before bed", done: false }],
+  yearlyGoals: [
+    { id: uid(), n: "Save $5,000", done: false },
+    { id: uid(), n: "Run a 5K", done: false },
+    { id: uid(), n: "Read 12 books", done: false },
+  ],
+  intention: "Steady",
+  blocks: [
+    ...doc.blocks,
+    { id: uid(), type: "checklist", category: "plan", title: "To Do", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }, { t: "Schedule dentist", done: false }] },
+  ],
+});
 
-const LOGO_URL = "/__l5e/assets-v1/9dac1cfe-e63c-454c-a03e-d189e841f1f5/bethanie-rose-logo-v2.png";
+const seedTrackers = (doc) => ({
+  ...doc,
+  blocks: [
+    ...doc.blocks,
+    {
+      id: uid(),
+      type: "tracker",
+      kind: "rated",
+      category: "plan",
+      title: "Books I'm reading",
+      entries: [
+        { id: uid(), subject: "Atomic Habits", rating: 5, note: "Re-reading favorites" },
+        { id: uid(), subject: "The Creative Act", rating: 4, note: "" },
+      ],
+    },
+  ],
+});
 
-const MEAL_SLOTS = [
-  { key: "breakfast", label: "Breakfast" },
-  { key: "lunch", label: "Lunch" },
-  { key: "dinner", label: "Dinner" },
-  { key: "snacks", label: "Snacks" },
-];
-// Normalize a day's meal entry — supports legacy string (treated as dinner) or object.
-const mealsFor = (entry) => {
-  if (!entry) return {};
-  if (typeof entry === "string") return entry.trim() ? { dinner: entry } : {};
-  return entry;
+// Apply seeds for the categories the user picked during onboarding (or all on Skip).
+const applyCategorySeeds = (doc, categories) => {
+  let next = { ...doc, enabledCategories: { ...doc.enabledCategories, ...categories } };
+  if (categories.money)    next = seedMoney(next);
+  if (categories.health)   next = seedHealth(next);
+  if (categories.plan)     next = seedPlan(next);
+  if (categories.trackers) next = seedTrackers(next);
+  return next;
 };
+
+// Default factory used by useState(seed) — every new visitor starts empty + un-onboarded.
+const seed = () => emptyDoc();
+
+
 const dayHasMeal = (entry) => {
   const m = mealsFor(entry);
   return MEAL_SLOTS.some((s) => (m[s.key] || "").trim());
