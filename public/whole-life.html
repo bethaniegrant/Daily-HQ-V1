@@ -1935,31 +1935,42 @@ function WeekOverview({ d, anchor, onClose, go, isDesktop, onPickDay }) {
   const todayK = dayKey(new Date());
   return (
     <OverviewShell title="Week at a glance" sub={sub} onClose={onClose} width={isDesktop ? 1100 : 560}>
-      <div style={{ display: "grid", gap: 10, gridTemplateColumns: isDesktop ? "repeat(7, minmax(0, 1fr))" : "1fr" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {days.map((dt) => {
           const b = dayBundle(d, dt);
           const k = dayKey(dt);
           const isToday = k === todayK;
           const habitsDone = b.habits.filter((h) => h.done).length;
           const medsDone = b.medsList.reduce((s, m) => s + (m.done >= m.times ? 1 : 0), 0);
+          const mealsCount = MEAL_SLOTS.filter((s) => (b.meal[s.key] || "").trim()).length;
+          const openTodos = b.todos.filter((t) => !t.done);
+          const chips = [
+            b.events.length > 0 && { label: "Events", val: b.events.length, color: "#6E8597" },
+            b.todos.length > 0 && { label: "To do", val: `${openTodos.length}/${b.todos.length}`, color: AMBER },
+            b.bills.length > 0 && { label: "Bills", val: b.bills.length, color: AMBER },
+            b.habits.length > 0 && { label: "Habits", val: `${habitsDone}/${b.habits.length}`, color: SAGE },
+            b.medsList.length > 0 && { label: "Meds", val: `${medsDone}/${b.medsList.length}`, color: PLUM },
+            b.workouts.length > 0 && { label: "Workout", val: b.workouts.length, color: BLUE },
+            mealsCount > 0 && { label: "Meals", val: `${mealsCount}/4`, color: SAGE },
+          ].filter(Boolean);
           return (
-            <div key={k} onClick={() => onPickDay(dt)} className="pop" style={{ background: isToday ? INK : CARD, color: isToday ? PAPER : INK, border: `1px solid ${isToday ? INK : LINE}`, borderRadius: 14, padding: "14px 14px", cursor: "pointer", display: "flex", flexDirection: "column", gap: 8, minHeight: isDesktop ? 220 : "auto" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <div>
-                  <div style={{ fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 700, color: isToday ? MIST : MUTED }}>{dt.toLocaleDateString("en-US", { weekday: "short" })}</div>
+            <div key={k} onClick={() => onPickDay(dt)} className="pop" style={{ background: isToday ? INK : CARD, color: isToday ? PAPER : INK, border: `1px solid ${isToday ? INK : LINE}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexShrink: 0 }}>
+                  <div style={{ fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 800, color: isToday ? MIST : MUTED }}>{dt.toLocaleDateString("en-US", { weekday: "short" })}</div>
                   <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, fontWeight: 600, lineHeight: 1 }}>{dt.getDate()}</div>
+                  {b.mood && <span title={b.mood.label} style={{ width: 14, height: 14, borderRadius: 4, background: b.mood.color, border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
                 </div>
-                {b.mood && <div title={b.mood.label} style={{ width: 14, height: 14, borderRadius: 4, background: b.mood.color, border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
-              </div>
-              <div style={{ display: "grid", gap: 4, fontSize: 11, fontWeight: 600 }}>
-                {b.habits.length > 0 && <Row isToday={isToday} color={SAGE} label="Habits" val={`${habitsDone}/${b.habits.length}`} />}
-                {b.medsList.length > 0 && <Row isToday={isToday} color={PLUM} label="Meds" val={`${medsDone}/${b.medsList.length}`} />}
-                {b.workouts.length > 0 && <Row isToday={isToday} color={BLUE} label="Workout" val={`${b.workouts.length}`} />}
-                {b.bills.length > 0 && <Row isToday={isToday} color={AMBER} label="Bills" val={`${b.bills.length}`} />}
-                {MEAL_SLOTS.some((s) => (b.meal[s.key] || "").trim()) && <Row isToday={isToday} color={SAGE} label="Meals" val={`${MEAL_SLOTS.filter((s) => (b.meal[s.key] || "").trim()).length}/4`} />}
-                {b.habits.length === 0 && b.medsList.length === 0 && b.workouts.length === 0 && b.bills.length === 0 && !MEAL_SLOTS.some((s) => (b.meal[s.key] || "").trim()) && !b.mood && (
-                  <div style={{ fontSize: 11, color: isToday ? MIST : MUTED, fontStyle: "italic", fontFamily: "'DM Serif Display',serif" }}>Nothing tracked</div>
-                )}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  {chips.length > 0 ? chips.map((c, i) => (
+                    <span key={i} style={{ fontSize: 10, fontWeight: 700, color: isToday ? PAPER : INK, background: c.color + (isToday ? "33" : "18"), borderRadius: 999, padding: "3px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: 999, background: c.color }} />
+                      {c.label} {c.val}
+                    </span>
+                  )) : (
+                    <span style={{ fontSize: 11, color: isToday ? MIST : MUTED, fontStyle: "italic", fontFamily: "'DM Serif Display',serif" }}>Nothing tracked</span>
+                  )}
+                </div>
               </div>
             </div>
           );
