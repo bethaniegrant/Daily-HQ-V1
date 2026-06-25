@@ -1294,16 +1294,6 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
         <button onClick={() => go("health", "meds")} className="pop" style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: AMBER, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>Meds</button>
       </div>
 
-      <div>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, marginBottom: 6 }}>Notes</div>
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Add a note for this day…"
-          rows={3}
-          style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 8, background: PAPER, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", color: TEXT, resize: "vertical", outline: "none" }}
-        />
-      </div>
     </div>
   );
 }
