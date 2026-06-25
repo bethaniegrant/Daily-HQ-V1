@@ -949,7 +949,52 @@ function dayBundle(d, dt) {
   });
   const weekdayShort = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()];
   const meal = mealsFor(d.meals && d.meals[weekdayShort]);
-  return { habits, medsList, workouts, mood, bills, meal, weekdayShort };
+  const isToday = k === dayKey(new Date());
+  const events = [];
+  (d.blocks || []).forEach((bk) => {
+    if (bk.type !== "events") return;
+    (bk.events || []).forEach((e) => { if (e.date === k) events.push({ ...e, blockId: bk.id }); });
+  });
+  events.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+  const todoBlock = (d.blocks || []).find((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
+  const todos = [];
+  if (todoBlock) {
+    (todoBlock.items || []).forEach((it, idx) => {
+      const matchDate = it.date ? it.date === k : isToday;
+      if (matchDate) todos.push({ ...it, idx, blockId: todoBlock.id });
+    });
+  }
+  return { habits, medsList, workouts, mood, bills, meal, weekdayShort, events, todos, todoBlockId: todoBlock ? todoBlock.id : null };
+}
+
+// Quick-add helper used by the side panel: writes a To Do (with date) or an Event.
+function quickAddItem(d, setD, { type, title, date, time }) {
+  const t = (title || "").trim();
+  if (!t) return;
+  if (type === "todo") {
+    let blocks = d.blocks || [];
+    let todo = blocks.find((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
+    if (!todo) {
+      todo = { id: uid(), type: "checklist", category: "plan", title: "To Do", items: [] };
+      blocks = [...blocks, todo];
+    }
+    setD({
+      ...d,
+      blocks: blocks.map((b) => b.id === todo.id ? { ...b, items: [...(b.items || []), { t, done: false, date: date || null }] } : b),
+    });
+  } else {
+    let blocks = d.blocks || [];
+    let ev = blocks.find((b) => b.type === "events");
+    if (!ev) {
+      ev = { id: uid(), type: "events", category: "plan", title: "Calendar", events: [], googleSync: { connected: false, lastSyncAt: null, calendarId: "primary" } };
+      blocks = [...blocks, ev];
+    }
+    const newEvent = { id: uid(), title: t, date: date || dayKey(new Date()), allDay: !time, start: time || "", end: "", location: "", notes: "", source: "local", googleId: null, updatedAt: new Date().toISOString() };
+    setD({
+      ...d,
+      blocks: blocks.map((b) => b.id === ev.id ? { ...b, events: [...(b.events || []), newEvent] } : b),
+    });
+  }
 }
 
 function OverviewShell({ title, sub, onClose, children, width }) {
