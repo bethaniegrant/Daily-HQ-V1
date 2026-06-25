@@ -785,10 +785,11 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
   const todayK = dayKey(now);
   const dayShells = ["S", "M", "T", "W", "T", "F", "S"];
 
-  // bills due map: day-of-month -> [{ n, color }] — recurs every month, clamps to month length
+  // bills due map: day-of-month -> [{ n, color }] — only real bills (fixed + debt), recurs monthly
   const billsByDay = {};
   const monthLen = daysInMonth(cursor);
-  const allBudgetSecs = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])];
+  const allBudgetSecs = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])]
+    .filter((sec) => sec.key === "fixed" || sec.key === "debt");
   allBudgetSecs.forEach((sec) => {
     (d.budget[sec.key] || []).forEach((r) => {
       let day = parseInt(r.due, 10);
