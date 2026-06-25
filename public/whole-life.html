@@ -927,12 +927,14 @@ function AddCategoriesModal({ d, setD, onClose }) {
 
 // ═══ HOME ═════════════════════════════════════════════════════════
 function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
+  const cats = d.enabledCategories || { money: true, health: true, plan: true, trackers: true };
   const hour = now.getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const comp = dayCompletion(d, now);
   const left = (Number(d.pay) || 0) - budgetSpent(d);
   const medsToday = d.meds.length, medsTaken = d.meds.filter((m) => medFullyTaken((d.medChecks[dayKey(now)] || {})[m.id], medTimes(m))).length;
   const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const firstName = (d.username || (displayName || "").trim().split(/\s+/)[0] || "friend");
 
   const navBtn = (label, onClick) => (
     <button onClick={onClick} className="pop" style={{ background: "none", border: "none", color: "rgba(244,241,234,.62)", fontSize: 12, fontWeight: 600, letterSpacing: ".02em", cursor: "pointer", padding: "4px 2px" }}>{label}</button>
