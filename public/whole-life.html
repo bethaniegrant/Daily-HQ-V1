@@ -954,10 +954,10 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
           </span>
           <div style={{ display: "flex", gap: isDesktop ? 22 : 14, alignItems: "center" }}>
             {navBtn("Today", () => go("home"))}
-            {navBtn("Health", () => go("health"))}
-            {navBtn("Plan", () => go("plan"))}
+            {cats.health && navBtn("Health", () => go("health"))}
+            {cats.plan && navBtn("Plan", () => go("plan"))}
             {navBtn("Spaces", () => go("spaces"))}
-            {isDesktop && navBtn("Money", () => go("money"))}
+            {isDesktop && cats.money && navBtn("Money", () => go("money"))}
           </div>
         </nav>
       </div>
