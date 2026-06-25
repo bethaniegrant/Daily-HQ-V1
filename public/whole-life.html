@@ -218,43 +218,6 @@ const medDoseArr = (val, times) => { const t = Math.max(1, times || 1); if (Arra
 const medDoneCount = (val, times) => medDoseArr(val, times).filter(Boolean).length;
 const medFullyTaken = (val, times) => medDoneCount(val, times) >= Math.max(1, times || 1);
 
-const seed = () => ({
-  pay: "3200",
-  budget: {
-    fixed: [
-      { id: uid(), n: "Rent", a: "1200", due: "1" },
-      { id: uid(), n: "Car payment", a: "320", due: "5" },
-      { id: uid(), n: "Internet", a: "60", due: "12" },
-      { id: uid(), n: "Phone", a: "45", due: "18" },
-    ],
-    variable: [
-      { id: uid(), n: "Groceries", a: "400", due: "" },
-      { id: uid(), n: "Gas", a: "150", due: "" },
-      { id: uid(), n: "Dining out", a: "120", due: "" },
-    ],
-    savings: [
-      { id: uid(), n: "Retirement", a: "200", due: "" },
-    ],
-    debt: [{ id: uid(), n: "Credit card", a: "150", due: "20" }],
-  },
-  savingsGoals: [
-    { id: uid(), n: "Emergency fund", target: "5000", saved: "1200", color: "#7d8a5e" },
-    { id: uid(), n: "Vacation", target: "2000", saved: "450", color: "#C4717A" },
-  ],
-  monthStamp: monthKey(),
-  habitDefs: [{ id: uid(), n: "Move my body" }, { id: uid(), n: "Drink water" }, { id: uid(), n: "Read 10 min" }],
-  habitChecks: {}, habitOneoffs: {},
-  meds: [{ id: uid(), n: "Vitamin D", dose: "1000 IU", times: 1 }, { id: uid(), n: "Magnesium", dose: "200 mg", times: 1 }],
-  medChecks: {},
-  workouts: [
-    { id: uid(), n: "Push day", cat: "push",   ex: [{ id: uid(), n: "Bench press",    sets: "3", reps: "8",  w: "135" }, { id: uid(), n: "Shoulder press", sets: "3", reps: "10", w: "65" }] },
-    { id: uid(), n: "Pull day", cat: "pull",   ex: [{ id: uid(), n: "Pull-ups",       sets: "3", reps: "8",  w: "" }, { id: uid(), n: "Bent-over row",  sets: "3", reps: "10", w: "95" }] },
-    { id: uid(), n: "Leg day",  cat: "leg",    ex: [{ id: uid(), n: "Squats",         sets: "4", reps: "6",  w: "185" }] },
-    { id: uid(), n: "Core",     cat: "core",   ex: [{ id: uid(), n: "Plank",          sets: "3", reps: "45s", w: "" }] },
-    { id: uid(), n: "Cardio",   cat: "cardio", ex: [{ id: uid(), n: "Run / bike",     sets: "1", reps: "20m", w: "" }] },
-  ],
-  workoutDone: {},
-  goals: [{ n: "Drink 8 cups of water", done: false }, { n: "Walk 30 minutes", done: true }, { n: "Read before bed", done: false }],
 // ─── Per-category seed helpers ───────────────────────────────────
 // Empty shell — what every new account starts with before onboarding.
 const emptyDoc = () => ({
