@@ -601,6 +601,25 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             );
           })()}
         </div>
+        <div style={{ marginTop: isDesktop ? 16 : 12, background: CARD, border: `1px solid ${LINE}`, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+            <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's notes</span>
+            <span style={{ fontSize: 10, color: MUTED, fontWeight: 600 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
+          </div>
+          {(() => {
+            const tk = dayKey(new Date());
+            const note = (d.dayNotes && d.dayNotes[tk]) || "";
+            return (
+              <textarea
+                value={note}
+                onChange={(e) => setD({ ...d, dayNotes: { ...(d.dayNotes || {}), [tk]: e.target.value } })}
+                placeholder="Jot a thought, reminder, or reflection for today…"
+                rows={3}
+                style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 8, background: PAPER, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", color: TEXT, resize: "vertical", outline: "none" }}
+              />
+            );
+          })()}
+        </div>
       </section>
 
       {/* Explore */}
