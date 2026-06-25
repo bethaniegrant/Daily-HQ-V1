@@ -1656,8 +1656,10 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
   }));
   const eventRows = bundle.events;
 
-  const all = [...habitRows, ...todoRows, ...medRows];
+  const taskRows = [...habitRows, ...todoRows];
+  const all = [...taskRows, ...medRows];
   const doneCount = all.filter((r) => r.done).length;
+  const medsDoneCount = medRows.filter((r) => r.done).length;
 
   const note = (d.dayNotes && d.dayNotes[tk]) || "";
   const setNote = (v) => setD({ ...d, dayNotes: { ...(d.dayNotes || {}), [tk]: v } });
