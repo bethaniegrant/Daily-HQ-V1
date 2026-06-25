@@ -213,10 +213,13 @@ const monthKey = (dt = new Date()) => `${dt.getFullYear()}-${dt.getMonth() + 1}`
 const dayKey = (dt) => `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
 const daysInMonth = (dt) => new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
 const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay();
-const medTimes = (m) => Math.max(1, Number(m && m.times) || 1);
+const medTimes = (m) => Math.max(1, Number(m && m.times) || (Array.isArray(m && m.schedule) ? m.schedule.length : 1) || 1);
+const medSchedule = (m) => { const t = medTimes(m); const s = Array.isArray(m && m.schedule) ? m.schedule : []; return Array.from({ length: t }, (_, i) => (typeof s[i] === "string" ? s[i] : "")); };
 const medDoseArr = (val, times) => { const t = Math.max(1, times || 1); if (Array.isArray(val)) return Array.from({ length: t }, (_, i) => !!val[i]); return Array.from({ length: t }, () => !!val); };
 const medDoneCount = (val, times) => medDoseArr(val, times).filter(Boolean).length;
 const medFullyTaken = (val, times) => medDoneCount(val, times) >= Math.max(1, times || 1);
+const fmtTime = (hhmm) => { if (!hhmm || typeof hhmm !== "string" || !hhmm.includes(":")) return ""; const [h, m] = hhmm.split(":").map(Number); if (isNaN(h)) return ""; const am = h < 12; const hr = h % 12 || 12; return `${hr}:${String(m || 0).padStart(2, "0")} ${am ? "AM" : "PM"}`; };
+const medDoseLabel = (m, i) => { const time = medSchedule(m)[i]; return time ? fmtTime(time) : `Dose ${i + 1}`; };
 
 // ─── Per-category seed helpers ───────────────────────────────────
 // Empty shell — what every new account starts with before onboarding.
@@ -1638,12 +1641,13 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
   const medRows = isToday ? d.meds.flatMap((m) => {
     const t = medTimes(m);
     const arr = medDoseArr((d.medChecks[tk] || {})[m.id], t);
+    const sched = medSchedule(m);
     const base = (m.n || "Medication") + (m.dose ? ` · ${m.dose}` : "");
     if (t <= 1) {
-      return [{ kind: "med", id: m.id, label: base, done: arr[0], color: PLUM, onToggle: () => toggleMedDose(m, 0) }];
+      return [{ kind: "med", id: m.id, label: base, time: sched[0] || "", done: arr[0], color: PLUM, onToggle: () => toggleMedDose(m, 0) }];
     }
-    return arr.map((v, i) => ({ kind: "med", id: m.id + ":" + i, label: `${base} · Dose ${i + 1} of ${t}`, done: !!v, color: PLUM, onToggle: () => toggleMedDose(m, i) }));
-  }) : [];
+    return arr.map((v, i) => ({ kind: "med", id: m.id + ":" + i, label: base, time: sched[i] || "", sub: sched[i] ? fmtTime(sched[i]) : `Dose ${i + 1} of ${t}`, done: !!v, color: PLUM, onToggle: () => toggleMedDose(m, i) }));
+  }).sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99")) : [];
   const billRows = bundle.bills.map((b, idx) => ({
     id: `${b.section}:${b.n}:${idx}`,
     label: `${b.n || "Bill"}${b.a ? ` · $${money(b.a)}` : ""}`,
@@ -1652,8 +1656,10 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
   }));
   const eventRows = bundle.events;
 
-  const all = [...habitRows, ...todoRows, ...medRows];
+  const taskRows = [...habitRows, ...todoRows];
+  const all = [...taskRows, ...medRows];
   const doneCount = all.filter((r) => r.done).length;
+  const medsDoneCount = medRows.filter((r) => r.done).length;
 
   const note = (d.dayNotes && d.dayNotes[tk]) || "";
   const setNote = (v) => setD({ ...d, dayNotes: { ...(d.dayNotes || {}), [tk]: v } });
@@ -1705,27 +1711,43 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
       {all.length === 0 && billRows.length === 0 && eventRows.length === 0 ? (
         <div style={{ fontSize: 13, color: MUTED, fontStyle: "italic", fontFamily: "'DM Serif Display',serif", padding: "10px 4px" }}>Nothing scheduled. Use “+ Add” above to drop in a to-do or event for this day.</div>
 
-      ) : all.length > 0 ? (
-        <div style={{ display: "grid", gap: 6 }}>
-          {all.map((r) => (
-            <label key={r.kind + ":" + r.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "4px 2px" }}>
-              <input
-                type="checkbox"
-                checked={r.done}
-                onChange={r.onToggle}
-                style={{ width: 16, height: 16, accentColor: r.color, cursor: "pointer", flexShrink: 0 }}
-              />
-              <span style={{ width: 5, height: 5, borderRadius: 999, background: r.color, flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 13, color: r.done ? MUTED : TEXT, textDecoration: r.done ? "line-through" : "none", fontWeight: 500 }}>
-                {r.label}
-              </span>
-              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED }}>
-                {r.kind === "habit" ? "Habit" : r.kind === "todo" ? "To do" : "Med"}
-              </span>
-            </label>
-          ))}
-        </div>
-      ) : null}
+      ) : (
+        <>
+          {taskRows.length > 0 && (
+            <div style={{ display: "grid", gap: 6 }}>
+              {taskRows.map((r) => (
+                <label key={r.kind + ":" + r.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "4px 2px" }}>
+                  <input type="checkbox" checked={r.done} onChange={r.onToggle} style={{ width: 16, height: 16, accentColor: r.color, cursor: "pointer", flexShrink: 0 }} />
+                  <span style={{ width: 5, height: 5, borderRadius: 999, background: r.color, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 13, color: r.done ? MUTED : TEXT, textDecoration: r.done ? "line-through" : "none", fontWeight: 500 }}>{r.label}</span>
+                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED }}>{r.kind === "habit" ? "Habit" : "To do"}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          {medRows.length > 0 && (
+            <div style={{ display: "grid", gap: 6, marginTop: taskRows.length > 0 ? 4 : 0, paddingTop: taskRows.length > 0 ? 10 : 0, borderTop: taskRows.length > 0 ? `1px dashed ${LINE}` : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: PLUM }}>Medications</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: MUTED }}>{medsDoneCount}/{medRows.length}</div>
+              </div>
+              {medRows.map((r) => (
+                <label key={"med:" + r.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 8px", background: r.done ? "transparent" : "rgba(122,90,124,.06)", border: `1px solid ${r.done ? "transparent" : LINE}`, borderRadius: 8 }}>
+                  <input type="checkbox" checked={r.done} onChange={r.onToggle} style={{ width: 16, height: 16, accentColor: PLUM, cursor: "pointer", flexShrink: 0 }} />
+                  {r.time ? (
+                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".06em", color: r.done ? MUTED : PLUM, minWidth: 58, fontVariantNumeric: "tabular-nums" }}>{fmtTime(r.time)}</span>
+                  ) : (
+                    <span style={{ width: 5, height: 5, borderRadius: 999, background: PLUM, flexShrink: 0 }} />
+                  )}
+                  <span style={{ flex: 1, fontSize: 13, color: r.done ? MUTED : TEXT, textDecoration: r.done ? "line-through" : "none", fontWeight: 600 }}>
+                    {r.label}{!r.time && r.sub ? ` · ${r.sub}` : ""}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       <div style={{ display: "flex", gap: 14, justifyContent: "flex-end" }}>
         <button onClick={() => go("plan", "habits")} className="pop" style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: AMBER, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>Habits</button>
@@ -2027,8 +2049,27 @@ function Meds({ d, setD, now, back }) {
     setD({ ...d, medChecks: { ...d.medChecks, [selKey]: day } });
   };
   const setMed = (id, f, v) => setD({ ...d, meds: d.meds.map((m) => m.id === id ? { ...m, [f]: v } : m) });
-  const setTimes = (id, t) => setD({ ...d, meds: d.meds.map((m) => m.id === id ? { ...m, times: Math.max(1, Math.min(12, t)) } : m) });
-  const addMed = () => setD({ ...d, meds: [...d.meds, { id: uid(), n: "", dose: "", times: 1 }] });
+  const setDoseTime = (id, idx, val) => setD({ ...d, meds: d.meds.map((m) => {
+    if (m.id !== id) return m;
+    const sched = medSchedule(m).slice();
+    sched[idx] = val;
+    return { ...m, schedule: sched, times: sched.length };
+  }) });
+  const addDose = (id) => setD({ ...d, meds: d.meds.map((m) => {
+    if (m.id !== id) return m;
+    const sched = medSchedule(m).slice();
+    if (sched.length >= 12) return m;
+    sched.push("");
+    return { ...m, schedule: sched, times: sched.length };
+  }) });
+  const removeDose = (id, idx) => setD({ ...d, meds: d.meds.map((m) => {
+    if (m.id !== id) return m;
+    const sched = medSchedule(m).slice();
+    if (sched.length <= 1) return m;
+    sched.splice(idx, 1);
+    return { ...m, schedule: sched, times: sched.length };
+  }) });
+  const addMed = () => setD({ ...d, meds: [...d.meds, { id: uid(), n: "", dose: "", times: 1, schedule: [""] }] });
   const delMed = (id) => setD({ ...d, meds: d.meds.filter((m) => m.id !== id) });
 
   const weekStart = new Date(sel); weekStart.setDate(sel.getDate() - sel.getDay());
@@ -2050,22 +2091,37 @@ function Meds({ d, setD, now, back }) {
       </div>
 
       {edit ? (
-        <div style={{ display: "grid", gap: 9 }}>
+        <div style={{ display: "grid", gap: 12 }}>
           {d.meds.map((m) => {
-            const t = medTimes(m);
+            const sched = medSchedule(m);
             return (
-            <div key={m.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "12px 14px", display: "grid", gap: 7 }}>
-              <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-                <input value={m.n} onChange={(e) => setMed(m.id, "n", e.target.value)} placeholder="Medication name" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 600 }} />
-                <div className="pop" onClick={() => delMed(m.id)} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={15} /></div>
+            <div key={m.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 6, padding: "14px 16px", display: "grid", gap: 10 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input value={m.n} onChange={(e) => setMed(m.id, "n", e.target.value)} placeholder="Medication name" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 4, padding: "10px 12px", fontSize: 14, fontWeight: 700 }} />
+                <div className="pop" onClick={() => delMed(m.id)} title="Remove medication" style={{ cursor: "pointer", opacity: .5, padding: 4 }}><XIcon c={MUTED} s={16} /></div>
               </div>
-              <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-                <input value={m.dose} onChange={(e) => setMed(m.id, "dose", e.target.value)} placeholder="Dose (e.g. 200 mg)" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 13 }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 6, border: `1px solid ${LINE}`, borderRadius: 3, padding: "4px 8px", background: CARD }}>
-                  <div className="pop" onClick={() => setTimes(m.id, t - 1)} style={{ cursor: "pointer", fontWeight: 700, color: PLUM, fontSize: 16, width: 18, textAlign: "center" }}>−</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, minWidth: 56, textAlign: "center" }}>{t}×/day</div>
-                  <div className="pop" onClick={() => setTimes(m.id, t + 1)} style={{ cursor: "pointer", fontWeight: 700, color: PLUM, fontSize: 16, width: 18, textAlign: "center" }}>+</div>
-                </div>
+              <input value={m.dose} onChange={(e) => setMed(m.id, "dose", e.target.value)} placeholder="Dose (e.g. 200 mg, 1 tablet)" style={{ border: `1px solid ${LINE}`, borderRadius: 4, padding: "9px 11px", fontSize: 13 }} />
+
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED }}>Schedule</div>
+                {sched.map((time, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", background: PAPER, border: `1px solid ${LINE}`, borderRadius: 4, padding: "6px 10px" }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: PLUM, minWidth: 52, letterSpacing: ".06em", textTransform: "uppercase" }}>Dose {i + 1}</span>
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) => setDoseTime(m.id, i, e.target.value)}
+                      style={{ flex: 1, border: "none", background: "transparent", fontSize: 14, fontWeight: 600, color: TEXT, outline: "none", fontFamily: "inherit" }}
+                    />
+                    {time && <span style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}>{fmtTime(time)}</span>}
+                    {sched.length > 1 && (
+                      <div className="pop" onClick={() => removeDose(m.id, i)} title="Remove dose" style={{ cursor: "pointer", opacity: .5, padding: 2 }}><XIcon c={MUTED} s={13} /></div>
+                    )}
+                  </div>
+                ))}
+                {sched.length < 12 && (
+                  <button onClick={() => addDose(m.id)} className="pop" style={{ background: "transparent", border: `1px dashed ${PLUM}`, color: PLUM, borderRadius: 4, padding: "7px 10px", fontSize: 11, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>+ Add dose time</button>
+                )}
               </div>
             </div>
             );
@@ -2077,19 +2133,24 @@ function Meds({ d, setD, now, back }) {
           {d.meds.length === 0 && <Note>No meds yet. Tap "Edit meds" to add your first.</Note>}
           {d.meds.map((m) => {
             const t = medTimes(m);
+            const sched = medSchedule(m);
             const doses = medDoseArr(checks[m.id], t);
             const doneCount = doses.filter(Boolean).length;
             const allTaken = doneCount >= t;
             return (
-              <div key={m.id} style={{ background: allTaken ? INK : CARD, color: allTaken ? PAPER : INK, borderRadius: 4, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, border: allTaken ? "none" : `1px solid ${LINE}`, flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
+              <div key={m.id} style={{ background: allTaken ? INK : CARD, color: allTaken ? PAPER : INK, borderRadius: 6, padding: "14px 16px", display: "grid", gap: 10, border: allTaken ? "none" : `1px solid ${LINE}` }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
                   <div style={{ fontSize: 15, fontWeight: 700, textDecoration: allTaken ? "line-through" : "none" }}>{m.n || "Unnamed"}</div>
-                  <div style={{ fontSize: 12, color: allTaken ? "rgba(244,241,234,.6)" : MUTED }}>{[m.dose, t > 1 ? `${doneCount}/${t} today` : null].filter(Boolean).join(" · ")}</div>
+                  {m.dose && <div style={{ fontSize: 12, color: allTaken ? "rgba(244,241,234,.6)" : MUTED }}>{m.dose}</div>}
+                  <div style={{ marginLeft: "auto", fontSize: 11, fontWeight: 800, color: allTaken ? "rgba(244,241,234,.7)" : MUTED, letterSpacing: ".06em" }}>{doneCount}/{t}</div>
                 </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 6 }}>
                   {doses.map((on, i) => (
-                    <div key={i} className="pop" onClick={() => toggle(m.id, i, t)} title={`Dose ${i + 1}`} style={{ width: 30, height: 30, borderRadius: 3, border: `2px solid ${on ? SAGEHI : PLUM}`, background: on ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
-                      {on ? <CheckIcon c={INK} s={15} /> : <span style={{ fontSize: 11, fontWeight: 700, color: allTaken ? PAPER : MUTED }}>{i + 1}</span>}
+                    <div key={i} className="pop" onClick={() => toggle(m.id, i, t)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 4, border: `1.5px solid ${on ? SAGEHI : (allTaken ? "rgba(244,241,234,.2)" : PLUM + "55")}`, background: on ? SAGEHI + "22" : "transparent", cursor: "pointer" }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 3, border: `2px solid ${on ? SAGEHI : PLUM}`, background: on ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {on && <CheckIcon c={INK} s={12} />}
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: allTaken ? PAPER : (on ? INK : TEXT), fontVariantNumeric: "tabular-nums" }}>{sched[i] ? fmtTime(sched[i]) : `Dose ${i + 1}`}</span>
                     </div>
                   ))}
                 </div>
@@ -2098,7 +2159,7 @@ function Meds({ d, setD, now, back }) {
           })}
         </div>
       )}
-      <p style={tip}>Check off each dose as you take it. Tracking resets each month so every month starts fresh.</p>
+      <p style={tip}>Set a time for each dose to see them show up on your day at a glance. Tracking resets each month.</p>
     </Screen>
   );
 }
