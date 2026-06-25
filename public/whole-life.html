@@ -1186,24 +1186,32 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     day[m.id] = taken ? medDoseArr(null, t) : Array(t).fill(true);
     setD({ ...d, medChecks: { ...d.medChecks, [tk]: day } });
   };
+  const delEvent = (blockId, eventId) => setD({
+    ...d,
+    blocks: d.blocks.map((b) => b.id === blockId ? { ...b, events: (b.events || []).filter((e) => e.id !== eventId) } : b),
+  });
 
-  const habitRows = [
+  const bundle = dayBundle(d, dt);
+
+  const habitRows = isToday ? [
     ...d.habitDefs.map((h) => ({ kind: "habit", id: h.id, label: h.n, done: !!habitChecks[h.id], color: SAGE, onToggle: () => toggleHabit(h.id) })),
     ...oneoffs.map((o) => ({ kind: "habit", id: o.id, label: o.n, done: !!o.done, color: SAGE, onToggle: () => toggleOneoff(o.id) })),
-  ];
-  const todoRows = isToday && todoBlock ? (todoBlock.items || []).map((it, idx) => ({ kind: "todo", id: "t" + idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(idx) })) : [];
-  const medRows = d.meds.map((m) => {
+  ] : [];
+  const todoRows = bundle.todos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx) }));
+  const medRows = isToday ? d.meds.map((m) => {
     const t = medTimes(m);
     const done = medFullyTaken((d.medChecks[tk] || {})[m.id], t);
     const count = medDoneCount((d.medChecks[tk] || {})[m.id], t);
     return { kind: "med", id: m.id, label: (m.n || "Medication") + (m.dose ? ` · ${m.dose}` : "") + (t > 1 ? ` (${count}/${t})` : ""), done, color: PLUM, onToggle: () => toggleMed(m) };
-  });
-  const billRows = dayBundle(d, dt).bills.map((b, idx) => ({
+  }) : [];
+  const billRows = bundle.bills.map((b, idx) => ({
     id: `${b.section}:${b.n}:${idx}`,
     label: `${b.n || "Bill"}${b.a ? ` · $${money(b.a)}` : ""}`,
     section: b.section,
     color: b.color || AMBER,
   }));
+  const eventRows = bundle.events;
+
   const all = [...habitRows, ...todoRows, ...medRows];
   const doneCount = all.filter((r) => r.done).length;
 
