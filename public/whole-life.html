@@ -1075,6 +1075,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
       </section>
 
       {/* Monthly goals snapshot */}
+      {cats.plan && (
       <section style={{ padding: isDesktop ? "30px 32px 0" : "26px 18px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 4px 10px" }}>
           <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Monthly goals</span>
@@ -1092,6 +1093,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
           })}
         </div>
       </section>
+      )}
 
 
       <footer style={{ display: "flex", justifyContent: "center", gap: 14, padding: "8px 0 28px", opacity: .4 }}>
