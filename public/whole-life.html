@@ -1463,13 +1463,6 @@ function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
                 <QuickAddInline d={d} setD={setD} date={k} dark={isToday} onDone={() => setAddFor(null)} />
               </div>
             )}
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Quick note…"
-              rows={1}
-              style={{ width: "100%", border: `1px solid ${isToday ? "rgba(255,255,255,.15)" : LINE}`, borderRadius: 6, background: isToday ? "rgba(255,255,255,.06)" : CARD, padding: "6px 8px", fontSize: 12, fontFamily: "inherit", color: isToday ? PAPER : TEXT, resize: "vertical", outline: "none" }}
-            />
           </div>
         );
       })}
