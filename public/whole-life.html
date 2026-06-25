@@ -1011,14 +1011,15 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
 
 
 
+      {(cats.money || cats.health) && (
       <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
         <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Jump back in</div>
         <div className="stagger" style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(5, 1fr)" : "1fr 1fr", gap: isDesktop ? 16 : 12 }}>
-          <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money")} />
-          <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />
-          <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />
-          <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${daysPlanned(d)}/7`} sub="days planned" onClick={() => go("health", "meals")} />
-          {(() => {
+          {cats.money && <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money")} />}
+          {cats.health && <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />}
+          {cats.health && <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />}
+          {cats.health && <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${daysPlanned(d)}/7`} sub="days planned" onClick={() => go("health", "meals")} />}
+          {cats.health && (() => {
             const mb = d.blocks.find((b) => b.type === "mood");
             const logged = mb ? Object.keys(mb.days || {}).length : 0;
             const today = mb && mb.days && mb.days[now.getDate()];
@@ -1028,7 +1029,12 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             );
           })()}
         </div>
-        <div style={{ marginTop: isDesktop ? 16 : 12, background: CARD, border: `1px solid ${LINE}`, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px" }}>
+      </section>
+      )}
+
+      {/* Today's notes — always available */}
+      <section style={{ padding: isDesktop ? "20px 32px 0" : "18px 18px 0" }}>
+        <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
             <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's notes</span>
             <span style={{ fontSize: 10, color: MUTED, fontWeight: 600 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
