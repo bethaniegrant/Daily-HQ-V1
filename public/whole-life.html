@@ -195,7 +195,6 @@ const seed = () => ({
       { id: uid(), n: "Dining out", a: "120", due: "" },
     ],
     savings: [
-      { id: uid(), n: "Emergency fund", a: "300", due: "" },
       { id: uid(), n: "Retirement", a: "200", due: "" },
     ],
     debt: [{ id: uid(), n: "Credit card", a: "150", due: "20" }],
@@ -602,6 +601,25 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             );
           })()}
         </div>
+        <div style={{ marginTop: isDesktop ? 16 : 12, background: CARD, border: `1px solid ${LINE}`, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+            <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's notes</span>
+            <span style={{ fontSize: 10, color: MUTED, fontWeight: 600 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
+          </div>
+          {(() => {
+            const tk = dayKey(new Date());
+            const note = (d.dayNotes && d.dayNotes[tk]) || "";
+            return (
+              <textarea
+                value={note}
+                onChange={(e) => setD({ ...d, dayNotes: { ...(d.dayNotes || {}), [tk]: e.target.value } })}
+                placeholder="Jot a thought, reminder, or reflection for today…"
+                rows={3}
+                style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 8, background: PAPER, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", color: TEXT, resize: "vertical", outline: "none" }}
+              />
+            );
+          })()}
+        </div>
       </section>
 
       {/* Explore */}
@@ -785,10 +803,11 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
   const todayK = dayKey(now);
   const dayShells = ["S", "M", "T", "W", "T", "F", "S"];
 
-  // bills due map: day-of-month -> [{ n, color }] — recurs every month, clamps to month length
+  // bills due map: day-of-month -> [{ n, color }] — only real bills (fixed + debt), recurs monthly
   const billsByDay = {};
   const monthLen = daysInMonth(cursor);
-  const allBudgetSecs = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])];
+  const allBudgetSecs = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])]
+    .filter((sec) => sec.key === "fixed" || sec.key === "debt");
   allBudgetSecs.forEach((sec) => {
     (d.budget[sec.key] || []).forEach((r) => {
       let day = parseInt(r.due, 10);
@@ -937,7 +956,8 @@ function dayBundle(d, dt) {
   const mood = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
   const bills = [];
   const monthLen2 = daysInMonth(dt);
-  const allBudgetSecs2 = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])];
+  const allBudgetSecs2 = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])]
+    .filter((sec) => sec.key === "fixed" || sec.key === "debt");
   allBudgetSecs2.forEach((sec) => {
     (d.budget[sec.key] || []).forEach((r) => {
       let day = parseInt(r.due, 10);
@@ -1293,16 +1313,6 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
         <button onClick={() => go("health", "meds")} className="pop" style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: AMBER, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>Meds</button>
       </div>
 
-      <div>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, marginBottom: 6 }}>Notes</div>
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Add a note for this day…"
-          rows={3}
-          style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 8, background: PAPER, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", color: TEXT, resize: "vertical", outline: "none" }}
-        />
-      </div>
     </div>
   );
 }
@@ -1385,25 +1395,29 @@ function SidePanel({ d, setD, go, isDesktop, selectedDay, setSelectedDay, view, 
           )}
         </div>
         {expanded && (
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.08)", borderRadius: 999, padding: 3, flex: 1 }}>
-              {tabBtn("day", "Day")}
-              {tabBtn("week", "Week")}
-            </div>
-            <button onClick={() => setAddOpen((v) => !v)} className="pop" style={{ background: addOpen ? PAPER : AMBER, border: "none", color: INK, borderRadius: 999, padding: "8px 14px", fontSize: 10, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>{addOpen ? "Close" : "+ Add"}</button>
+          <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.08)", borderRadius: 999, padding: 3 }}>
+            {tabBtn("day", "Day")}
+            {tabBtn("week", "Week")}
           </div>
-        )}
-        {expanded && addOpen && (
-          <QuickAddForm d={d} setD={setD} defaultDate={dayKey(selectedDay)} onDone={() => setAddOpen(false)} />
         )}
       </div>
 
       {expanded && (
-        <div style={{ padding: "16px 16px 18px", flex: 1, overflow: "auto", maxHeight: isDesktop ? 640 : "none" }}>
+        <div style={{ padding: "16px 16px 12px", flex: 1, overflow: "auto", maxHeight: isDesktop ? 640 : "none" }}>
           {view === "day"
             ? <TodayList d={d} setD={setD} dt={selectedDay} go={go} isDesktop={isDesktop} />
             : <InlineWeekPanel d={d} setD={setD} go={go} anchor={selectedDay} isDesktop={isDesktop} onPickDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
           }
+        </div>
+      )}
+
+      {expanded && (
+        <div style={{ borderTop: `1px solid ${LINE}`, background: INK, color: PAPER, padding: "12px 16px 14px" }}>
+          {!addOpen ? (
+            <button onClick={() => setAddOpen(true)} className="pop" style={{ width: "100%", background: AMBER, border: "none", color: INK, borderRadius: 999, padding: "10px 14px", fontSize: 11, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: "pointer" }}>+ Add to do or event</button>
+          ) : (
+            <QuickAddForm d={d} setD={setD} defaultDate={dayKey(new Date())} onDone={() => setAddOpen(false)} />
+          )}
         </div>
       )}
     </div>
@@ -1472,13 +1486,6 @@ function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
                 <QuickAddInline d={d} setD={setD} date={k} dark={isToday} onDone={() => setAddFor(null)} />
               </div>
             )}
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Quick note…"
-              rows={1}
-              style={{ width: "100%", border: `1px solid ${isToday ? "rgba(255,255,255,.15)" : LINE}`, borderRadius: 6, background: isToday ? "rgba(255,255,255,.06)" : CARD, padding: "6px 8px", fontSize: 12, fontFamily: "inherit", color: isToday ? PAPER : TEXT, resize: "vertical", outline: "none" }}
-            />
           </div>
         );
       })}
