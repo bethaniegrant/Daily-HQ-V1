@@ -154,10 +154,48 @@ function useCloudSync(d, setD) {
 // New this round: Meds tracker + Workout builder.
 // Per-day habits/meds, monthly reset (local tz), streaks, custom spaces.
 
-const INK = "#1B3652", TEXT = "#2A2018", PAPER = "#EDE3D5", CARD = "#FDFAF4",
-      SAGE = "#7d8a5e", SAGEHI = "#9aa777", LINE = "#DDD5C8",
-      MUTED = "#9A9082", AMBER = "#C4717A", MIST = "#B8C8D8",
-      BLUE = "#7a8a93", PLUM = "#9a7e8e";
+// Color tokens are mutable so we can swap themes at runtime.
+// All UI reads these as ordinary identifiers and re-renders when App bumps themeVersion.
+let INK = "#1B3652", TEXT = "#2A2018", PAPER = "#EDE3D5", CARD = "#FDFAF4",
+    SAGE = "#7d8a5e", SAGEHI = "#9aa777", LINE = "#DDD5C8",
+    MUTED = "#9A9082", AMBER = "#C4717A", MIST = "#B8C8D8",
+    BLUE = "#7a8a93", PLUM = "#9a7e8e";
+
+const THEMES = {
+  sage:   { label: "Sage",    desc: "Earthy green + cream (default)",
+    INK: "#1B3652", TEXT: "#2A2018", PAPER: "#EDE3D5", CARD: "#FDFAF4",
+    SAGE: "#7d8a5e", SAGEHI: "#9aa777", LINE: "#DDD5C8",
+    MUTED: "#9A9082", AMBER: "#C4717A", MIST: "#B8C8D8",
+    BLUE: "#7a8a93", PLUM: "#9a7e8e" },
+  plum:   { label: "Plum",    desc: "Berry + warm cream",
+    INK: "#3A1F3A", TEXT: "#2A1F2A", PAPER: "#F2E8E0", CARD: "#FDF8F2",
+    SAGE: "#8C6A8E", SAGEHI: "#A584A6", LINE: "#E0D2D4",
+    MUTED: "#8E8089", AMBER: "#B85268", MIST: "#D8C8D2",
+    BLUE: "#7E7A92", PLUM: "#7A4E68" },
+  ocean:  { label: "Ocean",   desc: "Slate blue + sand",
+    INK: "#1E3A4C", TEXT: "#1F2A33", PAPER: "#E8E4DA", CARD: "#FAFAF5",
+    SAGE: "#5C8AA6", SAGEHI: "#7AA3BC", LINE: "#D2D8D8",
+    MUTED: "#8A9098", AMBER: "#D89464", MIST: "#B8CAD6",
+    BLUE: "#4A7088", PLUM: "#7A8AA0" },
+  sunset: { label: "Sunset",  desc: "Terracotta + warm neutrals",
+    INK: "#3A2218", TEXT: "#2E1F18", PAPER: "#F2E5D2", CARD: "#FDF6EA",
+    SAGE: "#B5704A", SAGEHI: "#CC8B62", LINE: "#E3D4C0",
+    MUTED: "#9A8472", AMBER: "#C8542E", MIST: "#D8C2A8",
+    BLUE: "#8C7060", PLUM: "#A8624E" },
+  mono:   { label: "Mono",    desc: "Charcoal + ivory, minimal",
+    INK: "#1F1F1F", TEXT: "#2A2A2A", PAPER: "#F2EEE8", CARD: "#FCFAF6",
+    SAGE: "#5A5A5A", SAGEHI: "#777", LINE: "#D8D4CE",
+    MUTED: "#8A8A88", AMBER: "#3A3A3A", MIST: "#C4C0BA",
+    BLUE: "#6E6E6E", PLUM: "#4A4A4A" },
+};
+const THEME_KEYS = ["sage", "plum", "ocean", "sunset", "mono"];
+function applyTheme(name) {
+  const t = THEMES[name] || THEMES.sage;
+  INK = t.INK; TEXT = t.TEXT; PAPER = t.PAPER; CARD = t.CARD;
+  SAGE = t.SAGE; SAGEHI = t.SAGEHI; LINE = t.LINE;
+  MUTED = t.MUTED; AMBER = t.AMBER; MIST = t.MIST;
+  BLUE = t.BLUE; PLUM = t.PLUM;
+}
 
 const WORKOUT_CATS = [
   { id: "push",   label: "Push day", color: "#C8783C" },
@@ -217,10 +255,68 @@ const seed = () => ({
   ],
   workoutDone: {},
   goals: [{ n: "Drink 8 cups of water", done: false }, { n: "Walk 30 minutes", done: true }, { n: "Read before bed", done: false }],
-  yearlyGoals: [
-    { id: uid(), n: "Save $5,000", done: false },
-    { id: uid(), n: "Run a 5K", done: false },
-    { id: uid(), n: "Read 12 books", done: false },
+// ─── Per-category seed helpers ───────────────────────────────────
+// Empty shell — what every new account starts with before onboarding.
+const emptyDoc = () => ({
+  onboarded: false,
+  username: "",
+  theme: "sage",
+  enabledCategories: { money: false, health: false, plan: false, trackers: false },
+  pay: "",
+  budget: { fixed: [], variable: [], savings: [], debt: [] },
+  savingsGoals: [],
+  monthStamp: monthKey(),
+  habitDefs: [],
+  habitChecks: {}, habitOneoffs: {},
+  meds: [],
+  medChecks: {},
+  workouts: [],
+  workoutDone: {},
+  goals: [{ n: "", done: false }, { n: "", done: false }, { n: "", done: false }],
+  yearlyGoals: [],
+  meals: { Mon: {}, Tue: {}, Wed: {}, Thu: {}, Fri: {}, Sat: {}, Sun: {} },
+  shopping: [],
+  intention: "",
+  dayNotes: {},
+  blocks: [],
+});
+
+const seedMoney = (doc) => ({
+  ...doc,
+  pay: "3200",
+  budget: {
+    fixed: [
+      { id: uid(), n: "Rent", a: "1200", due: "1" },
+      { id: uid(), n: "Car payment", a: "320", due: "5" },
+      { id: uid(), n: "Internet", a: "60", due: "12" },
+      { id: uid(), n: "Phone", a: "45", due: "18" },
+    ],
+    variable: [
+      { id: uid(), n: "Groceries", a: "400", due: "" },
+      { id: uid(), n: "Gas", a: "150", due: "" },
+      { id: uid(), n: "Dining out", a: "120", due: "" },
+    ],
+    savings: [{ id: uid(), n: "Retirement", a: "200", due: "" }],
+    debt: [{ id: uid(), n: "Credit card", a: "150", due: "20" }],
+  },
+  savingsGoals: [
+    { id: uid(), n: "Emergency fund", target: "5000", saved: "1200", color: "#7d8a5e" },
+    { id: uid(), n: "Vacation", target: "2000", saved: "450", color: "#C4717A" },
+  ],
+});
+
+const seedHealth = (doc) => ({
+  ...doc,
+  meds: [
+    { id: uid(), n: "Vitamin D", dose: "1000 IU", times: 1 },
+    { id: uid(), n: "Magnesium", dose: "200 mg", times: 1 },
+  ],
+  workouts: [
+    { id: uid(), n: "Push day", cat: "push",   ex: [{ id: uid(), n: "Bench press",    sets: "3", reps: "8",  w: "135" }, { id: uid(), n: "Shoulder press", sets: "3", reps: "10", w: "65" }] },
+    { id: uid(), n: "Pull day", cat: "pull",   ex: [{ id: uid(), n: "Pull-ups",       sets: "3", reps: "8",  w: "" }, { id: uid(), n: "Bent-over row",  sets: "3", reps: "10", w: "95" }] },
+    { id: uid(), n: "Leg day",  cat: "leg",    ex: [{ id: uid(), n: "Squats",         sets: "4", reps: "6",  w: "185" }] },
+    { id: uid(), n: "Core",     cat: "core",   ex: [{ id: uid(), n: "Plank",          sets: "3", reps: "45s", w: "" }] },
+    { id: uid(), n: "Cardio",   cat: "cardio", ex: [{ id: uid(), n: "Run / bike",     sets: "1", reps: "20m", w: "" }] },
   ],
   meals: {
     Mon: { breakfast: "Oatmeal & berries", lunch: "Chicken salad", dinner: "Salmon & rice", snacks: "Apple" },
@@ -234,14 +330,58 @@ const seed = () => ({
     { t: "Olive oil", done: true },
     { t: "Bananas", done: false },
   ],
-  intention: "Steady",
-  dayNotes: {},
   blocks: [
-    { id: uid(), type: "checklist", category: "plan", title: "To Do", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }, { t: "Schedule dentist", done: false }] },
+    ...doc.blocks,
     { id: uid(), type: "mood", category: "health", title: "Mood", monthStamp: monthKey(), moods: [{ id: uid(), label: "Great", color: "#5A6B4D" }, { id: uid(), label: "Okay", color: "#D9B16A" }, { id: uid(), label: "Low", color: "#6E8597" }, { id: uid(), label: "Hard", color: "#C8783C" }], days: {} },
   ],
 });
 
+const seedPlan = (doc) => ({
+  ...doc,
+  habitDefs: [{ id: uid(), n: "Move my body" }, { id: uid(), n: "Drink water" }, { id: uid(), n: "Read 10 min" }],
+  goals: [{ n: "Drink 8 cups of water", done: false }, { n: "Walk 30 minutes", done: true }, { n: "Read before bed", done: false }],
+  yearlyGoals: [
+    { id: uid(), n: "Save $5,000", done: false },
+    { id: uid(), n: "Run a 5K", done: false },
+    { id: uid(), n: "Read 12 books", done: false },
+  ],
+  intention: "Steady",
+  blocks: [
+    ...doc.blocks,
+    { id: uid(), type: "checklist", category: "plan", title: "To Do", items: [{ t: "Pharmacy pickup", done: false }, { t: "Mail package", done: true }, { t: "Schedule dentist", done: false }] },
+  ],
+});
+
+const seedTrackers = (doc) => ({
+  ...doc,
+  blocks: [
+    ...doc.blocks,
+    {
+      id: uid(),
+      type: "tracker",
+      kind: "rated",
+      category: "plan",
+      title: "Books I'm reading",
+      entries: [
+        { id: uid(), subject: "Atomic Habits", rating: 5, note: "Re-reading favorites" },
+        { id: uid(), subject: "The Creative Act", rating: 4, note: "" },
+      ],
+    },
+  ],
+});
+
+// Apply seeds for the categories the user picked during onboarding (or all on Skip).
+const applyCategorySeeds = (doc, categories) => {
+  let next = { ...doc, enabledCategories: { ...doc.enabledCategories, ...categories } };
+  if (categories.money)    next = seedMoney(next);
+  if (categories.health)   next = seedHealth(next);
+  if (categories.plan)     next = seedPlan(next);
+  if (categories.trackers) next = seedTrackers(next);
+  return next;
+};
+
+// Default factory used by useState(seed) — every new visitor starts empty + un-onboarded.
+const seed = () => emptyDoc();
 
 const LOGO_URL = "/__l5e/assets-v1/9dac1cfe-e63c-454c-a03e-d189e841f1f5/bethanie-rose-logo-v2.png";
 
@@ -257,6 +397,9 @@ const mealsFor = (entry) => {
   if (typeof entry === "string") return entry.trim() ? { dinner: entry } : {};
   return entry;
 };
+
+
+
 const dayHasMeal = (entry) => {
   const m = mealsFor(entry);
   return MEAL_SLOTS.some((s) => (m[s.key] || "").trim());
@@ -285,6 +428,36 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [d, setD] = useState(seed);
   const { ready: synced, displayName } = useCloudSync(d, setD);
+  const [themeVersion, setThemeVersion] = useState(0);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [addCatsOpen, setAddCatsOpen] = useState(false);
+
+  // Apply theme tokens whenever the chosen theme changes.
+  useEffect(() => {
+    applyTheme(d.theme || "sage");
+    setThemeVersion((v) => v + 1);
+  }, [d.theme]);
+
+  // Existing-user migration: if their doc has data but no onboarded flag, mark them done.
+  useEffect(() => {
+    if (!synced) return;
+    if (d.onboarded === true) return;
+    const hasData = (d.blocks && d.blocks.length > 0)
+      || (d.meds && d.meds.length > 0)
+      || (d.habitDefs && d.habitDefs.length > 0)
+      || (d.workouts && d.workouts.length > 0)
+      || (d.pay && String(d.pay).trim() !== "")
+      || ((d.intention || "").trim() !== "" && (d.intention || "").trim() !== "Steady" ? true : false);
+    if (hasData) {
+      setD((p) => ({
+        ...p,
+        onboarded: true,
+        username: p.username || displayName || "",
+        theme: p.theme || "sage",
+        enabledCategories: { money: true, health: true, plan: true, trackers: true, ...(p.enabledCategories || {}) },
+      }));
+    }
+  }, [synced, displayName]); // eslint-disable-line
 
   // monthly reset: wipe habit checks, one-offs, med checks, workout logs, mood grids
   useEffect(() => {
@@ -371,32 +544,35 @@ function App() {
   const builtin = ["money", "health", "plan", "more"];
   const customCats = [...new Set(d.blocks.map((b) => b.category || "plan").filter((c) => !builtin.includes(c)))];
 
+  const enabledCats = d.enabledCategories || { money: true, health: true, plan: true, trackers: true };
   const MENU_GROUPS = [
     { label: "", items: [{ icon: HomeIcon, color: SAGE, title: "Home", onClick: () => navGo("home") }] },
-    { label: "Money", items: [
+    ...(enabledCats.money ? [{ label: "Money", items: [
       { icon: WalletIcon, color: AMBER, title: "Budget", onClick: () => navGo("money", "budget") },
       ...blocksFor("money"),
-    ]},
-    { label: "Health", items: [
+    ]}] : []),
+    ...(enabledCats.health ? [{ label: "Health", items: [
       { icon: PillIcon, color: PLUM, title: "Medications", onClick: () => navGo("health", "meds") },
       { icon: DumbbellIcon, color: BLUE, title: "Workouts", onClick: () => navGo("health", "workouts") },
       { icon: PlateIcon, color: SAGE, title: "Meal Plan", onClick: () => navGo("health", "meals") },
       { icon: HeartIcon, color: PLUM, title: "Mood", onClick: () => navGo("health", moodBlock ? "block:" + moodBlock.id : null) },
       ...blocksFor("health").filter((it) => !moodBlock || it.title !== moodBlock.title),
-    ]},
-    { label: "Plan", items: [
+    ]}] : []),
+    ...(enabledCats.plan ? [{ label: "Plan", items: [
       { icon: LeafIcon, color: SAGE, title: "Habits", onClick: () => navGo("plan", "habits") },
       { icon: StarIcon, color: AMBER, title: "Monthly Goals", onClick: () => navGo("plan", "goals") },
       { icon: StarIcon, color: AMBER, title: "Yearly Goals", onClick: () => navGo("plan", "yearly") },
       ...blocksFor("plan"),
-    ]},
+    ]}] : []),
     { label: "More", items: [
       { icon: GridIcon, color: SAGE, title: "Add a space", onClick: () => navGo("spaces") },
+      { icon: GridIcon, color: AMBER, title: "Add more categories", onClick: () => { closeMenu(); setAddCatsOpen(true); } },
       ...blocksFor("more"),
     ]},
     ...customCats.map((c) => ({ label: c.charAt(0).toUpperCase() + c.slice(1), items: blocksFor(c) })),
     { label: "Account", items: [
       ...(isAdmin ? [{ icon: GridIcon, color: BLUE, title: "Admin", onClick: () => { closeMenu(); openAdmin(); } }] : []),
+      { icon: GridIcon, color: SAGE, title: "Appearance", onClick: () => { closeMenu(); setAppearanceOpen(true); } },
       { icon: GridIcon, color: SAGE, title: "Main website", onClick: () => { closeMenu(); try { window.parent && window.parent.postMessage({ type: "shell:navigate", to: "/" }, "*"); } catch (_) {} } },
       { icon: XIcon, color: PLUM, title: "Sign out", onClick: () => { closeMenu(); signOutFromShell(); } },
     ]},
@@ -496,18 +672,269 @@ function App() {
           </div>
         </div>
       </div>
+
+      {appearanceOpen && (
+        <AppearanceModal d={d} setD={setD} onClose={() => setAppearanceOpen(false)} />
+      )}
+      {addCatsOpen && (
+        <AddCategoriesModal d={d} setD={setD} onClose={() => setAddCatsOpen(false)} />
+      )}
+      {synced && d.onboarded !== true && (
+        <Onboarding initialName={displayName} onFinish={(payload) => {
+          setD((p) => {
+            const base = { ...p, onboarded: true, username: payload.username || "", theme: payload.theme || "sage" };
+            return applyCategorySeeds(base, payload.categories);
+          });
+        }} />
+      )}
+    </div>
+  );
+}
+
+// ═══ ONBOARDING ═══════════════════════════════════════════════════
+const SPACE_PRESETS = [
+  { id: "money",    label: "Money",    blurb: "Budget, bills, savings, debt",            includes: ["Budget", "Bills", "Savings goals", "Debt"] },
+  { id: "health",   label: "Health",   blurb: "Daily care + meals",                       includes: ["Medications", "Workouts", "Meal plan", "Mood"] },
+  { id: "plan",     label: "Plan",     blurb: "Habits, to-do, goals, intention",          includes: ["Habits", "To Do", "Monthly goals", "Yearly goals"] },
+  { id: "trackers", label: "Trackers", blurb: "Custom logs for anything you care about",  includes: ["Books", "Sleep", "Journal", "Ratings"] },
+];
+
+function Onboarding({ initialName, onFinish }) {
+  const [step, setStep] = useState(0);
+  const [username, setUsername] = useState((initialName || "").split(" ")[0] || "");
+  const [theme, setTheme] = useState("sage");
+  const [cats, setCats] = useState({ money: false, health: false, plan: false, trackers: false });
+  const totalSteps = 4;
+
+  const toggleCat = (id) => setCats((c) => ({ ...c, [id]: !c[id] }));
+  const anyPicked = Object.values(cats).some(Boolean);
+  const canNext = step === 0 ? (username.trim().length > 0) : step === 2 ? anyPicked : true;
+
+  const finish = (skipAll) => {
+    onFinish({
+      username: username.trim() || "Friend",
+      theme: skipAll ? "sage" : theme,
+      categories: skipAll ? { money: true, health: true, plan: true, trackers: true } : cats,
+    });
+  };
+
+  const next = () => {
+    if (step < totalSteps - 1) setStep(step + 1);
+    else finish(false);
+  };
+  const back = () => step > 0 && setStep(step - 1);
+
+  const stepTitles = ["Welcome", "Pick your palette", "Choose your spaces", "All set"];
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: PAPER, overflow: "auto", fontFamily: "'Outfit', -apple-system, sans-serif", color: TEXT }}>
+      <div style={{ maxWidth: 560, margin: "0 auto", padding: "max(28px, env(safe-area-inset-top)) 22px 40px", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        {/* Progress dots */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 24 }}>
+          {Array.from({ length: totalSteps }, (_, i) => (
+            <span key={i} style={{ width: i === step ? 28 : 8, height: 8, borderRadius: 999, background: i <= step ? AMBER : LINE, transition: "all .2s" }} />
+          ))}
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Step {step + 1} of {totalSteps}</div>
+          <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 36, fontWeight: 600, lineHeight: 1.1, letterSpacing: "-.02em", margin: "6px 0 6px", color: TEXT }}>{stepTitles[step]}</h1>
+        </div>
+
+        <div style={{ flex: 1 }}>
+          {step === 0 && (
+            <div>
+              <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.5, margin: "0 0 22px" }}>
+                Welcome to <span style={{ color: AMBER, fontWeight: 700 }}>Daily HQ</span> — a calm space for the bits of life that matter to you. We'll get you set up in 4 quick steps.
+              </p>
+              <label style={{ display: "block", fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", fontWeight: 700, color: MUTED, marginBottom: 8 }}>What should we call you?</label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Your first name"
+                autoFocus
+                style={{ width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 12, background: CARD, padding: "14px 16px", fontSize: 18, fontFamily: "'DM Serif Display',serif", color: TEXT, outline: "none" }}
+              />
+            </div>
+          )}
+
+          {step === 1 && (
+            <div>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>Pick a color theme. You can change this any time from Account → Appearance.</p>
+              <div style={{ display: "grid", gap: 10 }}>
+                {THEME_KEYS.map((k) => {
+                  const t = THEMES[k];
+                  const active = theme === k;
+                  return (
+                    <button key={k} onClick={() => setTheme(k)} className="pop" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: t.CARD, border: `2px solid ${active ? t.AMBER : t.LINE}`, borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
+                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                        {[t.INK, t.SAGE, t.AMBER, t.MIST].map((c, i) => (
+                          <span key={i} style={{ width: 22, height: 36, borderRadius: 4, background: c }} />
+                        ))}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: t.TEXT }}>{t.label}</div>
+                        <div style={{ fontSize: 12, color: t.MUTED }}>{t.desc}</div>
+                      </div>
+                      {active && <span style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 800, color: t.AMBER }}>Selected</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
+                Pick the spaces that matter to you most. You can add more later from the menu. <strong style={{ color: TEXT }}>At least one required.</strong>
+              </p>
+              <div style={{ display: "grid", gap: 10 }}>
+                {SPACE_PRESETS.map((sp) => {
+                  const active = !!cats[sp.id];
+                  return (
+                    <button key={sp.id} onClick={() => toggleCat(sp.id)} className="pop" style={{ padding: "14px 16px", background: CARD, border: `2px solid ${active ? AMBER : LINE}`, borderRadius: 14, cursor: "pointer", textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                      <span style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${active ? AMBER : LINE}`, background: active ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                        {active && <CheckIcon c="#fff" s={12} />}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: TEXT }}>{sp.label}</div>
+                        <div style={{ fontSize: 13, color: MUTED, marginBottom: 6 }}>{sp.blurb}</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {sp.includes.map((inc) => (
+                            <span key={inc} style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: MUTED, border: `1px solid ${LINE}`, padding: "3px 7px", borderRadius: 999 }}>{inc}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
+                You're all set, <span style={{ color: AMBER, fontWeight: 700 }}>{username.trim() || "friend"}</span>. Here's what's loaded in:
+              </p>
+              <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: "16px 18px", display: "grid", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}><span style={{ color: MUTED }}>Theme</span><strong>{THEMES[theme].label}</strong></div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}><span style={{ color: MUTED }}>Your spaces</span><strong>{SPACE_PRESETS.filter((sp) => cats[sp.id]).map((sp) => sp.label).join(", ") || "None"}</strong></div>
+              </div>
+              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "16px 0 0" }}>
+                Your dashboard will keep it minimal — just the calendar, today's intention, and your daily/weekly glance to start.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer controls */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, gap: 10 }}>
+          <button onClick={() => finish(true)} className="pop" style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer", padding: "8px 4px" }}>Skip — set me up with everything</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {step > 0 && (
+              <button onClick={back} className="pop" style={{ background: "none", border: `1.5px solid ${LINE}`, color: TEXT, borderRadius: 999, padding: "10px 18px", fontSize: 11, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: "pointer" }}>Back</button>
+            )}
+            <button
+              onClick={next}
+              disabled={!canNext}
+              className="pop"
+              style={{ background: canNext ? AMBER : LINE, border: "none", color: canNext ? "#fff" : MUTED, borderRadius: 999, padding: "10px 22px", fontSize: 11, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: canNext ? "pointer" : "not-allowed" }}
+            >{step === totalSteps - 1 ? "Enter Daily HQ" : "Next →"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AppearanceModal({ d, setD, onClose }) {
+  const cur = d.theme || "sage";
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 150, background: "rgba(22,32,28,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 18, maxWidth: 440, width: "100%", padding: 22, maxHeight: "90vh", overflow: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h2 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, fontWeight: 600, margin: 0, color: TEXT }}>Appearance</h2>
+          <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", color: MUTED, fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ display: "grid", gap: 10 }}>
+          {THEME_KEYS.map((k) => {
+            const t = THEMES[k];
+            const active = cur === k;
+            return (
+              <button key={k} onClick={() => { setD({ ...d, theme: k }); }} className="pop" style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", background: t.CARD, border: `2px solid ${active ? t.AMBER : t.LINE}`, borderRadius: 12, cursor: "pointer", textAlign: "left" }}>
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  {[t.INK, t.SAGE, t.AMBER, t.MIST].map((c, i) => (
+                    <span key={i} style={{ width: 18, height: 30, borderRadius: 3, background: c }} />
+                  ))}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 16, color: t.TEXT }}>{t.label}</div>
+                  <div style={{ fontSize: 11, color: t.MUTED }}>{t.desc}</div>
+                </div>
+                {active && <span style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: t.AMBER }}>Active</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddCategoriesModal({ d, setD, onClose }) {
+  const cur = d.enabledCategories || {};
+  const toggle = (id) => {
+    const nextEnabled = { ...cur, [id]: !cur[id] };
+    // If turning ON for the first time, seed example data for that category.
+    if (!cur[id]) {
+      const seeded = applyCategorySeeds({ ...d, enabledCategories: nextEnabled }, { [id]: true });
+      setD(seeded);
+    } else {
+      setD({ ...d, enabledCategories: nextEnabled });
+    }
+  };
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 150, background: "rgba(22,32,28,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 18, maxWidth: 460, width: "100%", padding: 22, maxHeight: "90vh", overflow: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <h2 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, fontWeight: 600, margin: 0, color: TEXT }}>Your categories</h2>
+          <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", color: MUTED, fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+        <p style={{ fontSize: 13, color: MUTED, margin: "0 0 16px" }}>Turn a category on to add it to your menu and dashboard. Turning one off hides it but keeps your data safe.</p>
+        <div style={{ display: "grid", gap: 10 }}>
+          {SPACE_PRESETS.map((sp) => {
+            const active = !!cur[sp.id];
+            return (
+              <button key={sp.id} onClick={() => toggle(sp.id)} className="pop" style={{ padding: "12px 14px", background: CARD, border: `2px solid ${active ? AMBER : LINE}`, borderRadius: 12, cursor: "pointer", textAlign: "left", display: "flex", gap: 12, alignItems: "center" }}>
+                <span style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${active ? AMBER : LINE}`, background: active ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {active && <CheckIcon c="#fff" s={12} />}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 16, color: TEXT }}>{sp.label}</div>
+                  <div style={{ fontSize: 12, color: MUTED }}>{sp.blurb}</div>
+                </div>
+                <span style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: active ? AMBER : MUTED }}>{active ? "On" : "Off"}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
 
 // ═══ HOME ═════════════════════════════════════════════════════════
 function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
+  const cats = d.enabledCategories || { money: true, health: true, plan: true, trackers: true };
   const hour = now.getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const comp = dayCompletion(d, now);
   const left = (Number(d.pay) || 0) - budgetSpent(d);
   const medsToday = d.meds.length, medsTaken = d.meds.filter((m) => medFullyTaken((d.medChecks[dayKey(now)] || {})[m.id], medTimes(m))).length;
   const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const firstName = (d.username || (displayName || "").trim().split(/\s+/)[0] || "friend");
 
   const navBtn = (label, onClick) => (
     <button onClick={onClick} className="pop" style={{ background: "none", border: "none", color: "rgba(244,241,234,.62)", fontSize: 12, fontWeight: 600, letterSpacing: ".02em", cursor: "pointer", padding: "4px 2px" }}>{label}</button>
@@ -527,10 +954,10 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
           </span>
           <div style={{ display: "flex", gap: isDesktop ? 22 : 14, alignItems: "center" }}>
             {navBtn("Today", () => go("home"))}
-            {navBtn("Health", () => go("health"))}
-            {navBtn("Plan", () => go("plan"))}
+            {cats.health && navBtn("Health", () => go("health"))}
+            {cats.plan && navBtn("Plan", () => go("plan"))}
             {navBtn("Spaces", () => go("spaces"))}
-            {isDesktop && navBtn("Money", () => go("money"))}
+            {isDesktop && cats.money && navBtn("Money", () => go("money"))}
           </div>
         </nav>
       </div>
@@ -543,7 +970,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{dateLine}</span>
           </div>
           <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: isDesktop ? 64 : 38, fontWeight: 600, lineHeight: 1.05, letterSpacing: "-.02em", margin: "10px 0 8px", color: TEXT }}>
-            {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>{((displayName || "").trim().split(/\s+/)[0] || "").charAt(0).toUpperCase() || "•"}.</span>
+            {greet}, <span style={{ color: AMBER, fontStyle: "italic" }}>{firstName}.</span>
           </h1>
           <p style={{ fontSize: isDesktop ? 16 : 14, color: MUTED, lineHeight: 1.5, maxWidth: 520, margin: 0 }}>
             {comp.total ? `${comp.done} of ${comp.total} rituals checked.` : "No rituals set up yet."} {medsToday ? `${medsTaken}/${medsToday} meds taken.` : ""}
@@ -584,14 +1011,15 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
 
 
 
+      {(cats.money || cats.health) && (
       <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
         <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Jump back in</div>
         <div className="stagger" style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(5, 1fr)" : "1fr 1fr", gap: isDesktop ? 16 : 12 }}>
-          <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money")} />
-          <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />
-          <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />
-          <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${daysPlanned(d)}/7`} sub="days planned" onClick={() => go("health", "meals")} />
-          {(() => {
+          {cats.money && <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money")} />}
+          {cats.health && <Tile accent={PLUM} icon={PillIcon} title="Meds" big={medsToday ? `${medsTaken}/${medsToday}` : "Add"} sub={medsToday ? "taken today" : "tap to begin"} onClick={() => go("health", "meds")} />}
+          {cats.health && <Tile accent={BLUE} icon={DumbbellIcon} title="Workouts" big={`${d.workouts.length}`} sub="plans built" onClick={() => go("health", "workouts")} />}
+          {cats.health && <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${daysPlanned(d)}/7`} sub="days planned" onClick={() => go("health", "meals")} />}
+          {cats.health && (() => {
             const mb = d.blocks.find((b) => b.type === "mood");
             const logged = mb ? Object.keys(mb.days || {}).length : 0;
             const today = mb && mb.days && mb.days[now.getDate()];
@@ -601,7 +1029,12 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
             );
           })()}
         </div>
-        <div style={{ marginTop: isDesktop ? 16 : 12, background: CARD, border: `1px solid ${LINE}`, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px" }}>
+      </section>
+      )}
+
+      {/* Today's notes — always available */}
+      <section style={{ padding: isDesktop ? "20px 32px 0" : "18px 18px 0" }}>
+        <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
             <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's notes</span>
             <span style={{ fontSize: 10, color: MUTED, fontWeight: 600 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
@@ -626,9 +1059,9 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
       <section style={{ padding: isDesktop ? "30px 32px 30px" : "26px 18px 30px" }}>
         <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Explore</div>
         <div style={{ display: "grid", gap: isDesktop ? 12 : 8, gridTemplateColumns: isDesktop ? "repeat(3, 1fr)" : "1fr" }}>
-          <HubLink icon={WalletIcon} color={AMBER} title="Money" sub="Budget · debt · savings" onClick={() => go("money")} />
-          <HubLink icon={HeartIcon} color={PLUM} title="Health" sub="Meds · workouts · meals · mood" onClick={() => go("health")} />
-          <HubLink icon={StarIcon} color={SAGE} title="Plan" sub="Habits · goals · your spaces" onClick={() => go("plan")} />
+          {cats.money && <HubLink icon={WalletIcon} color={AMBER} title="Money" sub="Budget · debt · savings" onClick={() => go("money")} />}
+          {cats.health && <HubLink icon={HeartIcon} color={PLUM} title="Health" sub="Meds · workouts · meals · mood" onClick={() => go("health")} />}
+          {cats.plan && <HubLink icon={StarIcon} color={SAGE} title="Plan" sub="Habits · goals · your spaces" onClick={() => go("plan")} />}
           {(() => {
             const builtin = ["money", "health", "plan", "more"];
             const customCats = [...new Set((d.blocks || []).map((b) => b.category || "plan").filter((c) => !builtin.includes(c)))];
@@ -642,6 +1075,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
       </section>
 
       {/* Monthly goals snapshot */}
+      {cats.plan && (
       <section style={{ padding: isDesktop ? "30px 32px 0" : "26px 18px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 4px 10px" }}>
           <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Monthly goals</span>
@@ -659,6 +1093,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
           })}
         </div>
       </section>
+      )}
 
 
       <footer style={{ display: "flex", justifyContent: "center", gap: 14, padding: "8px 0 28px", opacity: .4 }}>
