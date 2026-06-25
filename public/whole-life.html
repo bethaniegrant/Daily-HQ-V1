@@ -672,6 +672,21 @@ function App() {
           </div>
         </div>
       </div>
+
+      {appearanceOpen && (
+        <AppearanceModal d={d} setD={setD} onClose={() => setAppearanceOpen(false)} />
+      )}
+      {addCatsOpen && (
+        <AddCategoriesModal d={d} setD={setD} onClose={() => setAddCatsOpen(false)} />
+      )}
+      {synced && d.onboarded !== true && (
+        <Onboarding initialName={displayName} onFinish={(payload) => {
+          setD((p) => {
+            const base = { ...p, onboarded: true, username: payload.username || "", theme: payload.theme || "sage" };
+            return applyCategorySeeds(base, payload.categories);
+          });
+        }} />
+      )}
     </div>
   );
 }
