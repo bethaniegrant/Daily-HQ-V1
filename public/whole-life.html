@@ -1641,12 +1641,13 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
   const medRows = isToday ? d.meds.flatMap((m) => {
     const t = medTimes(m);
     const arr = medDoseArr((d.medChecks[tk] || {})[m.id], t);
+    const sched = medSchedule(m);
     const base = (m.n || "Medication") + (m.dose ? ` · ${m.dose}` : "");
     if (t <= 1) {
-      return [{ kind: "med", id: m.id, label: base, done: arr[0], color: PLUM, onToggle: () => toggleMedDose(m, 0) }];
+      return [{ kind: "med", id: m.id, label: base, time: sched[0] || "", done: arr[0], color: PLUM, onToggle: () => toggleMedDose(m, 0) }];
     }
-    return arr.map((v, i) => ({ kind: "med", id: m.id + ":" + i, label: `${base} · Dose ${i + 1} of ${t}`, done: !!v, color: PLUM, onToggle: () => toggleMedDose(m, i) }));
-  }) : [];
+    return arr.map((v, i) => ({ kind: "med", id: m.id + ":" + i, label: base, time: sched[i] || "", sub: sched[i] ? fmtTime(sched[i]) : `Dose ${i + 1} of ${t}`, done: !!v, color: PLUM, onToggle: () => toggleMedDose(m, i) }));
+  }).sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99")) : [];
   const billRows = bundle.bills.map((b, idx) => ({
     id: `${b.section}:${b.n}:${idx}`,
     label: `${b.n || "Bill"}${b.a ? ` · $${money(b.a)}` : ""}`,
