@@ -1615,6 +1615,14 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     day[m.id] = taken ? medDoseArr(null, t) : Array(t).fill(true);
     setD({ ...d, medChecks: { ...d.medChecks, [tk]: day } });
   };
+  const toggleMedDose = (m, i) => {
+    const t = medTimes(m);
+    const day = { ...(d.medChecks[tk] || {}) };
+    const arr = medDoseArr(day[m.id], t);
+    arr[i] = !arr[i];
+    day[m.id] = arr;
+    setD({ ...d, medChecks: { ...d.medChecks, [tk]: day } });
+  };
   const delEvent = (blockId, eventId) => setD({
     ...d,
     blocks: d.blocks.map((b) => b.id === blockId ? { ...b, events: (b.events || []).filter((e) => e.id !== eventId) } : b),
