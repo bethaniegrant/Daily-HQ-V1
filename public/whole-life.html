@@ -213,10 +213,13 @@ const monthKey = (dt = new Date()) => `${dt.getFullYear()}-${dt.getMonth() + 1}`
 const dayKey = (dt) => `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
 const daysInMonth = (dt) => new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
 const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay();
-const medTimes = (m) => Math.max(1, Number(m && m.times) || 1);
+const medTimes = (m) => Math.max(1, Number(m && m.times) || (Array.isArray(m && m.schedule) ? m.schedule.length : 1) || 1);
+const medSchedule = (m) => { const t = medTimes(m); const s = Array.isArray(m && m.schedule) ? m.schedule : []; return Array.from({ length: t }, (_, i) => (typeof s[i] === "string" ? s[i] : "")); };
 const medDoseArr = (val, times) => { const t = Math.max(1, times || 1); if (Array.isArray(val)) return Array.from({ length: t }, (_, i) => !!val[i]); return Array.from({ length: t }, () => !!val); };
 const medDoneCount = (val, times) => medDoseArr(val, times).filter(Boolean).length;
 const medFullyTaken = (val, times) => medDoneCount(val, times) >= Math.max(1, times || 1);
+const fmtTime = (hhmm) => { if (!hhmm || typeof hhmm !== "string" || !hhmm.includes(":")) return ""; const [h, m] = hhmm.split(":").map(Number); if (isNaN(h)) return ""; const am = h < 12; const hr = h % 12 || 12; return `${hr}:${String(m || 0).padStart(2, "0")} ${am ? "AM" : "PM"}`; };
+const medDoseLabel = (m, i) => { const time = medSchedule(m)[i]; return time ? fmtTime(time) : `Dose ${i + 1}`; };
 
 // ─── Per-category seed helpers ───────────────────────────────────
 // Empty shell — what every new account starts with before onboarding.
