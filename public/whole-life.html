@@ -417,9 +417,9 @@ function App() {
 
   // Apply theme tokens whenever the chosen theme changes.
   useEffect(() => {
-    applyTheme(d.theme || "sage");
+    applyTheme(d.theme || "sage", d.customTheme);
     setThemeVersion((v) => v + 1);
-  }, [d.theme]);
+  }, [d.theme, d.customTheme]);
 
   // Existing-user migration: if their doc has data but no onboarded flag, mark them done.
   useEffect(() => {
