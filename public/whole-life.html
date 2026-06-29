@@ -676,8 +676,31 @@ function App() {
       {synced && d.onboarded !== true && (
         <Onboarding initialName={displayName} onFinish={(payload) => {
           setD((p) => {
-            const base = { ...p, onboarded: true, username: payload.username || "", theme: payload.theme || "sage" };
-            return applyCategorySeeds(base, payload.categories);
+            const base = {
+              ...p,
+              onboarded: true,
+              username: payload.username || "",
+              theme: payload.theme || "sage",
+              customTheme: payload.customTheme || null,
+              focusAreas: payload.focusAreas || [],
+              dashboardDefault: payload.dashboardDefault || "day",
+              notTodayIntroSeen: true,
+              timezone: payload.timezone || p.timezone || "",
+            };
+            const seeded = applyCategorySeeds(base, payload.categories);
+            // Optional first task from step 5
+            if (payload.firstTask && payload.firstTask.trim()) {
+              const blocks = seeded.blocks || [];
+              let todoIdx = blocks.findIndex((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
+              const today = dayKey(new Date());
+              const newItem = { t: payload.firstTask.trim(), done: false, date: today };
+              if (todoIdx >= 0) {
+                seeded.blocks = blocks.map((b, i) => i === todoIdx ? { ...b, items: [newItem, ...(b.items || [])] } : b);
+              } else {
+                seeded.blocks = [...blocks, { id: uid(), type: "checklist", category: "plan", title: "To Do", items: [newItem] }];
+              }
+            }
+            return seeded;
           });
         }} />
       )}
