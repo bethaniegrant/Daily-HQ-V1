@@ -3320,7 +3320,7 @@ function BlockEditor({ block, d, setD, back }) {
           <textarea value={block.items} onChange={(e) => update({ items: e.target.value })} placeholder="Start writing…" style={{ width: "100%", minHeight: 320, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", fontSize: 16, lineHeight: 1.6, background: CARD, resize: "vertical", color: TEXT }} />
         ) : (
           <>
-            <div style={{ display: "grid", gap: 9 }}>{block.items.map((it, i) => <BlockRow key={i} type={block.type} item={it} accent={meta.color} onToggle={() => setItem(i, { done: !it.done })} onText={(v) => setItem(i, { t: v })} onTime={(v) => setItem(i, { time: v })} onDelete={() => delItem(i)} />)}</div>
+            <div style={{ display: "grid", gap: 9 }}>{block.items.map((it, i) => <BlockRow key={i} type={block.type} item={it} accent={meta.color} onToggle={() => setItem(i, { done: !it.done })} onText={(v) => setItem(i, { t: v })} onTime={(v) => setItem(i, { time: v })} onDelete={() => delItem(i)} onBump={() => { const base = it.date ? new Date(it.date) : new Date(); base.setDate(base.getDate() + 1); const nd = `${base.getFullYear()}-${base.getMonth() + 1}-${base.getDate()}`; setItem(i, { date: nd, done: false }); }} />)}</div>
             <button onClick={addItem} style={addBtn}>+ Add {block.type === "schedule" ? "a time" : "an item"}</button>
           </>
         )}
