@@ -993,6 +993,9 @@ function Onboarding({ initialName, onFinish }) {
 
 function AppearanceModal({ d, setD, onClose }) {
   const cur = d.theme || "sage";
+  const ct = d.customTheme || { AMBER: "#C4717A", MIST: "#B8C8D8" };
+  const preview = resolveTheme("custom", ct);
+  const setCustom = (patch) => setD({ ...d, theme: "custom", customTheme: { ...ct, ...patch } });
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 150, background: "rgba(22,32,28,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 18, maxWidth: 440, width: "100%", padding: 22, maxHeight: "90vh", overflow: "auto" }}>
@@ -1019,6 +1022,22 @@ function AppearanceModal({ d, setD, onClose }) {
               </button>
             );
           })}
+          {/* Custom theme */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", background: preview.CARD, border: `2px solid ${cur === "custom" ? preview.AMBER : LINE}`, borderRadius: 12 }}>
+            <button onClick={() => setD({ ...d, theme: "custom", customTheme: ct })} className="pop" style={{ display: "flex", gap: 4, flexShrink: 0, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+              {[preview.INK, preview.SAGE, preview.AMBER, preview.MIST].map((c, i) => (
+                <span key={i} style={{ width: 18, height: 30, borderRadius: 3, background: c }} />
+              ))}
+            </button>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 16, color: preview.TEXT }}>Custom</div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 4 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: preview.MUTED }}>Accent <input type="color" value={ct.AMBER} onChange={(e) => setCustom({ AMBER: e.target.value })} style={{ width: 28, height: 22, border: "none", padding: 0, background: "none", cursor: "pointer" }} /></label>
+                <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: preview.MUTED }}>Mist <input type="color" value={ct.MIST} onChange={(e) => setCustom({ MIST: e.target.value })} style={{ width: 28, height: 22, border: "none", padding: 0, background: "none", cursor: "pointer" }} /></label>
+              </div>
+            </div>
+            {cur === "custom" && <span style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: preview.AMBER }}>Active</span>}
+          </div>
         </div>
       </div>
     </div>
