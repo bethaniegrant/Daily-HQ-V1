@@ -1814,6 +1814,18 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     ...d,
     blocks: d.blocks.map((b) => b.id === blockId ? { ...b, events: (b.events || []).filter((e) => e.id !== eventId) } : b),
   });
+  // Not Today: bump a todo to tomorrow (keeps it un-done, doesn't delete).
+  const bumpTodo = (idx) => {
+    if (!todoBlock) return;
+    const t = new Date(dt); t.setDate(t.getDate() + 1);
+    const nextDate = `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
+    setD({
+      ...d,
+      blocks: d.blocks.map((b) => b.id === todoBlock.id
+        ? { ...b, items: (b.items || []).map((it, j) => j === idx ? { ...it, date: nextDate, done: false } : it) }
+        : b),
+    });
+  };
 
   const bundle = dayBundle(d, dt);
 
@@ -1821,7 +1833,7 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     ...d.habitDefs.map((h) => ({ kind: "habit", id: h.id, label: h.n, done: !!habitChecks[h.id], color: SAGE, onToggle: () => toggleHabit(h.id) })),
     ...oneoffs.map((o) => ({ kind: "habit", id: o.id, label: o.n, done: !!o.done, color: SAGE, onToggle: () => toggleOneoff(o.id) })),
   ] : [];
-  const todoRows = bundle.todos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx) }));
+  const todoRows = bundle.todos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx), onBump: () => bumpTodo(it.idx) }));
   const medRows = isToday ? d.meds.flatMap((m) => {
     const t = medTimes(m);
     const arr = medDoseArr((d.medChecks[tk] || {})[m.id], t);
