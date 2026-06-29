@@ -45,9 +45,67 @@ const LEGACY_KEY = "wlp_doc";
 function useCloudSync(d, setD) {
   const [ready, setReady] = useState(false);
   const [displayName, setDisplayName] = useState("");
-  const ctx = useRef({ client: null, userId: null, lkey: null });
+  const ctx = useRef({ client: null, userId: null, lkey: null, loadedVersion: 0, rowExists: false });
   const skipNextSave = useRef(true);
   const bootedRef = useRef(false);
+  const dRef = useRef(d);
+  useEffect(() => { dRef.current = d; }, [d]);
+
+  // Conditional save with optimistic concurrency. Returns true on success.
+  // On version conflict: refetch, shallow-overlay in-flight edit on server doc, retry once.
+  async function saveWithOCC(doc, updated_at, attempt = 0) {
+    const { client, userId, rowExists } = ctx.current;
+    if (!client || !userId) return false;
+
+    // First-time insert path (no row yet): plain upsert with version: 1.
+    if (!rowExists) {
+      const nextDoc = { ...doc, version: 1 };
+      const { error } = await client.from("user_data")
+        .upsert({ user_id: userId, key: "planner", value: nextDoc, updated_at });
+      if (error) { console.warn("cloud insert failed", error); return false; }
+      ctx.current.rowExists = true;
+      ctx.current.loadedVersion = 1;
+      try { localStorage.setItem(ctx.current.lkey, JSON.stringify({ value: nextDoc, updated_at, version: 1 })); } catch {}
+      return true;
+    }
+
+    const expected = ctx.current.loadedVersion | 0;
+    const nextDoc = { ...doc, version: expected + 1 };
+    const { data, error } = await client.from("user_data")
+      .update({ value: nextDoc, updated_at })
+      .eq("user_id", userId).eq("key", "planner")
+      .eq("value->>version", String(expected))
+      .select("value");
+
+    if (error) { console.warn("cloud save failed", error); return false; }
+
+    if (data && data.length === 1) {
+      ctx.current.loadedVersion = nextDoc.version;
+      try { localStorage.setItem(ctx.current.lkey, JSON.stringify({ value: nextDoc, updated_at, version: nextDoc.version })); } catch {}
+      return true;
+    }
+
+    // Conflict: another device wrote since we loaded. Refetch + shallow-overlay.
+    if (attempt >= 2) { console.warn("OCC: giving up after repeated conflicts"); return false; }
+    try {
+      const { data: row } = await client.from("user_data")
+        .select("value").eq("user_id", userId).eq("key", "planner").maybeSingle();
+      const serverDoc = (row && row.value) || {};
+      const serverVersion = (serverDoc.version | 0) || 0;
+      const localDoc = dRef.current || {};
+      // Shallow top-level overlay: keep server keys we didn't touch, prefer local edits for keys we did.
+      const merged = { ...serverDoc, ...localDoc, version: serverVersion };
+      ctx.current.loadedVersion = serverVersion;
+      skipNextSave.current = true;
+      setD(merged);
+      dRef.current = merged;
+      // Retry with the freshly-merged doc against the new server version.
+      return await saveWithOCC(merged, new Date().toISOString(), attempt + 1);
+    } catch (e) {
+      console.warn("OCC: refetch failed", e);
+      return false;
+    }
+  }
 
   useEffect(() => {
     if (bootedRef.current) return;
@@ -87,24 +145,29 @@ function useCloudSync(d, setD) {
         } catch (e) { console.warn("cloud read failed (offline?)", e); }
 
         let chosen = null;
+        let chosenLocalWins = false;
         if (cloud && local) {
           const cT = +new Date(cloud.updated_at), lT = +new Date(local.updated_at || 0);
           chosen = lT > cT ? local.value : cloud.value;
-          if (lT > cT) {
-            client.from("user_data").upsert({ user_id: user.id, key: "planner", value: local.value });
-          }
+          chosenLocalWins = lT > cT;
+          ctx.current.rowExists = true;
+          ctx.current.loadedVersion = (cloud.value && (cloud.value.version | 0)) || 0;
         } else if (cloud) {
           chosen = cloud.value;
+          ctx.current.rowExists = true;
+          ctx.current.loadedVersion = (cloud.value && (cloud.value.version | 0)) || 0;
         } else if (local) {
           chosen = local.value;
-          client.from("user_data").upsert({ user_id: user.id, key: "planner", value: local.value });
+          ctx.current.rowExists = false;
+          ctx.current.loadedVersion = 0;
         } else {
           // first-time login: pull any legacy pre-auth local data
           try {
             const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || "null");
             if (legacy && legacy.value) {
               chosen = legacy.value;
-              client.from("user_data").upsert({ user_id: user.id, key: "planner", value: legacy.value });
+              ctx.current.rowExists = false;
+              ctx.current.loadedVersion = 0;
               localStorage.removeItem(LEGACY_KEY);
             }
           } catch {}
@@ -113,6 +176,12 @@ function useCloudSync(d, setD) {
         if (chosen && typeof chosen === "object") {
           skipNextSave.current = true;
           setD(chosen);
+          dRef.current = chosen;
+        }
+
+        // If local was newer than cloud, or we only had local/legacy, push it through OCC now.
+        if (chosen && (chosenLocalWins || !cloud)) {
+          saveWithOCC(chosen, new Date().toISOString());
         }
       } catch (e) {
         console.warn("sync init failed", e);
@@ -126,24 +195,22 @@ function useCloudSync(d, setD) {
   useEffect(() => {
     if (!ready) return;
     if (skipNextSave.current) { skipNextSave.current = false; return; }
-    const { client, userId, lkey } = ctx.current;
+    const { client, userId, lkey, loadedVersion } = ctx.current;
     const updated_at = new Date().toISOString();
+    const cachedVersion = (d && (d.version | 0)) || loadedVersion || 0;
     if (lkey) {
-      try { localStorage.setItem(lkey, JSON.stringify({ value: d, updated_at })); } catch {}
+      try { localStorage.setItem(lkey, JSON.stringify({ value: d, updated_at, version: cachedVersion })); } catch {}
     } else {
       try { localStorage.setItem(LEGACY_KEY, JSON.stringify({ value: d, updated_at })); } catch {}
     }
     if (!client || !userId) return;
-    const t = setTimeout(() => {
-      client.from("user_data")
-        .upsert({ user_id: userId, key: "planner", value: d, updated_at })
-        .then(({ error }) => { if (error) console.warn("cloud save failed", error); });
-    }, 800);
+    const t = setTimeout(() => { saveWithOCC(d, updated_at); }, 800);
     return () => clearTimeout(t);
   }, [d, ready]);
 
   return { ready, displayName, ctx };
 }
+
 
 
 
