@@ -43,6 +43,16 @@ function PlannerPage() {
         await supabase.auth.signOut();
         toast.success("Signed out");
         navigate({ to: "/auth" });
+      } else if (m.type === "shell:deleteAccount") {
+        try {
+          const { deleteMyAccount } = await import("@/lib/api/account.functions");
+          await deleteMyAccount();
+          await supabase.auth.signOut();
+          toast.success("Account deleted");
+          navigate({ to: "/" });
+        } catch (err: any) {
+          toast.error(err?.message || "Could not delete account");
+        }
       } else if (m.type === "shell:navigate" && typeof m.to === "string") {
         navigate({ to: m.to });
       } else if (m.type === "shell:ready") {

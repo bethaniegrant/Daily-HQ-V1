@@ -413,6 +413,7 @@ function App() {
   const { ready: synced, displayName } = useCloudSync(d, setD);
   const [themeVersion, setThemeVersion] = useState(0);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [addCatsOpen, setAddCatsOpen] = useState(false);
 
   // Apply theme tokens whenever the chosen theme changes.
@@ -558,19 +559,8 @@ function App() {
     ...customCats.map((c) => ({ label: c.charAt(0).toUpperCase() + c.slice(1), items: blocksFor(c) })),
     { label: "Account", items: [
       ...(isAdmin ? [{ icon: GridIcon, color: BLUE, title: "Admin", onClick: () => { closeMenu(); openAdmin(); } }] : []),
-      { icon: GridIcon, color: SAGE, title: "Appearance", onClick: () => { closeMenu(); setAppearanceOpen(true); } },
+      { icon: GridIcon, color: SAGE, title: "Account settings", onClick: () => { closeMenu(); setAccountOpen(true); } },
       { icon: GridIcon, color: SAGE, title: "Main website", onClick: () => { closeMenu(); try { window.parent && window.parent.postMessage({ type: "shell:navigate", to: "/" }, "*"); } catch (_) {} } },
-      { icon: GridIcon, color: AMBER, title: "Reset my account (restart onboarding)", onClick: async () => {
-        if (!confirm("Reset YOUR account's planner data and restart onboarding? Other accounts signed in on this device are not affected.")) return;
-        try {
-          const { client, userId, lkey } = ctx.current || {};
-          if (lkey) { try { localStorage.removeItem(lkey); } catch(_){} }
-          if (client && userId) {
-            try { await client.from("user_data").delete().eq("user_id", userId).eq("key", "planner"); } catch(_){}
-          }
-        } catch(_){}
-        location.reload();
-      } },
       { icon: XIcon, color: PLUM, title: "Sign out", onClick: () => { closeMenu(); signOutFromShell(); } },
     ]},
   ];
@@ -672,6 +662,9 @@ function App() {
 
       {appearanceOpen && (
         <AppearanceModal d={d} setD={setD} onClose={() => setAppearanceOpen(false)} />
+      )}
+      {accountOpen && (
+        <AccountSettingsModal d={d} setD={setD} ctx={ctx} onClose={() => setAccountOpen(false)} onOpenAppearance={() => { setAccountOpen(false); setAppearanceOpen(true); }} />
       )}
       {addCatsOpen && (
         <AddCategoriesModal d={d} setD={setD} onClose={() => setAddCatsOpen(false)} />
@@ -987,6 +980,123 @@ function Onboarding({ initialName, onFinish }) {
               : step === totalSteps - 1 ? "Save & Launch"
               : "Next \u2192"
             }</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccountSettingsModal({ d, setD, ctx, onClose, onOpenAppearance }) {
+  const [name, setName] = useState(d.username || "");
+  const [savingName, setSavingName] = useState(false);
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const [msg, setMsg] = useState(null); // {kind:'ok'|'err', text}
+  const flash = (kind, text) => { setMsg({ kind, text }); setTimeout(() => setMsg(null), 3500); };
+
+  const saveName = () => {
+    const n = name.trim();
+    if (!n) { flash("err", "Display name can't be empty."); return; }
+    setSavingName(true);
+    setD({ ...d, username: n });
+    try { const c = ctx?.current?.client; c && c.auth.updateUser({ data: { display_name: n } }); } catch (_) {}
+    setSavingName(false);
+    flash("ok", "Display name updated.");
+  };
+
+  const changePw = async () => {
+    if (pw1.length < 8) { flash("err", "Password must be at least 8 characters."); return; }
+    if (pw1 !== pw2) { flash("err", "Passwords don't match."); return; }
+    setPwBusy(true);
+    try {
+      const c = ctx?.current?.client;
+      if (!c) throw new Error("Not signed in");
+      const { error } = await c.auth.updateUser({ password: pw1 });
+      if (error) throw error;
+      setPw1(""); setPw2("");
+      flash("ok", "Password updated.");
+    } catch (e) { flash("err", e?.message || "Could not update password."); }
+    setPwBusy(false);
+  };
+
+  const resetData = async () => {
+    if (!confirm("Reset YOUR planner data and restart onboarding? Other accounts signed in on this device are not affected.")) return;
+    try {
+      const { client, userId, lkey } = ctx?.current || {};
+      if (lkey) { try { localStorage.removeItem(lkey); } catch (_) {} }
+      if (client && userId) { try { await client.from("user_data").delete().eq("user_id", userId).eq("key", "planner"); } catch (_) {} }
+    } catch (_) {}
+    location.reload();
+  };
+
+  const deleteAccount = () => {
+    if (!confirm("Permanently delete your account and all data? This cannot be undone.")) return;
+    if (!confirm("Are you absolutely sure? Type OK on the next prompt to confirm.")) return;
+    const v = prompt("Type DELETE to confirm:");
+    if (v !== "DELETE") return;
+    try { window.parent && window.parent.postMessage({ type: "shell:deleteAccount" }, "*"); } catch (_) {}
+  };
+
+  const labelStyle = { fontSize: 10, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED, marginBottom: 6, display: "block" };
+  const inputStyle = { width: "100%", border: `1px solid ${LINE}`, background: CARD, color: TEXT, padding: "10px 12px", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none" };
+  const sectionStyle = { padding: "16px 0", borderTop: `1px solid ${LINE}` };
+  const primaryBtn = { background: INK, color: PAPER, border: "none", borderRadius: 999, padding: "8px 16px", fontSize: 11, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer" };
+  const subtleBtn = { background: "transparent", color: TEXT, border: `1px solid ${LINE}`, borderRadius: 999, padding: "8px 16px", fontSize: 11, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer" };
+  const dangerBtn = { background: "transparent", color: "#B23A48", border: `1px solid #B23A48`, borderRadius: 999, padding: "8px 16px", fontSize: 11, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer" };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 150, background: "rgba(22,32,28,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 18, maxWidth: 480, width: "100%", padding: 22, maxHeight: "90vh", overflow: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <h2 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, fontWeight: 600, margin: 0, color: TEXT }}>Account settings</h2>
+          <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", color: MUTED, fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+        {msg && (
+          <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: msg.kind === "ok" ? SAGE + "22" : "#B23A4822", color: msg.kind === "ok" ? TEXT : "#B23A48" }}>{msg.text}</div>
+        )}
+
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Display name</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={name} onChange={(e) => setName(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+            <button onClick={saveName} disabled={savingName} className="pop" style={primaryBtn}>Save</button>
+          </div>
+        </div>
+
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Appearance</label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <div style={{ fontSize: 13, color: MUTED }}>Theme, colors and accent.</div>
+            <button onClick={onOpenAppearance} className="pop" style={subtleBtn}>Open</button>
+          </div>
+        </div>
+
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Change password</label>
+          <div style={{ display: "grid", gap: 8 }}>
+            <input type="password" placeholder="New password" value={pw1} onChange={(e) => setPw1(e.target.value)} style={inputStyle} />
+            <input type="password" placeholder="Confirm new password" value={pw2} onChange={(e) => setPw2(e.target.value)} style={inputStyle} />
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={changePw} disabled={pwBusy} className="pop" style={primaryBtn}>{pwBusy ? "Updating…" : "Update password"}</button>
+            </div>
+          </div>
+        </div>
+
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Reset planner data</label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <div style={{ fontSize: 13, color: MUTED }}>Clears your data and restarts onboarding. Account stays active.</div>
+            <button onClick={resetData} className="pop" style={subtleBtn}>Reset</button>
+          </div>
+        </div>
+
+        <div style={{ ...sectionStyle, borderTop: `1px solid #B23A4844` }}>
+          <label style={{ ...labelStyle, color: "#B23A48" }}>Danger zone</label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <div style={{ fontSize: 13, color: MUTED }}>Permanently delete your account and all data.</div>
+            <button onClick={deleteAccount} className="pop" style={dangerBtn}>Delete account</button>
           </div>
         </div>
       </div>
