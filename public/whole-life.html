@@ -1760,7 +1760,7 @@ function DayOverviewBody({ d, setD, dt, go, onNavigate }) {
 // ─── Dashboard calendar with integrated Day / Week side panel ───────
 function DashboardCalendar({ d, setD, now, go, isDesktop }) {
   const [selectedDay, setSelectedDay] = useState(new Date(now));
-  const [view, setView] = useState("day"); // "day" | "week"
+  const [view, setView] = useState(d.dashboardDefault === "week" ? "week" : "day"); // "day" | "week"
   return (
     <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "minmax(0, 1.05fr) minmax(0, 1fr)" : "1fr", gap: isDesktop ? 16 : 14, alignItems: "start" }}>
       <TrackerCalendar d={d} setD={setD} now={now} go={go} isDesktop={isDesktop} selectedDay={selectedDay} onSelectDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
