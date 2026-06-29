@@ -1287,6 +1287,12 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
 
       {/* Today list moved into the calendar side panel — see SidePanel */}
 
+      <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
+        <TimeBlocking d={d} setD={setD} now={now} isDesktop={isDesktop} />
+      </section>
+
+
+
 
 
       {(cats.money || cats.health) && (
