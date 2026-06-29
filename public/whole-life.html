@@ -189,8 +189,20 @@ const THEMES = {
     BLUE: "#6E6E6E", PLUM: "#4A4A4A" },
 };
 const THEME_KEYS = ["sage", "plum", "ocean", "sunset", "mono"];
-function applyTheme(name) {
-  const t = THEMES[name] || THEMES.sage;
+// Build a custom theme from a small {accent, surface} pair, layered on top of sage.
+function buildCustomTheme(custom) {
+  const base = THEMES.sage;
+  const c = custom || {};
+  return { ...base, label: "Custom", desc: "Your colors",
+    AMBER: c.AMBER || base.AMBER, MIST: c.MIST || base.MIST,
+    SAGE: c.AMBER || base.SAGE, SAGEHI: c.AMBER || base.SAGEHI };
+}
+function resolveTheme(name, customDoc) {
+  if (name === "custom") return buildCustomTheme(customDoc);
+  return THEMES[name] || THEMES.sage;
+}
+function applyTheme(name, customDoc) {
+  const t = resolveTheme(name, customDoc);
   INK = t.INK; TEXT = t.TEXT; PAPER = t.PAPER; CARD = t.CARD;
   SAGE = t.SAGE; SAGEHI = t.SAGEHI; LINE = t.LINE;
   MUTED = t.MUTED; AMBER = t.AMBER; MIST = t.MIST;
