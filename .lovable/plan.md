@@ -1,98 +1,53 @@
-# New User Flow — 6-Step Onboarding + Not Today
+## Goal
+Prevent cross-device clobbers on the planner JSON doc by adding optimistic concurrency control. Last-write-wins becomes "last-write-wins only if you saw the latest version."
 
-All work happens in `public/whole-life.html`. No backend or route changes.
+## Scope
+All changes in `public/whole-life.html`, inside `useCloudSync`. No new tables, no schema migration, no realtime, no per-field merge.
 
-## 1. Rewrite the `Onboarding` component (6 steps)
+## Where `version` lives
+Store `version` as an integer field *inside* the JSON `value` of the existing `user_data` row (same row, key `"planner"`). Keeping it in JSON means zero schema change and the check is atomic with the write.
 
-Replace the current 4-step flow with the six screens you described. Keep the existing progress dots, footer Back/Next, and "Skip — set me up with everything" shortcut.
+- New docs start at `version: 1`.
+- Existing docs without `version` are treated as `version: 0` on first load and bumped to `1` on next save.
 
-**Step 1 — Welcome / Why**
-- Headline: "Welcome to Daily HQ."
-- Body: your "You're in the right place… calm hub designed for reality, not just productivity." copy.
-- Single CTA: "Let's begin →".
+## Load behavior
+1. Read the row as today.
+2. Stash `loadedVersion = cloud.value.version ?? 0` on `ctx.current`.
+3. Local/cloud reconciliation stays as-is for now; whichever value is chosen, record its `version` as `loadedVersion`. (If local-newer wins and gets pushed, that push goes through the new conditional-save path so it still respects the server version.)
 
-**Step 2 — What matters (focus areas)**
-- Multi-select chips, at least one required.
-- Six options mapped to existing space data so no data model changes:
-  - Self-Care → seeds Health
-  - Budget / Finances → seeds Money
-  - Work Tasks → seeds Plan (To Do)
-  - Habit Tracking → seeds Plan (Habits)
-  - Important Dates → seeds Plan (calendar/events)
-  - Trackers → seeds Trackers
-- Internally collapses to the existing `enabledCategories { money, health, plan, trackers }` so `applyCategorySeeds` keeps working untouched. Picking Work Tasks, Habit Tracking, or Important Dates all enable `plan`; we remember the granular picks in a new `d.focusAreas` array so the dashboard can show only the chosen Plan widgets.
-- Helper line: "Select what matters right now. You can change these anytime in settings."
+## Save behavior (replaces current debounced upsert)
+On each debounced save:
+1. Compute `nextDoc = { ...d, version: loadedVersion + 1 }`.
+2. Conditional write — switch from `upsert` to:
+   ```
+   client.from("user_data")
+     .update({ value: nextDoc, updated_at })
+     .eq("user_id", userId).eq("key", "planner")
+     .eq("value->>version", String(loadedVersion))
+     .select("value")
+   ```
+   The `value->>version` equality is the optimistic lock: the row only updates if the stored version still matches what we loaded.
+3. If `data.length === 1` → success. Set `loadedVersion = nextDoc.version`. Write local cache with the new version included.
+4. If `data.length === 0` → conflict (another device wrote). Run the rejection flow.
+5. First-time insert (no row yet) keeps using `upsert` with `version: 1`; subsequent saves use the conditional update path.
 
-**Step 3 — Dashboard layout**
-- Two radio cards: "Day at a glance" / "Week at a glance".
-- Saves to `d.dashboardDefault` ("day" | "week"); the side-panel tab opens to that view on load.
+## Rejection flow (conflict resolution)
+1. Snapshot the user's current in-memory doc as `localDoc` (the in-flight edit).
+2. Refetch the row: `select("value").eq(...).maybeSingle()` → `serverDoc`, `serverVersion = serverDoc.version ?? 0`.
+3. Merge: start from `serverDoc`, then overlay `localDoc` on top at the **top-level key** granularity (shallow `{ ...serverDoc, ...localDoc, version: serverVersion }`). This preserves unrelated top-level sections the other device added (e.g. a med dose) while keeping the user's in-flight edit for sections they touched. This is the agreed "re-apply the user's current edit on top" — not per-field merge, just shallow overlay so the in-flight edit isn't lost.
+4. Set `loadedVersion = serverVersion`, `setD(mergedDoc)` (with `skipNextSave` guard set so the merge itself doesn't trigger an immediate save), then schedule a fresh save which will write `version: serverVersion + 1` through the conditional path.
+5. If the immediate re-save also conflicts (rare double-conflict), repeat once; after 2 failed attempts, log a warning and leave local state as-is so the next user edit retries.
 
-**Step 4 — The "Not Today" permission**
-- Pure informational screen with the exact copy you supplied.
-- CTA: "Got it →". Sets `d.notTodayIntroSeen = true`.
+## Local cache
+`localStorage` payload becomes `{ value, updated_at, version }`. On boot, if local-wins, push uses the conditional path with `loadedVersion` derived from the cloud read so it still respects the server lock.
 
-**Step 5 — First task (quick win)**
-- One text input + "Add Task" button.
-- If filled, pushes one row into `d.todos` for today's date, marked source `"onboarding"`. Skippable.
-
-**Step 6 — Final polish (account & preferences)**
-- Three fields:
-  - Name for dashboard (pre-filled from step 1 if we keep the name there, or asked here — see note below).
-  - Color theme: keeps the 5 existing themes plus a new **"Custom"** tile with two color inputs (Accent + Surface). When chosen, `d.theme = "custom"` and `d.customTheme = { AMBER, MIST }`; `applyTheme` extends to read from `d.customTheme` when name is `"custom"`.
-  - Timezone: native `<select>` populated from `Intl.supportedValuesOf('timeZone')` with browser default pre-selected; saved to `d.timezone`.
-- CTA: "Save & Launch".
-
-**Naming**: move the name input from old step 1 into step 6 ("your name for the dashboard"), so step 1 stays pure welcome copy.
-
-## 2. Custom color theme support
-
-- Extend `THEMES` registry with a `custom` entry that returns values from `d.customTheme` (fallback to sage).
-- `applyTheme(name, customOverride)` accepts the override so the live preview in the picker works without saving.
-- Add the same Custom tile in `AppearanceModal` so users can change it later.
-
-## 3. "Not Today" on To-Do rows
-
-- Add a small "Not today" link/button on each todo row in:
-  - the dashboard Today list,
-  - the side-panel Day view,
-  - the To Do page rows.
-- Behavior: sets the todo's `date` to tomorrow (local), leaves `done = false`, does not touch the existing rollover-on-load logic. Adds a tiny toast/inline note "Moved to tomorrow".
-- Distinct from delete (which removes) and complete (which checks off).
-
-## 4. Dashboard respects new prefs
-
-- Side panel opens on `d.dashboardDefault` instead of always Day.
-- Today list only renders Plan widgets that match `d.focusAreas` (e.g. hides Habits section if only "Work Tasks" was picked under Plan).
-- All gating falls back to "show everything" when `focusAreas` is empty (existing users).
-
-## 5. Migration safety
-
-- Existing-user migration block (lines ~407–420) stays. New fields default: `focusAreas = []`, `dashboardDefault = "day"`, `notTodayIntroSeen = true`, `customTheme = null`, `timezone = browser default`.
-- `Reset account` button continues to work — clears all the new fields too since they live on the same doc.
+## Out of scope (explicit)
+- No realtime subscriptions.
+- No deep/per-field merge — shallow top-level overlay only, as the minimum needed to "re-apply the in-flight edit."
+- No new tables or migrations.
+- No UI for conflict notifications (silent recovery; `console.warn` on conflict for debugging).
 
 ## Technical notes
-
-- Single file edit: `public/whole-life.html`.
-- New constants near `SPACE_PRESETS`: `FOCUS_AREAS` (6 items with `id`, `label`, `blurb`, `mapsTo: "money"|"health"|"plan"|"trackers"`, `planTag?`).
-- Doc shape additions:
-  ```js
-  focusAreas: [],            // e.g. ["selfcare","budget","habits"]
-  dashboardDefault: "day",   // "day" | "week"
-  notTodayIntroSeen: false,
-  customTheme: null,         // { AMBER, MIST } when theme === "custom"
-  timezone: "",              // IANA string
-  ```
-- `totalSteps = 6`; update `stepTitles` and per-step `canNext` rules (step 2 requires ≥1 focus area; step 6 requires non-empty name).
-- "Not today" handler:
-  ```js
-  const bumpToTomorrow = (todoId) => {
-    const t = new Date(); t.setDate(t.getDate() + 1);
-    const iso = t.toISOString().slice(0,10);
-    setD(p => ({ ...p, todos: p.todos.map(x => x.id === todoId ? { ...x, date: iso } : x) }));
-  };
-  ```
-
-## Out of scope (call out, don't build)
-
-- Drag-and-drop dashboard reorder in step 3 — using radio cards instead since the dashboard currently has a fixed layout. Flag as a follow-up if you want true rearrangement.
-- Server-side timezone usage — only stored for now; existing date logic continues to use the browser.
+- Supabase JS supports `.eq("value->>version", "N")` for JSONB field equality in a conditional update. Comparing as text is fine since we control both sides.
+- `.select()` on the update returns affected rows; length 0 = lock failed, length 1 = success. This is the standard OCC pattern and avoids a read-then-write race.
+- Debounce stays at 800ms. The conflict flow runs inside the same debounced callback.
