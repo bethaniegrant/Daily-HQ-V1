@@ -663,6 +663,9 @@ function App() {
       {appearanceOpen && (
         <AppearanceModal d={d} setD={setD} onClose={() => setAppearanceOpen(false)} />
       )}
+      {accountOpen && (
+        <AccountSettingsModal d={d} setD={setD} ctx={ctx} onClose={() => setAccountOpen(false)} onOpenAppearance={() => { setAccountOpen(false); setAppearanceOpen(true); }} />
+      )}
       {addCatsOpen && (
         <AddCategoriesModal d={d} setD={setD} onClose={() => setAddCatsOpen(false)} />
       )}
