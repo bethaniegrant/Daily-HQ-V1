@@ -1,103 +1,98 @@
-# New User Onboarding Flow
+# New User Flow — 6-Step Onboarding + Not Today
 
-Goal: when someone opens the app for the first time, walk them through a short, friendly setup so the dashboard and Spaces feel personalized — never overwhelming.
+All work happens in `public/whole-life.html`. No backend or route changes.
 
-## The flow (4 quick steps + skip)
+## 1. Rewrite the `Onboarding` component (6 steps)
 
-A full-screen welcome overlay inside the planner (`public/whole-life.html`), shown only when `d.onboarded !== true`.
+Replace the current 4-step flow with the six screens you described. Keep the existing progress dots, footer Back/Next, and "Skip — set me up with everything" shortcut.
 
-```text
-Step 1 — Welcome / Username
-  "What should we call you?"   [ text input ]
-  → saves to d.username
+**Step 1 — Welcome / Why**
+- Headline: "Welcome to Daily HQ."
+- Body: your "You're in the right place… calm hub designed for reality, not just productivity." copy.
+- Single CTA: "Let's begin →".
 
-Step 2 — Pick your color theme
-  5 named palettes, big swatches, one click to select:
-    • Sage     (current default — earthy green/cream)
-    • Plum     (warm berry + cream)
-    • Ocean    (slate blue + sand)
-    • Sunset   (terracotta + warm neutrals)
-    • Mono     (charcoal + ivory, minimal)
-  → saves to d.theme
+**Step 2 — What matters (focus areas)**
+- Multi-select chips, at least one required.
+- Six options mapped to existing space data so no data model changes:
+  - Self-Care → seeds Health
+  - Budget / Finances → seeds Money
+  - Work Tasks → seeds Plan (To Do)
+  - Habit Tracking → seeds Plan (Habits)
+  - Important Dates → seeds Plan (calendar/events)
+  - Trackers → seeds Trackers
+- Internally collapses to the existing `enabledCategories { money, health, plan, trackers }` so `applyCategorySeeds` keeps working untouched. Picking Work Tasks, Habit Tracking, or Important Dates all enable `plan`; we remember the granular picks in a new `d.focusAreas` array so the dashboard can show only the chosen Plan widgets.
+- Helper line: "Select what matters right now. You can change these anytime in settings."
 
-Step 3 — Pick your spaces
-  Four cards, multi-select, at least one required:
-    • Money    — Budget, Savings, Debt
-    • Health   — Meds, Workouts, Meals, Mood
-    • Plan     — Habits, To-Do, Goals, Calendar
-    • Trackers — Custom trackers (books, sleep, journal…)
-  Each card lists what's included so they know what they're choosing.
-  → saves to d.enabledCategories
+**Step 3 — Dashboard layout**
+- Two radio cards: "Day at a glance" / "Week at a glance".
+- Saves to `d.dashboardDefault` ("day" | "week"); the side-panel tab opens to that view on load.
 
-Step 4 — You're set
-  Short recap + two buttons:
-    [ Enter Daily HQ ]      → marks d.onboarded = true
-    [ Skip — set me up with everything ]   (visible from step 1 onward)
-       → enables all categories, applies Sage theme, seeds full example data,
-         marks d.onboarded = true
-```
+**Step 4 — The "Not Today" permission**
+- Pure informational screen with the exact copy you supplied.
+- CTA: "Got it →". Sets `d.notTodayIntroSeen = true`.
 
-Back/Next on every step. Progress dots at the top. ESC and outside-clicks disabled so the user can't half-finish.
+**Step 5 — First task (quick win)**
+- One text input + "Add Task" button.
+- If filled, pushes one row into `d.todos` for today's date, marked source `"onboarding"`. Skippable.
 
-## What changes on the dashboard
+**Step 6 — Final polish (account & preferences)**
+- Three fields:
+  - Name for dashboard (pre-filled from step 1 if we keep the name there, or asked here — see note below).
+  - Color theme: keeps the 5 existing themes plus a new **"Custom"** tile with two color inputs (Accent + Surface). When chosen, `d.theme = "custom"` and `d.customTheme = { AMBER, MIST }`; `applyTheme` extends to read from `d.customTheme` when name is `"custom"`.
+  - Timezone: native `<select>` populated from `Intl.supportedValuesOf('timeZone')` with browser default pre-selected; saved to `d.timezone`.
+- CTA: "Save & Launch".
 
-After onboarding the dashboard shows only:
-1. Header with greeting using `d.username` ("Good morning, Bethanie")
-2. **Today's intention** (the existing intention input, promoted to the top)
-3. **Calendar with Daily / Weekly glance** (existing `DashboardCalendar`)
-4. **Today's notes** widget (the one we just added)
-5. **Jump back in** tiles — filtered to only the categories the user enabled
-6. **Monthly goals** snapshot
-7. **Explore** — hidden until the user adds more spaces
+**Naming**: move the name input from old step 1 into step 6 ("your name for the dashboard"), so step 1 stays pure welcome copy.
 
-The current "Jump back in" tiles render conditionally based on `d.enabledCategories`. So if they only picked Plan + Trackers, Money/Health tiles don't appear until they enable those later.
+## 2. Custom color theme support
 
-## What changes in Spaces / menu
+- Extend `THEMES` registry with a `custom` entry that returns values from `d.customTheme` (fallback to sage).
+- `applyTheme(name, customOverride)` accepts the override so the live preview in the picker works without saving.
+- Add the same Custom tile in `AppearanceModal` so users can change it later.
 
-- The Spaces hub and the side menu drawer only show category sections (Money / Health / Plan) for categories the user enabled.
-- Disabled categories appear at the bottom of Spaces as a single **"+ Add more spaces"** card that re-opens a mini version of Step 3 so they can flip categories on later.
-- Toggling a category on seeds its example blocks (same data the current `seed()` produces, but scoped to that category).
+## 3. "Not Today" on To-Do rows
 
-## Seed data, restructured
+- Add a small "Not today" link/button on each todo row in:
+  - the dashboard Today list,
+  - the side-panel Day view,
+  - the To Do page rows.
+- Behavior: sets the todo's `date` to tomorrow (local), leaves `done = false`, does not touch the existing rollover-on-load logic. Adds a tiny toast/inline note "Moved to tomorrow".
+- Distinct from delete (which removes) and complete (which checks off).
 
-Refactor `seed()` in `public/whole-life.html` so example data is grouped by category and only the chosen categories get populated:
+## 4. Dashboard respects new prefs
 
-- `seedMoney()`   → pay, budget, savingsGoals
-- `seedHealth()`  → meds, workouts, meals, mood block
-- `seedPlan()`    → habitDefs, goals, yearlyGoals, To Do block, intention
-- `seedTrackers()` → one example tracker block (rated list: "Books I'm reading")
+- Side panel opens on `d.dashboardDefault` instead of always Day.
+- Today list only renders Plan widgets that match `d.focusAreas` (e.g. hides Habits section if only "Work Tasks" was picked under Plan).
+- All gating falls back to "show everything" when `focusAreas` is empty (existing users).
 
-`seed()` becomes: start from empty shell + apply seeds for enabled categories. "Skip" applies all four.
+## 5. Migration safety
 
-## Color theming
+- Existing-user migration block (lines ~407–420) stays. New fields default: `focusAreas = []`, `dashboardDefault = "day"`, `notTodayIntroSeen = true`, `customTheme = null`, `timezone = browser default`.
+- `Reset account` button continues to work — clears all the new fields too since they live on the same doc.
 
-Each theme is a small token map (`INK`, `PAPER`, `CARD`, `SAGE`/accent, `AMBER`/highlight, `MIST`, `LINE`, `MUTED`, `TEXT`, `PLUM`, `BLUE`). Today these are top-level consts in `public/whole-life.html`. We move them into a `THEMES` object and a `getTheme(name)` helper, then thread the active theme through the React tree via a `ThemeContext` so components read colors from context instead of module-level consts. Default = Sage = current values, so existing screens render identically.
+## Technical notes
 
-Theme is changeable later from a new **Settings → Appearance** menu item.
+- Single file edit: `public/whole-life.html`.
+- New constants near `SPACE_PRESETS`: `FOCUS_AREAS` (6 items with `id`, `label`, `blurb`, `mapsTo: "money"|"health"|"plan"|"trackers"`, `planTag?`).
+- Doc shape additions:
+  ```js
+  focusAreas: [],            // e.g. ["selfcare","budget","habits"]
+  dashboardDefault: "day",   // "day" | "week"
+  notTodayIntroSeen: false,
+  customTheme: null,         // { AMBER, MIST } when theme === "custom"
+  timezone: "",              // IANA string
+  ```
+- `totalSteps = 6`; update `stepTitles` and per-step `canNext` rules (step 2 requires ≥1 focus area; step 6 requires non-empty name).
+- "Not today" handler:
+  ```js
+  const bumpToTomorrow = (todoId) => {
+    const t = new Date(); t.setDate(t.getDate() + 1);
+    const iso = t.toISOString().slice(0,10);
+    setD(p => ({ ...p, todos: p.todos.map(x => x.id === todoId ? { ...x, date: iso } : x) }));
+  };
+  ```
 
-## Data model additions
+## Out of scope (call out, don't build)
 
-Stored inside the existing `d` blob (same persistence path as everything else):
-
-```text
-d.onboarded         : boolean
-d.username          : string
-d.theme             : "sage" | "plum" | "ocean" | "sunset" | "mono"
-d.enabledCategories : { money: bool, health: bool, plan: bool, trackers: bool }
-```
-
-Existing users (already have data, no `onboarded` flag) are auto-marked `onboarded: true` with all categories enabled and the Sage theme — they never see the flow.
-
-## Files touched
-
-- `public/whole-life.html`
-  - New: `Onboarding` component + `THEMES` map + `ThemeContext` + `seedMoney/Health/Plan/Trackers` helpers
-  - Edit: `seed()`, top-level color consts → context reads, dashboard sections (greeting, intention placement, tile filter, hide Explore when empty), Spaces hub (filter + "Add more spaces" card), menu drawer (filter), data loader (set onboarded=true for existing users)
-
-No backend/schema changes — everything lives in the existing user data blob.
-
-## Out of scope (ask before adding)
-
-- Saving theme/username to a server-side profile table
-- Per-space onboarding (e.g. "tell us your monthly income now")
-- A guided tour with tooltips on the actual dashboard
+- Drag-and-drop dashboard reorder in step 3 — using radio cards instead since the dashboard currently has a fixed layout. Flag as a follow-up if you want true rearrangement.
+- Server-side timezone usage — only stored for now; existing date logic continues to use the browser.
