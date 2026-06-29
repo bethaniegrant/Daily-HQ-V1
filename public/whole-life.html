@@ -1912,12 +1912,15 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
           {taskRows.length > 0 && (
             <div style={{ display: "grid", gap: 6 }}>
               {taskRows.map((r) => (
-                <label key={r.kind + ":" + r.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "4px 2px" }}>
+                <div key={r.kind + ":" + r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 2px" }}>
                   <input type="checkbox" checked={r.done} onChange={r.onToggle} style={{ width: 16, height: 16, accentColor: r.color, cursor: "pointer", flexShrink: 0 }} />
                   <span style={{ width: 5, height: 5, borderRadius: 999, background: r.color, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 13, color: r.done ? MUTED : TEXT, textDecoration: r.done ? "line-through" : "none", fontWeight: 500 }}>{r.label}</span>
+                  <span onClick={r.onToggle} style={{ flex: 1, fontSize: 13, color: r.done ? MUTED : TEXT, textDecoration: r.done ? "line-through" : "none", fontWeight: 500, cursor: "pointer" }}>{r.label}</span>
+                  {r.kind === "todo" && !r.done && r.onBump && (
+                    <button onClick={r.onBump} className="pop" title="Move to tomorrow" style={{ background: "none", border: `1px solid ${AMBER}`, color: AMBER, borderRadius: 999, padding: "2px 8px", fontSize: 9, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer" }}>Not today</button>
+                  )}
                   <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED }}>{r.kind === "habit" ? "Habit" : "To do"}</span>
-                </label>
+                </div>
               ))}
             </div>
           )}
