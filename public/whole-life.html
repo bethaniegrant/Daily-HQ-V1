@@ -3422,13 +3422,16 @@ function EventRow({ e, isToday, editing, onEdit, onChange, onDelete, fmtDate }) 
     </div>
   );
 }
-function BlockRow({ type, item, accent, onToggle, onText, onTime, onDelete }) {
+function BlockRow({ type, item, accent, onToggle, onText, onTime, onDelete, onBump }) {
   return (
     <div style={{ background: type === "checklist" && item.done ? INK : CARD, color: type === "checklist" && item.done ? PAPER : INK, border: `1px solid ${LINE}`, borderRadius: 4, padding: "13px 14px", display: "flex", alignItems: "center", gap: 12 }}>
       {type === "checklist" && <div className="pop" onClick={onToggle} style={{ width: 26, height: 26, borderRadius: 3, border: `2px solid ${item.done ? SAGEHI : accent}`, background: item.done ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{item.done && <CheckIcon c={INK} s={15} />}</div>}
       {type === "list" && <div style={{ width: 7, height: 7, borderRadius: "50%", background: accent, flexShrink: 0 }} />}
       {type === "schedule" && <input value={item.time} onChange={(e) => onTime(e.target.value)} placeholder="9:00" style={{ width: 58, border: "none", background: accent + "14", borderRadius: 3, padding: "7px 8px", fontSize: 13, fontWeight: 700, color: accent, textAlign: "center", flexShrink: 0 }} />}
       <input value={item.t} onChange={(e) => onText(e.target.value)} placeholder={type === "schedule" ? "What's happening" : "Add an item"} style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none", color: "inherit", textDecoration: type === "checklist" && item.done ? "line-through" : "none" }} />
+      {type === "checklist" && !item.done && onBump && (
+        <button onClick={onBump} className="pop" title="Move to tomorrow" style={{ background: "none", border: `1px solid ${accent}`, color: accent, borderRadius: 999, padding: "3px 9px", fontSize: 9, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer", flexShrink: 0 }}>Not today</button>
+      )}
       <div className="pop" onClick={onDelete} style={{ cursor: "pointer", opacity: .4, flexShrink: 0 }}><XIcon c={type === "checklist" && item.done ? PAPER : MUTED} s={15} /></div>
     </div>
   );
