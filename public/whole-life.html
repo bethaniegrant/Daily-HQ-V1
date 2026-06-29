@@ -444,6 +444,8 @@ function App() {
         dashboardDefault: p.dashboardDefault || "day",
         notTodayIntroSeen: p.notTodayIntroSeen !== false,
         enabledCategories: { money: true, health: true, plan: true, trackers: true, ...(p.enabledCategories || {}) },
+        timeBlockingEnabled: p.timeBlockingEnabled === true,
+        timeBlocks: p.timeBlocks || {},
       }));
     }
   }, [synced, displayName]); // eslint-disable-line
