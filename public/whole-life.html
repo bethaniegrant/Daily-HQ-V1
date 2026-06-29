@@ -413,6 +413,7 @@ function App() {
   const { ready: synced, displayName } = useCloudSync(d, setD);
   const [themeVersion, setThemeVersion] = useState(0);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [addCatsOpen, setAddCatsOpen] = useState(false);
 
   // Apply theme tokens whenever the chosen theme changes.
