@@ -189,8 +189,20 @@ const THEMES = {
     BLUE: "#6E6E6E", PLUM: "#4A4A4A" },
 };
 const THEME_KEYS = ["sage", "plum", "ocean", "sunset", "mono"];
-function applyTheme(name) {
-  const t = THEMES[name] || THEMES.sage;
+// Build a custom theme from a small {accent, surface} pair, layered on top of sage.
+function buildCustomTheme(custom) {
+  const base = THEMES.sage;
+  const c = custom || {};
+  return { ...base, label: "Custom", desc: "Your colors",
+    AMBER: c.AMBER || base.AMBER, MIST: c.MIST || base.MIST,
+    SAGE: c.AMBER || base.SAGE, SAGEHI: c.AMBER || base.SAGEHI };
+}
+function resolveTheme(name, customDoc) {
+  if (name === "custom") return buildCustomTheme(customDoc);
+  return THEMES[name] || THEMES.sage;
+}
+function applyTheme(name, customDoc) {
+  const t = resolveTheme(name, customDoc);
   INK = t.INK; TEXT = t.TEXT; PAPER = t.PAPER; CARD = t.CARD;
   SAGE = t.SAGE; SAGEHI = t.SAGEHI; LINE = t.LINE;
   MUTED = t.MUTED; AMBER = t.AMBER; MIST = t.MIST;
@@ -227,6 +239,11 @@ const emptyDoc = () => ({
   onboarded: false,
   username: "",
   theme: "sage",
+  customTheme: null,
+  focusAreas: [],
+  dashboardDefault: "day",
+  notTodayIntroSeen: false,
+  timezone: (typeof Intl !== "undefined" && Intl.DateTimeFormat) ? Intl.DateTimeFormat().resolvedOptions().timeZone : "",
   enabledCategories: { money: false, health: false, plan: false, trackers: false },
   pay: "",
   budget: { fixed: [], variable: [], savings: [], debt: [] },
@@ -400,9 +417,9 @@ function App() {
 
   // Apply theme tokens whenever the chosen theme changes.
   useEffect(() => {
-    applyTheme(d.theme || "sage");
+    applyTheme(d.theme || "sage", d.customTheme);
     setThemeVersion((v) => v + 1);
-  }, [d.theme]);
+  }, [d.theme, d.customTheme]);
 
   // Existing-user migration: if their doc has data but no onboarded flag, mark them done.
   useEffect(() => {
@@ -420,6 +437,9 @@ function App() {
         onboarded: true,
         username: p.username || displayName || "",
         theme: p.theme || "sage",
+        focusAreas: p.focusAreas || [],
+        dashboardDefault: p.dashboardDefault || "day",
+        notTodayIntroSeen: p.notTodayIntroSeen !== false,
         enabledCategories: { money: true, health: true, plan: true, trackers: true, ...(p.enabledCategories || {}) },
       }));
     }
@@ -659,8 +679,31 @@ function App() {
       {synced && d.onboarded !== true && (
         <Onboarding initialName={displayName} onFinish={(payload) => {
           setD((p) => {
-            const base = { ...p, onboarded: true, username: payload.username || "", theme: payload.theme || "sage" };
-            return applyCategorySeeds(base, payload.categories);
+            const base = {
+              ...p,
+              onboarded: true,
+              username: payload.username || "",
+              theme: payload.theme || "sage",
+              customTheme: payload.customTheme || null,
+              focusAreas: payload.focusAreas || [],
+              dashboardDefault: payload.dashboardDefault || "day",
+              notTodayIntroSeen: true,
+              timezone: payload.timezone || p.timezone || "",
+            };
+            const seeded = applyCategorySeeds(base, payload.categories);
+            // Optional first task from step 5
+            if (payload.firstTask && payload.firstTask.trim()) {
+              const blocks = seeded.blocks || [];
+              let todoIdx = blocks.findIndex((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
+              const today = dayKey(new Date());
+              const newItem = { t: payload.firstTask.trim(), done: false, date: today };
+              if (todoIdx >= 0) {
+                seeded.blocks = blocks.map((b, i) => i === todoIdx ? { ...b, items: [newItem, ...(b.items || [])] } : b);
+              } else {
+                seeded.blocks = [...blocks, { id: uid(), type: "checklist", category: "plan", title: "To Do", items: [newItem] }];
+              }
+            }
+            return seeded;
           });
         }} />
       )}
@@ -676,139 +719,258 @@ const SPACE_PRESETS = [
   { id: "trackers", label: "Trackers", blurb: "Custom logs for anything you care about",  includes: ["Books", "Sleep", "Journal", "Ratings"] },
 ];
 
+// 6 focus areas shown in step 2. mapsTo collapses to existing category seeds.
+const FOCUS_AREAS = [
+  { id: "selfcare",  label: "Self-Care",       blurb: "Meds, mood, workouts, meals", mapsTo: "health" },
+  { id: "budget",    label: "Budget / Finances", blurb: "Bills, spending, savings",   mapsTo: "money" },
+  { id: "work",      label: "Work Tasks",      blurb: "To-do list for your day",     mapsTo: "plan" },
+  { id: "habits",    label: "Habit Tracking",  blurb: "Daily check-ins",             mapsTo: "plan" },
+  { id: "dates",     label: "Important Dates", blurb: "Events on your calendar",     mapsTo: "plan" },
+  { id: "trackers",  label: "Trackers",        blurb: "Books, sleep, journal, more", mapsTo: "trackers" },
+];
+
 function Onboarding({ initialName, onFinish }) {
   const [step, setStep] = useState(0);
   const [username, setUsername] = useState((initialName || "").split(" ")[0] || "");
   const [theme, setTheme] = useState("sage");
-  const [cats, setCats] = useState({ money: false, health: false, plan: false, trackers: false });
-  const totalSteps = 4;
+  const [customTheme, setCustomTheme] = useState({ AMBER: "#C4717A", MIST: "#B8C8D8" });
+  const [focusIds, setFocusIds] = useState([]);
+  const [dashboardDefault, setDashboardDefault] = useState("day");
+  const [firstTask, setFirstTask] = useState("");
+  const [timezone, setTimezone] = useState(
+    (typeof Intl !== "undefined" && Intl.DateTimeFormat) ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC"
+  );
+  const totalSteps = 6;
 
-  const toggleCat = (id) => setCats((c) => ({ ...c, [id]: !c[id] }));
-  const anyPicked = Object.values(cats).some(Boolean);
-  const canNext = step === 0 ? (username.trim().length > 0) : step === 2 ? anyPicked : true;
+  const toggleFocus = (id) => setFocusIds((arr) => arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
+  const categories = (() => {
+    const c = { money: false, health: false, plan: false, trackers: false };
+    focusIds.forEach((id) => { const f = FOCUS_AREAS.find((x) => x.id === id); if (f) c[f.mapsTo] = true; });
+    return c;
+  })();
+
+  // step validations
+  const canNext = (
+    step === 0 ? true :
+    step === 1 ? focusIds.length > 0 :
+    step === 2 ? !!dashboardDefault :
+    step === 3 ? true :
+    step === 4 ? true :
+    step === 5 ? username.trim().length > 0 :
+    true
+  );
+
+  const tzOptions = (() => {
+    try { if (Intl.supportedValuesOf) return Intl.supportedValuesOf("timeZone"); } catch (_) {}
+    return [timezone, "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Paris", "Asia/Tokyo"];
+  })();
 
   const finish = (skipAll) => {
     onFinish({
       username: username.trim() || "Friend",
       theme: skipAll ? "sage" : theme,
-      categories: skipAll ? { money: true, health: true, plan: true, trackers: true } : cats,
+      customTheme: !skipAll && theme === "custom" ? customTheme : null,
+      categories: skipAll ? { money: true, health: true, plan: true, trackers: true } : categories,
+      focusAreas: skipAll ? FOCUS_AREAS.map((f) => f.id) : focusIds,
+      dashboardDefault: skipAll ? "day" : dashboardDefault,
+      timezone,
+      firstTask: skipAll ? "" : firstTask,
     });
   };
 
-  const next = () => {
-    if (step < totalSteps - 1) setStep(step + 1);
-    else finish(false);
-  };
+  const next = () => { if (step < totalSteps - 1) setStep(step + 1); else finish(false); };
   const back = () => step > 0 && setStep(step - 1);
 
-  const stepTitles = ["Welcome", "Pick your palette", "Choose your spaces", "All set"];
+  const stepTitles = ["Welcome to Daily HQ.", "What's most important right now?", "Choose your dashboard view.", "The \u2018Not Today\u2019 permission.", "Let's create your first task.", "Almost there."];
+
+  // Live preview of theme tokens during step 3
+  const previewT = resolveTheme(theme, customTheme);
+
+  const sectionLabel = { fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", fontWeight: 700, color: MUTED, marginBottom: 8 };
+  const cardBtn = (active) => ({
+    padding: "14px 16px", background: CARD,
+    border: `2px solid ${active ? AMBER : LINE}`, borderRadius: 14,
+    cursor: "pointer", textAlign: "left", width: "100%",
+  });
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, background: PAPER, overflow: "auto", fontFamily: "'Outfit', -apple-system, sans-serif", color: TEXT }}>
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "max(28px, env(safe-area-inset-top)) 22px 40px", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <div style={{ maxWidth: 580, margin: "0 auto", padding: "max(28px, env(safe-area-inset-top)) 22px 40px", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         {/* Progress dots */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 24 }}>
           {Array.from({ length: totalSteps }, (_, i) => (
-            <span key={i} style={{ width: i === step ? 28 : 8, height: 8, borderRadius: 999, background: i <= step ? AMBER : LINE, transition: "all .2s" }} />
+            <span key={i} style={{ width: i === step ? 26 : 8, height: 8, borderRadius: 999, background: i <= step ? AMBER : LINE, transition: "all .2s" }} />
           ))}
         </div>
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Step {step + 1} of {totalSteps}</div>
-          <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 36, fontWeight: 600, lineHeight: 1.1, letterSpacing: "-.02em", margin: "6px 0 6px", color: TEXT }}>{stepTitles[step]}</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 34, fontWeight: 600, lineHeight: 1.15, letterSpacing: "-.02em", margin: "6px 0 6px", color: TEXT }}>{stepTitles[step]}</h1>
         </div>
 
         <div style={{ flex: 1 }}>
+          {/* STEP 1 — Welcome */}
           {step === 0 && (
             <div>
-              <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.5, margin: "0 0 22px" }}>
-                Welcome to <span style={{ color: AMBER, fontWeight: 700 }}>Daily HQ</span> — a calm space for the bits of life that matter to you. We'll get you set up in 4 quick steps.
+              <p style={{ fontSize: 16, color: TEXT, lineHeight: 1.6, margin: "0 0 14px" }}>
+                You're in the right place. We're here to help you manage your life without the noise.
               </p>
-              <label style={{ display: "block", fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", fontWeight: 700, color: MUTED, marginBottom: 8 }}>What should we call you?</label>
+              <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.6, margin: "0 0 14px" }}>
+                This is your calm hub &mdash; designed for reality, not just productivity. Let's get you set up, simply.
+              </p>
+            </div>
+          )}
+
+          {/* STEP 2 — Focus areas */}
+          {step === 1 && (
+            <div>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
+                Select your core focus areas. You can change these anytime in settings. <strong style={{ color: TEXT }}>Pick at least one.</strong>
+              </p>
+              <div style={{ display: "grid", gap: 10 }}>
+                {FOCUS_AREAS.map((f) => {
+                  const active = focusIds.includes(f.id);
+                  return (
+                    <button key={f.id} onClick={() => toggleFocus(f.id)} className="pop" style={{ ...cardBtn(active), display: "flex", gap: 12, alignItems: "center" }}>
+                      <span style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${active ? AMBER : LINE}`, background: active ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {active && <CheckIcon c="#fff" s={12} />}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 17, color: TEXT }}>{f.label}</div>
+                        <div style={{ fontSize: 13, color: MUTED }}>{f.blurb}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3 — Dashboard layout */}
+          {step === 2 && (
+            <div>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>What do you want to see first when you log in?</p>
+              <div style={{ display: "grid", gap: 10 }}>
+                {[
+                  { id: "day", label: "Day at a glance", desc: "Today's tasks, meds, events, and bills front and center." },
+                  { id: "week", label: "Week at a glance", desc: "The full seven days, with quick-add on every day." },
+                ].map((opt) => {
+                  const active = dashboardDefault === opt.id;
+                  return (
+                    <button key={opt.id} onClick={() => setDashboardDefault(opt.id)} className="pop" style={{ ...cardBtn(active), display: "flex", gap: 12, alignItems: "center" }}>
+                      <span style={{ width: 22, height: 22, borderRadius: 999, border: `2px solid ${active ? AMBER : LINE}`, background: active ? AMBER : "transparent", flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 17, color: TEXT }}>{opt.label}</div>
+                        <div style={{ fontSize: 13, color: MUTED }}>{opt.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4 — Not Today permission */}
+          {step === 3 && (
+            <div>
+              <p style={{ fontSize: 16, color: TEXT, lineHeight: 1.6, margin: "0 0 14px" }}>
+                Life doesn't always go to plan. If you fall behind or have a heavy day, use the <strong style={{ color: AMBER }}>'Not Today'</strong> button to clear a task without guilt.
+              </p>
+              <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.6, margin: "0 0 18px" }}>
+                It's built in, because you're human. Tasks moved with 'Not Today' simply slide to tomorrow's list &mdash; no shame, no streak broken.
+              </p>
+              <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: "14px 16px", display: "flex", gap: 12, alignItems: "center" }}>
+                <span style={{ width: 14, height: 14, borderRadius: 4, border: `2px solid ${AMBER}`, flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 14, color: TEXT, fontWeight: 600 }}>Take a walk</span>
+                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", color: AMBER, border: `1px solid ${AMBER}`, padding: "4px 8px", borderRadius: 999 }}>Not today \u2192</span>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5 — First task */}
+          {step === 4 && (
+            <div>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
+                Enter one thing you want to get done today. No pressure, just one. (Optional &mdash; you can skip.)
+              </p>
+              <label style={sectionLabel}>Your first task</label>
               <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Your first name"
+                value={firstTask}
+                onChange={(e) => setFirstTask(e.target.value)}
+                placeholder="e.g. Make my bed"
                 autoFocus
-                style={{ width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 12, background: CARD, padding: "14px 16px", fontSize: 18, fontFamily: "'DM Serif Display',serif", color: TEXT, outline: "none" }}
+                style={{ width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 12, background: CARD, padding: "14px 16px", fontSize: 17, color: TEXT, outline: "none" }}
               />
             </div>
           )}
 
-          {step === 1 && (
+          {/* STEP 6 — Final polish */}
+          {step === 5 && (
             <div>
-              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>Pick a color theme. You can change this any time from Account → Appearance.</p>
-              <div style={{ display: "grid", gap: 10 }}>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 22px" }}>
+                Quick settings: your name, a color theme, and your timezone.
+              </p>
+
+              <label style={sectionLabel}>Name for your dashboard</label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Your first name"
+                style={{ width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 12, background: CARD, padding: "12px 14px", fontSize: 16, color: TEXT, outline: "none", marginBottom: 18 }}
+              />
+
+              <label style={sectionLabel}>Color theme</label>
+              <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
                 {THEME_KEYS.map((k) => {
                   const t = THEMES[k];
                   const active = theme === k;
                   return (
-                    <button key={k} onClick={() => setTheme(k)} className="pop" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: t.CARD, border: `2px solid ${active ? t.AMBER : t.LINE}`, borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
-                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                    <button key={k} onClick={() => setTheme(k)} className="pop" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: t.CARD, border: `2px solid ${active ? t.AMBER : t.LINE}`, borderRadius: 12, cursor: "pointer", textAlign: "left" }}>
+                      <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                         {[t.INK, t.SAGE, t.AMBER, t.MIST].map((c, i) => (
-                          <span key={i} style={{ width: 22, height: 36, borderRadius: 4, background: c }} />
+                          <span key={i} style={{ width: 16, height: 26, borderRadius: 3, background: c }} />
                         ))}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: t.TEXT }}>{t.label}</div>
-                        <div style={{ fontSize: 12, color: t.MUTED }}>{t.desc}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 15, color: t.TEXT }}>{t.label}</div>
                       </div>
-                      {active && <span style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 800, color: t.AMBER }}>Selected</span>}
+                      {active && <span style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: t.AMBER }}>Selected</span>}
                     </button>
                   );
                 })}
+                {/* Custom theme tile */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: previewT.CARD, border: `2px solid ${theme === "custom" ? previewT.AMBER : LINE}`, borderRadius: 12 }}>
+                  <button onClick={() => setTheme("custom")} className="pop" style={{ display: "flex", gap: 3, flexShrink: 0, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                    {[previewT.INK, previewT.SAGE, previewT.AMBER, previewT.MIST].map((c, i) => (
+                      <span key={i} style={{ width: 16, height: 26, borderRadius: 3, background: c }} />
+                    ))}
+                  </button>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 15, color: previewT.TEXT }}>Custom</div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: MUTED }}>
+                        Accent <input type="color" value={customTheme.AMBER} onChange={(e) => { setCustomTheme((c) => ({ ...c, AMBER: e.target.value })); setTheme("custom"); }} style={{ width: 26, height: 22, border: "none", padding: 0, background: "none", cursor: "pointer" }} />
+                      </label>
+                      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: MUTED }}>
+                        Mist <input type="color" value={customTheme.MIST} onChange={(e) => { setCustomTheme((c) => ({ ...c, MIST: e.target.value })); setTheme("custom"); }} style={{ width: 26, height: 22, border: "none", padding: 0, background: "none", cursor: "pointer" }} />
+                      </label>
+                    </div>
+                  </div>
+                  {theme === "custom" && <span style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: previewT.AMBER }}>Selected</span>}
+                </div>
               </div>
-            </div>
-          )}
 
-          {step === 2 && (
-            <div>
-              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
-                Pick the spaces that matter to you most. You can add more later from the menu. <strong style={{ color: TEXT }}>At least one required.</strong>
-              </p>
-              <div style={{ display: "grid", gap: 10 }}>
-                {SPACE_PRESETS.map((sp) => {
-                  const active = !!cats[sp.id];
-                  return (
-                    <button key={sp.id} onClick={() => toggleCat(sp.id)} className="pop" style={{ padding: "14px 16px", background: CARD, border: `2px solid ${active ? AMBER : LINE}`, borderRadius: 14, cursor: "pointer", textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                      <span style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${active ? AMBER : LINE}`, background: active ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-                        {active && <CheckIcon c="#fff" s={12} />}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: TEXT }}>{sp.label}</div>
-                        <div style={{ fontSize: 13, color: MUTED, marginBottom: 6 }}>{sp.blurb}</div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {sp.includes.map((inc) => (
-                            <span key={inc} style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: MUTED, border: `1px solid ${LINE}`, padding: "3px 7px", borderRadius: 999 }}>{inc}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div>
-              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
-                You're all set, <span style={{ color: AMBER, fontWeight: 700 }}>{username.trim() || "friend"}</span>. Here's what's loaded in:
-              </p>
-              <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: "16px 18px", display: "grid", gap: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}><span style={{ color: MUTED }}>Theme</span><strong>{THEMES[theme].label}</strong></div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}><span style={{ color: MUTED }}>Your spaces</span><strong>{SPACE_PRESETS.filter((sp) => cats[sp.id]).map((sp) => sp.label).join(", ") || "None"}</strong></div>
-              </div>
-              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "16px 0 0" }}>
-                Your dashboard will keep it minimal — just the calendar, today's intention, and your daily/weekly glance to start.
-              </p>
+              <label style={sectionLabel}>Timezone</label>
+              <select value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 12, background: CARD, padding: "12px 14px", fontSize: 14, color: TEXT, outline: "none" }}>
+                {tzOptions.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+              </select>
             </div>
           )}
         </div>
 
         {/* Footer controls */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, gap: 10 }}>
-          <button onClick={() => finish(true)} className="pop" style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer", padding: "8px 4px" }}>Skip — set me up with everything</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, gap: 10, flexWrap: "wrap" }}>
+          <button onClick={() => finish(true)} className="pop" style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer", padding: "8px 4px" }}>Skip &mdash; set me up with everything</button>
           <div style={{ display: "flex", gap: 8 }}>
             {step > 0 && (
               <button onClick={back} className="pop" style={{ background: "none", border: `1.5px solid ${LINE}`, color: TEXT, borderRadius: 999, padding: "10px 18px", fontSize: 11, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: "pointer" }}>Back</button>
@@ -818,7 +980,13 @@ function Onboarding({ initialName, onFinish }) {
               disabled={!canNext}
               className="pop"
               style={{ background: canNext ? AMBER : LINE, border: "none", color: canNext ? "#fff" : MUTED, borderRadius: 999, padding: "10px 22px", fontSize: 11, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: canNext ? "pointer" : "not-allowed" }}
-            >{step === totalSteps - 1 ? "Enter Daily HQ" : "Next →"}</button>
+            >{
+              step === 0 ? "Let's begin \u2192"
+              : step === 3 ? "Got it \u2192"
+              : step === 4 ? (firstTask.trim() ? "Add task \u2192" : "Skip \u2192")
+              : step === totalSteps - 1 ? "Save & Launch"
+              : "Next \u2192"
+            }</button>
           </div>
         </div>
       </div>
@@ -828,6 +996,9 @@ function Onboarding({ initialName, onFinish }) {
 
 function AppearanceModal({ d, setD, onClose }) {
   const cur = d.theme || "sage";
+  const ct = d.customTheme || { AMBER: "#C4717A", MIST: "#B8C8D8" };
+  const preview = resolveTheme("custom", ct);
+  const setCustom = (patch) => setD({ ...d, theme: "custom", customTheme: { ...ct, ...patch } });
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 150, background: "rgba(22,32,28,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 18, maxWidth: 440, width: "100%", padding: 22, maxHeight: "90vh", overflow: "auto" }}>
@@ -854,6 +1025,22 @@ function AppearanceModal({ d, setD, onClose }) {
               </button>
             );
           })}
+          {/* Custom theme */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", background: preview.CARD, border: `2px solid ${cur === "custom" ? preview.AMBER : LINE}`, borderRadius: 12 }}>
+            <button onClick={() => setD({ ...d, theme: "custom", customTheme: ct })} className="pop" style={{ display: "flex", gap: 4, flexShrink: 0, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+              {[preview.INK, preview.SAGE, preview.AMBER, preview.MIST].map((c, i) => (
+                <span key={i} style={{ width: 18, height: 30, borderRadius: 3, background: c }} />
+              ))}
+            </button>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 16, color: preview.TEXT }}>Custom</div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 4 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: preview.MUTED }}>Accent <input type="color" value={ct.AMBER} onChange={(e) => setCustom({ AMBER: e.target.value })} style={{ width: 28, height: 22, border: "none", padding: 0, background: "none", cursor: "pointer" }} /></label>
+                <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: preview.MUTED }}>Mist <input type="color" value={ct.MIST} onChange={(e) => setCustom({ MIST: e.target.value })} style={{ width: 28, height: 22, border: "none", padding: 0, background: "none", cursor: "pointer" }} /></label>
+              </div>
+            </div>
+            {cur === "custom" && <span style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: preview.AMBER }}>Active</span>}
+          </div>
         </div>
       </div>
     </div>
@@ -1576,7 +1763,7 @@ function DayOverviewBody({ d, setD, dt, go, onNavigate }) {
 // ─── Dashboard calendar with integrated Day / Week side panel ───────
 function DashboardCalendar({ d, setD, now, go, isDesktop }) {
   const [selectedDay, setSelectedDay] = useState(new Date(now));
-  const [view, setView] = useState("day"); // "day" | "week"
+  const [view, setView] = useState(d.dashboardDefault === "week" ? "week" : "day"); // "day" | "week"
   return (
     <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "minmax(0, 1.05fr) minmax(0, 1fr)" : "1fr", gap: isDesktop ? 16 : 14, alignItems: "start" }}>
       <TrackerCalendar d={d} setD={setD} now={now} go={go} isDesktop={isDesktop} selectedDay={selectedDay} onSelectDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
@@ -1630,6 +1817,18 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     ...d,
     blocks: d.blocks.map((b) => b.id === blockId ? { ...b, events: (b.events || []).filter((e) => e.id !== eventId) } : b),
   });
+  // Not Today: bump a todo to tomorrow (keeps it un-done, doesn't delete).
+  const bumpTodo = (idx) => {
+    if (!todoBlock) return;
+    const t = new Date(dt); t.setDate(t.getDate() + 1);
+    const nextDate = `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
+    setD({
+      ...d,
+      blocks: d.blocks.map((b) => b.id === todoBlock.id
+        ? { ...b, items: (b.items || []).map((it, j) => j === idx ? { ...it, date: nextDate, done: false } : it) }
+        : b),
+    });
+  };
 
   const bundle = dayBundle(d, dt);
 
@@ -1637,7 +1836,7 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     ...d.habitDefs.map((h) => ({ kind: "habit", id: h.id, label: h.n, done: !!habitChecks[h.id], color: SAGE, onToggle: () => toggleHabit(h.id) })),
     ...oneoffs.map((o) => ({ kind: "habit", id: o.id, label: o.n, done: !!o.done, color: SAGE, onToggle: () => toggleOneoff(o.id) })),
   ] : [];
-  const todoRows = bundle.todos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx) }));
+  const todoRows = bundle.todos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx), onBump: () => bumpTodo(it.idx) }));
   const medRows = isToday ? d.meds.flatMap((m) => {
     const t = medTimes(m);
     const arr = medDoseArr((d.medChecks[tk] || {})[m.id], t);
@@ -1716,12 +1915,15 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
           {taskRows.length > 0 && (
             <div style={{ display: "grid", gap: 6 }}>
               {taskRows.map((r) => (
-                <label key={r.kind + ":" + r.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "4px 2px" }}>
+                <div key={r.kind + ":" + r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 2px" }}>
                   <input type="checkbox" checked={r.done} onChange={r.onToggle} style={{ width: 16, height: 16, accentColor: r.color, cursor: "pointer", flexShrink: 0 }} />
                   <span style={{ width: 5, height: 5, borderRadius: 999, background: r.color, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 13, color: r.done ? MUTED : TEXT, textDecoration: r.done ? "line-through" : "none", fontWeight: 500 }}>{r.label}</span>
+                  <span onClick={r.onToggle} style={{ flex: 1, fontSize: 13, color: r.done ? MUTED : TEXT, textDecoration: r.done ? "line-through" : "none", fontWeight: 500, cursor: "pointer" }}>{r.label}</span>
+                  {r.kind === "todo" && !r.done && r.onBump && (
+                    <button onClick={r.onBump} className="pop" title="Move to tomorrow" style={{ background: "none", border: `1px solid ${AMBER}`, color: AMBER, borderRadius: 999, padding: "2px 8px", fontSize: 9, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer" }}>Not today</button>
+                  )}
                   <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED }}>{r.kind === "habit" ? "Habit" : "To do"}</span>
-                </label>
+                </div>
               ))}
             </div>
           )}
@@ -1875,6 +2077,14 @@ function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
     ...d,
     blocks: d.blocks.map((b) => b.id === blockId ? { ...b, items: (b.items || []).map((it, j) => j === idx ? { ...it, done: !it.done } : it) } : b),
   });
+  const bumpTodoOnDay = (blockId, idx, fromDate) => {
+    const t = new Date(fromDate); t.setDate(t.getDate() + 1);
+    const nextDate = `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
+    setD({
+      ...d,
+      blocks: d.blocks.map((b) => b.id === blockId ? { ...b, items: (b.items || []).map((it, j) => j === idx ? { ...it, date: nextDate, done: false } : it) } : b),
+    });
+  };
   
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1914,10 +2124,13 @@ function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
                   </div>
                 ))}
                 {b.todos.slice(0, 4).map((t) => (
-                  <label key={"t" + t.idx} style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", fontSize: 12 }}>
-                    <input type="checkbox" checked={!!t.done} onChange={() => toggleTodoOnDay(t.blockId, t.idx)} style={{ width: 13, height: 13, accentColor: AMBER, flexShrink: 0 }} />
+                  <div key={"t" + t.idx} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+                    <input type="checkbox" checked={!!t.done} onChange={() => toggleTodoOnDay(t.blockId, t.idx)} style={{ width: 13, height: 13, accentColor: AMBER, flexShrink: 0, cursor: "pointer" }} />
                     <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: isToday ? (t.done ? MIST : PAPER) : (t.done ? MUTED : TEXT), textDecoration: t.done ? "line-through" : "none" }}>{t.t || "Untitled"}</span>
-                  </label>
+                    {!t.done && (
+                      <button onClick={() => bumpTodoOnDay(t.blockId, t.idx, dt)} className="pop" title="Move to tomorrow" style={{ background: "none", border: `1px solid ${isToday ? MIST : AMBER}`, color: isToday ? MIST : AMBER, borderRadius: 999, padding: "1px 6px", fontSize: 8, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer", flexShrink: 0 }}>Not today</button>
+                    )}
+                  </div>
                 ))}
                 {addFor === k && <QuickAddInline d={d} setD={setD} date={k} dark={isToday} onDone={() => setAddFor(null)} />}
               </div>
@@ -3110,7 +3323,7 @@ function BlockEditor({ block, d, setD, back }) {
           <textarea value={block.items} onChange={(e) => update({ items: e.target.value })} placeholder="Start writing…" style={{ width: "100%", minHeight: 320, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", fontSize: 16, lineHeight: 1.6, background: CARD, resize: "vertical", color: TEXT }} />
         ) : (
           <>
-            <div style={{ display: "grid", gap: 9 }}>{block.items.map((it, i) => <BlockRow key={i} type={block.type} item={it} accent={meta.color} onToggle={() => setItem(i, { done: !it.done })} onText={(v) => setItem(i, { t: v })} onTime={(v) => setItem(i, { time: v })} onDelete={() => delItem(i)} />)}</div>
+            <div style={{ display: "grid", gap: 9 }}>{block.items.map((it, i) => <BlockRow key={i} type={block.type} item={it} accent={meta.color} onToggle={() => setItem(i, { done: !it.done })} onText={(v) => setItem(i, { t: v })} onTime={(v) => setItem(i, { time: v })} onDelete={() => delItem(i)} onBump={() => { const base = it.date ? new Date(it.date) : new Date(); base.setDate(base.getDate() + 1); const nd = `${base.getFullYear()}-${base.getMonth() + 1}-${base.getDate()}`; setItem(i, { date: nd, done: false }); }} />)}</div>
             <button onClick={addItem} style={addBtn}>+ Add {block.type === "schedule" ? "a time" : "an item"}</button>
           </>
         )}
@@ -3212,13 +3425,16 @@ function EventRow({ e, isToday, editing, onEdit, onChange, onDelete, fmtDate }) 
     </div>
   );
 }
-function BlockRow({ type, item, accent, onToggle, onText, onTime, onDelete }) {
+function BlockRow({ type, item, accent, onToggle, onText, onTime, onDelete, onBump }) {
   return (
     <div style={{ background: type === "checklist" && item.done ? INK : CARD, color: type === "checklist" && item.done ? PAPER : INK, border: `1px solid ${LINE}`, borderRadius: 4, padding: "13px 14px", display: "flex", alignItems: "center", gap: 12 }}>
       {type === "checklist" && <div className="pop" onClick={onToggle} style={{ width: 26, height: 26, borderRadius: 3, border: `2px solid ${item.done ? SAGEHI : accent}`, background: item.done ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{item.done && <CheckIcon c={INK} s={15} />}</div>}
       {type === "list" && <div style={{ width: 7, height: 7, borderRadius: "50%", background: accent, flexShrink: 0 }} />}
       {type === "schedule" && <input value={item.time} onChange={(e) => onTime(e.target.value)} placeholder="9:00" style={{ width: 58, border: "none", background: accent + "14", borderRadius: 3, padding: "7px 8px", fontSize: 13, fontWeight: 700, color: accent, textAlign: "center", flexShrink: 0 }} />}
       <input value={item.t} onChange={(e) => onText(e.target.value)} placeholder={type === "schedule" ? "What's happening" : "Add an item"} style={{ border: "none", flex: 1, fontSize: 15, fontWeight: 500, background: "none", color: "inherit", textDecoration: type === "checklist" && item.done ? "line-through" : "none" }} />
+      {type === "checklist" && !item.done && onBump && (
+        <button onClick={onBump} className="pop" title="Move to tomorrow" style={{ background: "none", border: `1px solid ${accent}`, color: accent, borderRadius: 999, padding: "3px 9px", fontSize: 9, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer", flexShrink: 0 }}>Not today</button>
+      )}
       <div className="pop" onClick={onDelete} style={{ cursor: "pointer", opacity: .4, flexShrink: 0 }}><XIcon c={type === "checklist" && item.done ? PAPER : MUTED} s={15} /></div>
     </div>
   );
