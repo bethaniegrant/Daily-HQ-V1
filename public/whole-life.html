@@ -262,6 +262,8 @@ const emptyDoc = () => ({
   intention: "",
   dayNotes: {},
   blocks: [],
+  timeBlockingEnabled: false,
+  timeBlocks: {},
 });
 
 const seedMoney = (doc) => ({
@@ -442,6 +444,8 @@ function App() {
         dashboardDefault: p.dashboardDefault || "day",
         notTodayIntroSeen: p.notTodayIntroSeen !== false,
         enabledCategories: { money: true, health: true, plan: true, trackers: true, ...(p.enabledCategories || {}) },
+        timeBlockingEnabled: p.timeBlockingEnabled === true,
+        timeBlocks: p.timeBlocks || {},
       }));
     }
   }, [synced, displayName]); // eslint-disable-line
@@ -1283,6 +1287,12 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
 
       {/* Today list moved into the calendar side panel — see SidePanel */}
 
+      <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
+        <TimeBlocking d={d} setD={setD} now={now} isDesktop={isDesktop} />
+      </section>
+
+
+
 
 
       {(cats.money || cats.health) && (
@@ -1878,6 +1888,164 @@ function DashboardCalendar({ d, setD, now, go, isDesktop }) {
     <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "minmax(0, 1.05fr) minmax(0, 1fr)" : "1fr", gap: isDesktop ? 16 : 14, alignItems: "start" }}>
       <TrackerCalendar d={d} setD={setD} now={now} go={go} isDesktop={isDesktop} selectedDay={selectedDay} onSelectDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
       <SidePanel d={d} setD={setD} go={go} isDesktop={isDesktop} selectedDay={selectedDay} setSelectedDay={setSelectedDay} view={view} setView={setView} />
+    </div>
+  );
+}
+
+// ─── Daily Time Blocking (opt-in) ───────────────────────────────────
+const TB_COLORS = ["#B8C8D8", "#C4717A", "#7d8a5e", "#9a7e8e", "#E0C097", "#7a8a93"];
+const tbNextStart = (blocks) => {
+  if (!blocks || !blocks.length) {
+    const h = new Date().getHours();
+    return `${String(h).padStart(2, "0")}:00`;
+  }
+  const sorted = [...blocks].sort((a, b) => (a.end || "").localeCompare(b.end || ""));
+  return sorted[sorted.length - 1].end || "09:00";
+};
+const tbAddHour = (hhmm) => {
+  if (!hhmm || !hhmm.includes(":")) return "10:00";
+  const [h, m] = hhmm.split(":").map(Number);
+  const nh = Math.min(23, (h || 0) + 1);
+  return `${String(nh).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
+};
+
+function TimeBlocking({ d, setD, now, isDesktop }) {
+  const [day, setDay] = useState(new Date(now));
+  const [editingId, setEditingId] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const dk = dayKey(day);
+  const blocks = (d.timeBlocks && d.timeBlocks[dk]) || [];
+  const sorted = [...blocks].sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+
+  const setBlocks = (next) => setD({ ...d, timeBlocks: { ...(d.timeBlocks || {}), [dk]: next } });
+  const shiftDay = (delta) => { const nd = new Date(day); nd.setDate(nd.getDate() + delta); setDay(nd); setEditingId(null); setAdding(false); };
+  const jumpToday = () => { setDay(new Date(now)); setEditingId(null); setAdding(false); };
+
+  const saveBlock = (b) => {
+    const exists = sorted.find((x) => x.id === b.id);
+    if (exists) setBlocks(blocks.map((x) => x.id === b.id ? b : x));
+    else setBlocks([...blocks, b]);
+  };
+  const deleteBlock = (id) => setBlocks(blocks.filter((x) => x.id !== id));
+
+  const enabled = d.timeBlockingEnabled === true;
+  if (!enabled) {
+    return (
+      <div style={{ background: CARD, border: `1px dashed ${LINE}`, borderRadius: 14, padding: isDesktop ? "20px 24px" : "16px 18px", display: "flex", flexDirection: isDesktop ? "row" : "column", gap: 14, alignItems: isDesktop ? "center" : "flex-start", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 6 }}>New · Optional</div>
+          <div style={{ fontSize: 16, fontFamily: "'DM Serif Display',serif", color: TEXT, marginBottom: 4 }}>Daily Time Blocking</div>
+          <div style={{ fontSize: 13, color: MUTED }}>Map out your day in gentle blocks — focus, breaks, anything you choose.</div>
+        </div>
+        <button onClick={() => setD({ ...d, timeBlockingEnabled: true })} className="pop" style={{ background: SAGE, color: CARD, border: "none", borderRadius: 999, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", letterSpacing: ".04em" }}>Enable time blocking</button>
+      </div>
+    );
+  }
+
+  const dateLabel = day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const isToday = dayKey(day) === dayKey(new Date(now));
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: isDesktop ? "20px 24px 18px" : "16px 16px 14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Time blocking</div>
+        <button onClick={() => setD({ ...d, timeBlockingEnabled: false })} title="Turn off time blocking" style={{ background: "transparent", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600 }}>Hide</button>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginBottom: 16 }}>
+        <button onClick={() => shiftDay(-1)} aria-label="Previous day" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 32, height: 32, cursor: "pointer", color: TEXT, fontSize: 16, lineHeight: 1 }}>‹</button>
+        <button onClick={jumpToday} style={{ background: "transparent", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 8px" }}>
+          <div style={{ fontSize: 18, fontFamily: "'DM Serif Display',serif", color: TEXT }}>{dateLabel}</div>
+          {!isToday && <div style={{ fontSize: 10, letterSpacing: ".18em", textTransform: "uppercase", color: SAGE, fontWeight: 700, marginTop: 2 }}>Tap for today</div>}
+        </button>
+        <button onClick={() => shiftDay(1)} aria-label="Next day" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, width: 32, height: 32, cursor: "pointer", color: TEXT, fontSize: 16, lineHeight: 1 }}>›</button>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {sorted.length === 0 && !adding && (
+          <div style={{ fontSize: 13, color: MUTED, textAlign: "center", padding: "18px 0" }}>No blocks yet for this day.</div>
+        )}
+        {sorted.map((b) => (
+          editingId === b.id
+            ? <TBEditor key={b.id} initial={b} onSave={(nb) => { saveBlock(nb); setEditingId(null); }} onCancel={() => setEditingId(null)} onDelete={() => { deleteBlock(b.id); setEditingId(null); }} keepOpen={false} />
+            : <TBRow key={b.id} block={b} onEdit={() => { setEditingId(b.id); setAdding(false); }} onDelete={() => deleteBlock(b.id)} />
+        ))}
+
+        {adding ? (
+          <TBEditor
+            initial={{ id: uid(), label: "", start: tbNextStart(sorted), end: tbAddHour(tbNextStart(sorted)), color: TB_COLORS[sorted.length % TB_COLORS.length] }}
+            onSave={(nb) => { saveBlock(nb); /* keep editor open with next start prefilled */ setAdding(true); }}
+            onCancel={() => setAdding(false)}
+            keepOpen
+            resetSignal={sorted.length}
+          />
+        ) : (
+          <button onClick={() => { setAdding(true); setEditingId(null); }} className="pop" style={{ marginTop: 4, background: PAPER, border: `1px dashed ${LINE}`, borderRadius: 10, padding: "10px 12px", color: SAGE, fontWeight: 600, fontSize: 13, cursor: "pointer", textAlign: "left" }}>+ Add block</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TBRow({ block, onEdit, onDelete }) {
+  return (
+    <div className="pop" style={{ display: "flex", alignItems: "stretch", gap: 10, background: PAPER, borderRadius: 10, overflow: "hidden", border: `1px solid ${LINE}` }}>
+      <div style={{ width: 4, background: block.color || MIST }} />
+      <button onClick={onEdit} style={{ flex: 1, background: "transparent", border: "none", textAlign: "left", padding: "10px 4px", cursor: "pointer", display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{fmtTime(block.start)} – {fmtTime(block.end)}</div>
+        <div style={{ fontSize: 14, color: TEXT, fontFamily: "'DM Serif Display',serif" }}>{block.label || "(untitled)"}</div>
+      </button>
+      <button onClick={onDelete} aria-label="Delete block" style={{ background: "transparent", border: "none", color: MUTED, padding: "0 14px", cursor: "pointer", fontSize: 16 }}>×</button>
+    </div>
+  );
+}
+
+function TBEditor({ initial, onSave, onCancel, onDelete, keepOpen, resetSignal }) {
+  const [label, setLabel] = useState(initial.label || "");
+  const [start, setStart] = useState(initial.start || "09:00");
+  const [end, setEnd] = useState(initial.end || "10:00");
+  const [color, setColor] = useState(initial.color || TB_COLORS[0]);
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (inputRef.current) inputRef.current.focus(); }, []);
+  // When parent signals a new "next add" slot, reset the form to those defaults.
+  useEffect(() => {
+    if (!keepOpen) return;
+    setLabel("");
+    setStart(initial.start || "09:00");
+    setEnd(initial.end || "10:00");
+    setColor(initial.color || TB_COLORS[0]);
+    if (inputRef.current) inputRef.current.focus();
+  }, [resetSignal]); // eslint-disable-line
+
+  const commit = () => {
+    const trimmed = (label || "").trim();
+    if (!trimmed) return;
+    onSave({ id: initial.id, label: trimmed, start, end, color });
+  };
+  const onKey = (e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } if (e.key === "Escape") onCancel && onCancel(); };
+
+  return (
+    <div style={{ display: "flex", alignItems: "stretch", gap: 10, background: PAPER, borderRadius: 10, overflow: "hidden", border: `1.5px solid ${SAGE}` }}>
+      <div style={{ width: 4, background: color }} />
+      <div style={{ flex: 1, padding: "10px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <input ref={inputRef} value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={onKey} placeholder="What's this block?" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 8, background: CARD, padding: "8px 10px", fontSize: 14, color: TEXT, fontFamily: "inherit", outline: "none" }} />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <input type="time" value={start} onChange={(e) => setStart(e.target.value)} onKeyDown={onKey} style={{ border: `1px solid ${LINE}`, borderRadius: 8, background: CARD, padding: "6px 8px", fontSize: 13, color: TEXT, fontFamily: "inherit" }} />
+          <span style={{ color: MUTED, fontSize: 12 }}>to</span>
+          <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} onKeyDown={onKey} style={{ border: `1px solid ${LINE}`, borderRadius: 8, background: CARD, padding: "6px 8px", fontSize: 13, color: TEXT, fontFamily: "inherit" }} />
+          <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+            {TB_COLORS.map((c) => (
+              <button key={c} onClick={() => setColor(c)} aria-label={"Color " + c} style={{ width: 20, height: 20, borderRadius: 999, background: c, border: color === c ? `2px solid ${TEXT}` : `1px solid ${LINE}`, cursor: "pointer", padding: 0 }} />
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
+          {onDelete && <button onClick={onDelete} style={{ background: "transparent", border: "none", color: MUTED, fontSize: 12, cursor: "pointer", marginRight: "auto" }}>Delete</button>}
+          <button onClick={onCancel} style={{ background: "transparent", border: `1px solid ${LINE}`, borderRadius: 999, padding: "6px 14px", fontSize: 12, color: MUTED, cursor: "pointer" }}>{keepOpen ? "Done" : "Cancel"}</button>
+          <button onClick={commit} style={{ background: SAGE, color: CARD, border: "none", borderRadius: 999, padding: "6px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{keepOpen ? "Save & add next" : "Save"}</button>
+        </div>
+      </div>
     </div>
   );
 }
