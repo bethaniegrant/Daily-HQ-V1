@@ -2074,6 +2074,14 @@ function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
     ...d,
     blocks: d.blocks.map((b) => b.id === blockId ? { ...b, items: (b.items || []).map((it, j) => j === idx ? { ...it, done: !it.done } : it) } : b),
   });
+  const bumpTodoOnDay = (blockId, idx, fromDate) => {
+    const t = new Date(fromDate); t.setDate(t.getDate() + 1);
+    const nextDate = `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
+    setD({
+      ...d,
+      blocks: d.blocks.map((b) => b.id === blockId ? { ...b, items: (b.items || []).map((it, j) => j === idx ? { ...it, date: nextDate, done: false } : it) } : b),
+    });
+  };
   
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
