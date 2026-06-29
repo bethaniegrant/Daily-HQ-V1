@@ -2121,10 +2121,13 @@ function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
                   </div>
                 ))}
                 {b.todos.slice(0, 4).map((t) => (
-                  <label key={"t" + t.idx} style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", fontSize: 12 }}>
-                    <input type="checkbox" checked={!!t.done} onChange={() => toggleTodoOnDay(t.blockId, t.idx)} style={{ width: 13, height: 13, accentColor: AMBER, flexShrink: 0 }} />
+                  <div key={"t" + t.idx} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+                    <input type="checkbox" checked={!!t.done} onChange={() => toggleTodoOnDay(t.blockId, t.idx)} style={{ width: 13, height: 13, accentColor: AMBER, flexShrink: 0, cursor: "pointer" }} />
                     <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: isToday ? (t.done ? MIST : PAPER) : (t.done ? MUTED : TEXT), textDecoration: t.done ? "line-through" : "none" }}>{t.t || "Untitled"}</span>
-                  </label>
+                    {!t.done && (
+                      <button onClick={() => bumpTodoOnDay(t.blockId, t.idx, dt)} className="pop" title="Move to tomorrow" style={{ background: "none", border: `1px solid ${isToday ? MIST : AMBER}`, color: isToday ? MIST : AMBER, borderRadius: 999, padding: "1px 6px", fontSize: 8, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer", flexShrink: 0 }}>Not today</button>
+                    )}
+                  </div>
                 ))}
                 {addFor === k && <QuickAddInline d={d} setD={setD} date={k} dark={isToday} onDone={() => setAddFor(null)} />}
               </div>
