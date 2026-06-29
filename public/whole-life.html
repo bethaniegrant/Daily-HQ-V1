@@ -716,139 +716,258 @@ const SPACE_PRESETS = [
   { id: "trackers", label: "Trackers", blurb: "Custom logs for anything you care about",  includes: ["Books", "Sleep", "Journal", "Ratings"] },
 ];
 
+// 6 focus areas shown in step 2. mapsTo collapses to existing category seeds.
+const FOCUS_AREAS = [
+  { id: "selfcare",  label: "Self-Care",       blurb: "Meds, mood, workouts, meals", mapsTo: "health" },
+  { id: "budget",    label: "Budget / Finances", blurb: "Bills, spending, savings",   mapsTo: "money" },
+  { id: "work",      label: "Work Tasks",      blurb: "To-do list for your day",     mapsTo: "plan" },
+  { id: "habits",    label: "Habit Tracking",  blurb: "Daily check-ins",             mapsTo: "plan" },
+  { id: "dates",     label: "Important Dates", blurb: "Events on your calendar",     mapsTo: "plan" },
+  { id: "trackers",  label: "Trackers",        blurb: "Books, sleep, journal, more", mapsTo: "trackers" },
+];
+
 function Onboarding({ initialName, onFinish }) {
   const [step, setStep] = useState(0);
   const [username, setUsername] = useState((initialName || "").split(" ")[0] || "");
   const [theme, setTheme] = useState("sage");
-  const [cats, setCats] = useState({ money: false, health: false, plan: false, trackers: false });
-  const totalSteps = 4;
+  const [customTheme, setCustomTheme] = useState({ AMBER: "#C4717A", MIST: "#B8C8D8" });
+  const [focusIds, setFocusIds] = useState([]);
+  const [dashboardDefault, setDashboardDefault] = useState("day");
+  const [firstTask, setFirstTask] = useState("");
+  const [timezone, setTimezone] = useState(
+    (typeof Intl !== "undefined" && Intl.DateTimeFormat) ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC"
+  );
+  const totalSteps = 6;
 
-  const toggleCat = (id) => setCats((c) => ({ ...c, [id]: !c[id] }));
-  const anyPicked = Object.values(cats).some(Boolean);
-  const canNext = step === 0 ? (username.trim().length > 0) : step === 2 ? anyPicked : true;
+  const toggleFocus = (id) => setFocusIds((arr) => arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
+  const categories = (() => {
+    const c = { money: false, health: false, plan: false, trackers: false };
+    focusIds.forEach((id) => { const f = FOCUS_AREAS.find((x) => x.id === id); if (f) c[f.mapsTo] = true; });
+    return c;
+  })();
+
+  // step validations
+  const canNext = (
+    step === 0 ? true :
+    step === 1 ? focusIds.length > 0 :
+    step === 2 ? !!dashboardDefault :
+    step === 3 ? true :
+    step === 4 ? true :
+    step === 5 ? username.trim().length > 0 :
+    true
+  );
+
+  const tzOptions = (() => {
+    try { if (Intl.supportedValuesOf) return Intl.supportedValuesOf("timeZone"); } catch (_) {}
+    return [timezone, "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Paris", "Asia/Tokyo"];
+  })();
 
   const finish = (skipAll) => {
     onFinish({
       username: username.trim() || "Friend",
       theme: skipAll ? "sage" : theme,
-      categories: skipAll ? { money: true, health: true, plan: true, trackers: true } : cats,
+      customTheme: !skipAll && theme === "custom" ? customTheme : null,
+      categories: skipAll ? { money: true, health: true, plan: true, trackers: true } : categories,
+      focusAreas: skipAll ? FOCUS_AREAS.map((f) => f.id) : focusIds,
+      dashboardDefault: skipAll ? "day" : dashboardDefault,
+      timezone,
+      firstTask: skipAll ? "" : firstTask,
     });
   };
 
-  const next = () => {
-    if (step < totalSteps - 1) setStep(step + 1);
-    else finish(false);
-  };
+  const next = () => { if (step < totalSteps - 1) setStep(step + 1); else finish(false); };
   const back = () => step > 0 && setStep(step - 1);
 
-  const stepTitles = ["Welcome", "Pick your palette", "Choose your spaces", "All set"];
+  const stepTitles = ["Welcome to Daily HQ.", "What's most important right now?", "Choose your dashboard view.", "The \u2018Not Today\u2019 permission.", "Let's create your first task.", "Almost there."];
+
+  // Live preview of theme tokens during step 3
+  const previewT = resolveTheme(theme, customTheme);
+
+  const sectionLabel = { fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", fontWeight: 700, color: MUTED, marginBottom: 8 };
+  const cardBtn = (active) => ({
+    padding: "14px 16px", background: CARD,
+    border: `2px solid ${active ? AMBER : LINE}`, borderRadius: 14,
+    cursor: "pointer", textAlign: "left", width: "100%",
+  });
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, background: PAPER, overflow: "auto", fontFamily: "'Outfit', -apple-system, sans-serif", color: TEXT }}>
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "max(28px, env(safe-area-inset-top)) 22px 40px", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <div style={{ maxWidth: 580, margin: "0 auto", padding: "max(28px, env(safe-area-inset-top)) 22px 40px", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         {/* Progress dots */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 24 }}>
           {Array.from({ length: totalSteps }, (_, i) => (
-            <span key={i} style={{ width: i === step ? 28 : 8, height: 8, borderRadius: 999, background: i <= step ? AMBER : LINE, transition: "all .2s" }} />
+            <span key={i} style={{ width: i === step ? 26 : 8, height: 8, borderRadius: 999, background: i <= step ? AMBER : LINE, transition: "all .2s" }} />
           ))}
         </div>
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Step {step + 1} of {totalSteps}</div>
-          <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 36, fontWeight: 600, lineHeight: 1.1, letterSpacing: "-.02em", margin: "6px 0 6px", color: TEXT }}>{stepTitles[step]}</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 34, fontWeight: 600, lineHeight: 1.15, letterSpacing: "-.02em", margin: "6px 0 6px", color: TEXT }}>{stepTitles[step]}</h1>
         </div>
 
         <div style={{ flex: 1 }}>
+          {/* STEP 1 — Welcome */}
           {step === 0 && (
             <div>
-              <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.5, margin: "0 0 22px" }}>
-                Welcome to <span style={{ color: AMBER, fontWeight: 700 }}>Daily HQ</span> — a calm space for the bits of life that matter to you. We'll get you set up in 4 quick steps.
+              <p style={{ fontSize: 16, color: TEXT, lineHeight: 1.6, margin: "0 0 14px" }}>
+                You're in the right place. We're here to help you manage your life without the noise.
               </p>
-              <label style={{ display: "block", fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", fontWeight: 700, color: MUTED, marginBottom: 8 }}>What should we call you?</label>
+              <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.6, margin: "0 0 14px" }}>
+                This is your calm hub &mdash; designed for reality, not just productivity. Let's get you set up, simply.
+              </p>
+            </div>
+          )}
+
+          {/* STEP 2 — Focus areas */}
+          {step === 1 && (
+            <div>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
+                Select your core focus areas. You can change these anytime in settings. <strong style={{ color: TEXT }}>Pick at least one.</strong>
+              </p>
+              <div style={{ display: "grid", gap: 10 }}>
+                {FOCUS_AREAS.map((f) => {
+                  const active = focusIds.includes(f.id);
+                  return (
+                    <button key={f.id} onClick={() => toggleFocus(f.id)} className="pop" style={{ ...cardBtn(active), display: "flex", gap: 12, alignItems: "center" }}>
+                      <span style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${active ? AMBER : LINE}`, background: active ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {active && <CheckIcon c="#fff" s={12} />}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 17, color: TEXT }}>{f.label}</div>
+                        <div style={{ fontSize: 13, color: MUTED }}>{f.blurb}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3 — Dashboard layout */}
+          {step === 2 && (
+            <div>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>What do you want to see first when you log in?</p>
+              <div style={{ display: "grid", gap: 10 }}>
+                {[
+                  { id: "day", label: "Day at a glance", desc: "Today's tasks, meds, events, and bills front and center." },
+                  { id: "week", label: "Week at a glance", desc: "The full seven days, with quick-add on every day." },
+                ].map((opt) => {
+                  const active = dashboardDefault === opt.id;
+                  return (
+                    <button key={opt.id} onClick={() => setDashboardDefault(opt.id)} className="pop" style={{ ...cardBtn(active), display: "flex", gap: 12, alignItems: "center" }}>
+                      <span style={{ width: 22, height: 22, borderRadius: 999, border: `2px solid ${active ? AMBER : LINE}`, background: active ? AMBER : "transparent", flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 17, color: TEXT }}>{opt.label}</div>
+                        <div style={{ fontSize: 13, color: MUTED }}>{opt.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4 — Not Today permission */}
+          {step === 3 && (
+            <div>
+              <p style={{ fontSize: 16, color: TEXT, lineHeight: 1.6, margin: "0 0 14px" }}>
+                Life doesn't always go to plan. If you fall behind or have a heavy day, use the <strong style={{ color: AMBER }}>'Not Today'</strong> button to clear a task without guilt.
+              </p>
+              <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.6, margin: "0 0 18px" }}>
+                It's built in, because you're human. Tasks moved with 'Not Today' simply slide to tomorrow's list &mdash; no shame, no streak broken.
+              </p>
+              <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: "14px 16px", display: "flex", gap: 12, alignItems: "center" }}>
+                <span style={{ width: 14, height: 14, borderRadius: 4, border: `2px solid ${AMBER}`, flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 14, color: TEXT, fontWeight: 600 }}>Take a walk</span>
+                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", color: AMBER, border: `1px solid ${AMBER}`, padding: "4px 8px", borderRadius: 999 }}>Not today \u2192</span>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5 — First task */}
+          {step === 4 && (
+            <div>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
+                Enter one thing you want to get done today. No pressure, just one. (Optional &mdash; you can skip.)
+              </p>
+              <label style={sectionLabel}>Your first task</label>
               <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Your first name"
+                value={firstTask}
+                onChange={(e) => setFirstTask(e.target.value)}
+                placeholder="e.g. Make my bed"
                 autoFocus
-                style={{ width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 12, background: CARD, padding: "14px 16px", fontSize: 18, fontFamily: "'DM Serif Display',serif", color: TEXT, outline: "none" }}
+                style={{ width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 12, background: CARD, padding: "14px 16px", fontSize: 17, color: TEXT, outline: "none" }}
               />
             </div>
           )}
 
-          {step === 1 && (
+          {/* STEP 6 — Final polish */}
+          {step === 5 && (
             <div>
-              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>Pick a color theme. You can change this any time from Account → Appearance.</p>
-              <div style={{ display: "grid", gap: 10 }}>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 22px" }}>
+                Quick settings: your name, a color theme, and your timezone.
+              </p>
+
+              <label style={sectionLabel}>Name for your dashboard</label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Your first name"
+                style={{ width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 12, background: CARD, padding: "12px 14px", fontSize: 16, color: TEXT, outline: "none", marginBottom: 18 }}
+              />
+
+              <label style={sectionLabel}>Color theme</label>
+              <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
                 {THEME_KEYS.map((k) => {
                   const t = THEMES[k];
                   const active = theme === k;
                   return (
-                    <button key={k} onClick={() => setTheme(k)} className="pop" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: t.CARD, border: `2px solid ${active ? t.AMBER : t.LINE}`, borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
-                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                    <button key={k} onClick={() => setTheme(k)} className="pop" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: t.CARD, border: `2px solid ${active ? t.AMBER : t.LINE}`, borderRadius: 12, cursor: "pointer", textAlign: "left" }}>
+                      <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                         {[t.INK, t.SAGE, t.AMBER, t.MIST].map((c, i) => (
-                          <span key={i} style={{ width: 22, height: 36, borderRadius: 4, background: c }} />
+                          <span key={i} style={{ width: 16, height: 26, borderRadius: 3, background: c }} />
                         ))}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: t.TEXT }}>{t.label}</div>
-                        <div style={{ fontSize: 12, color: t.MUTED }}>{t.desc}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 15, color: t.TEXT }}>{t.label}</div>
                       </div>
-                      {active && <span style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 800, color: t.AMBER }}>Selected</span>}
+                      {active && <span style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: t.AMBER }}>Selected</span>}
                     </button>
                   );
                 })}
+                {/* Custom theme tile */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: previewT.CARD, border: `2px solid ${theme === "custom" ? previewT.AMBER : LINE}`, borderRadius: 12 }}>
+                  <button onClick={() => setTheme("custom")} className="pop" style={{ display: "flex", gap: 3, flexShrink: 0, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                    {[previewT.INK, previewT.SAGE, previewT.AMBER, previewT.MIST].map((c, i) => (
+                      <span key={i} style={{ width: 16, height: 26, borderRadius: 3, background: c }} />
+                    ))}
+                  </button>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 15, color: previewT.TEXT }}>Custom</div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: MUTED }}>
+                        Accent <input type="color" value={customTheme.AMBER} onChange={(e) => { setCustomTheme((c) => ({ ...c, AMBER: e.target.value })); setTheme("custom"); }} style={{ width: 26, height: 22, border: "none", padding: 0, background: "none", cursor: "pointer" }} />
+                      </label>
+                      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: MUTED }}>
+                        Mist <input type="color" value={customTheme.MIST} onChange={(e) => { setCustomTheme((c) => ({ ...c, MIST: e.target.value })); setTheme("custom"); }} style={{ width: 26, height: 22, border: "none", padding: 0, background: "none", cursor: "pointer" }} />
+                      </label>
+                    </div>
+                  </div>
+                  {theme === "custom" && <span style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: previewT.AMBER }}>Selected</span>}
+                </div>
               </div>
-            </div>
-          )}
 
-          {step === 2 && (
-            <div>
-              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
-                Pick the spaces that matter to you most. You can add more later from the menu. <strong style={{ color: TEXT }}>At least one required.</strong>
-              </p>
-              <div style={{ display: "grid", gap: 10 }}>
-                {SPACE_PRESETS.map((sp) => {
-                  const active = !!cats[sp.id];
-                  return (
-                    <button key={sp.id} onClick={() => toggleCat(sp.id)} className="pop" style={{ padding: "14px 16px", background: CARD, border: `2px solid ${active ? AMBER : LINE}`, borderRadius: 14, cursor: "pointer", textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                      <span style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${active ? AMBER : LINE}`, background: active ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-                        {active && <CheckIcon c="#fff" s={12} />}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: TEXT }}>{sp.label}</div>
-                        <div style={{ fontSize: 13, color: MUTED, marginBottom: 6 }}>{sp.blurb}</div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {sp.includes.map((inc) => (
-                            <span key={inc} style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: MUTED, border: `1px solid ${LINE}`, padding: "3px 7px", borderRadius: 999 }}>{inc}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div>
-              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.5, margin: "0 0 18px" }}>
-                You're all set, <span style={{ color: AMBER, fontWeight: 700 }}>{username.trim() || "friend"}</span>. Here's what's loaded in:
-              </p>
-              <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: "16px 18px", display: "grid", gap: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}><span style={{ color: MUTED }}>Theme</span><strong>{THEMES[theme].label}</strong></div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}><span style={{ color: MUTED }}>Your spaces</span><strong>{SPACE_PRESETS.filter((sp) => cats[sp.id]).map((sp) => sp.label).join(", ") || "None"}</strong></div>
-              </div>
-              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "16px 0 0" }}>
-                Your dashboard will keep it minimal — just the calendar, today's intention, and your daily/weekly glance to start.
-              </p>
+              <label style={sectionLabel}>Timezone</label>
+              <select value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 12, background: CARD, padding: "12px 14px", fontSize: 14, color: TEXT, outline: "none" }}>
+                {tzOptions.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+              </select>
             </div>
           )}
         </div>
 
         {/* Footer controls */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, gap: 10 }}>
-          <button onClick={() => finish(true)} className="pop" style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer", padding: "8px 4px" }}>Skip — set me up with everything</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, gap: 10, flexWrap: "wrap" }}>
+          <button onClick={() => finish(true)} className="pop" style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", cursor: "pointer", padding: "8px 4px" }}>Skip &mdash; set me up with everything</button>
           <div style={{ display: "flex", gap: 8 }}>
             {step > 0 && (
               <button onClick={back} className="pop" style={{ background: "none", border: `1.5px solid ${LINE}`, color: TEXT, borderRadius: 999, padding: "10px 18px", fontSize: 11, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: "pointer" }}>Back</button>
@@ -858,7 +977,13 @@ function Onboarding({ initialName, onFinish }) {
               disabled={!canNext}
               className="pop"
               style={{ background: canNext ? AMBER : LINE, border: "none", color: canNext ? "#fff" : MUTED, borderRadius: 999, padding: "10px 22px", fontSize: 11, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: canNext ? "pointer" : "not-allowed" }}
-            >{step === totalSteps - 1 ? "Enter Daily HQ" : "Next →"}</button>
+            >{
+              step === 0 ? "Let's begin \u2192"
+              : step === 3 ? "Got it \u2192"
+              : step === 4 ? (firstTask.trim() ? "Add task \u2192" : "Skip \u2192")
+              : step === totalSteps - 1 ? "Save & Launch"
+              : "Next \u2192"
+            }</button>
           </div>
         </div>
       </div>
