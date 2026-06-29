@@ -142,7 +142,7 @@ function useCloudSync(d, setD) {
     return () => clearTimeout(t);
   }, [d, ready]);
 
-  return { ready, displayName };
+  return { ready, displayName, ctx };
 }
 
 
@@ -410,7 +410,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [d, setD] = useState(seed);
-  const { ready: synced, displayName } = useCloudSync(d, setD);
+  const { ready: synced, displayName, ctx } = useCloudSync(d, setD);
   const [themeVersion, setThemeVersion] = useState(0);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
