@@ -437,6 +437,9 @@ function App() {
         onboarded: true,
         username: p.username || displayName || "",
         theme: p.theme || "sage",
+        focusAreas: p.focusAreas || [],
+        dashboardDefault: p.dashboardDefault || "day",
+        notTodayIntroSeen: p.notTodayIntroSeen !== false,
         enabledCategories: { money: true, health: true, plan: true, trackers: true, ...(p.enabledCategories || {}) },
       }));
     }
