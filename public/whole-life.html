@@ -1952,7 +1952,7 @@ function DashboardCalendar({ d, setD, now, go, isDesktop }) {
     <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "minmax(0, 1.05fr) minmax(0, 1fr)" : "1fr", gap: isDesktop ? 16 : 14, alignItems: "start" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: isDesktop ? 16 : 14 }}>
         <TrackerCalendar d={d} setD={setD} now={now} go={go} isDesktop={isDesktop} selectedDay={selectedDay} onSelectDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
-        <TimeBlocking d={d} setD={setD} now={now} isDesktop={isDesktop} />
+        <TimeBlocking d={d} setD={setD} now={now} isDesktop={isDesktop} selectedDay={selectedDay} />
       </div>
       <SidePanel d={d} setD={setD} go={go} isDesktop={isDesktop} selectedDay={selectedDay} setSelectedDay={setSelectedDay} view={view} setView={setView} />
     </div>
