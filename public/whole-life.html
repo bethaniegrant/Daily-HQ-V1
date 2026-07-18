@@ -2001,16 +2001,16 @@ function TimeBlocking({ d, setD, now, isDesktop }) {
   const enabled = d.timeBlockingEnabled === true;
   if (!enabled) {
     return (
-      <div style={{ background: CARD, border: `1px dashed ${LINE}`, borderRadius: 14, padding: isDesktop ? "20px 24px" : "16px 18px", display: "flex", flexDirection: isDesktop ? "row" : "column", gap: 14, alignItems: isDesktop ? "center" : "flex-start", justifyContent: "space-between" }}>
+      <div style={{ background: CARD, border: `1px dashed ${LINE}`, borderRadius: 12, padding: isDesktop ? "14px 18px" : "12px 14px", display: "flex", flexDirection: isDesktop ? "row" : "column", gap: 12, alignItems: isDesktop ? "center" : "flex-start", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 6 }}>New · Optional</div>
-          <div style={{ fontSize: 16, fontFamily: "'DM Serif Display',serif", color: TEXT, marginBottom: 4 }}>Daily Time Blocking</div>
-          <div style={{ fontSize: 13, color: MUTED }}>Map out your day in gentle blocks — focus, breaks, anything you choose.</div>
+          <div style={{ fontSize: 14, fontFamily: "'DM Serif Display',serif", color: TEXT, marginBottom: 3 }}>Daily Time Blocking</div>
+          <div style={{ fontSize: 12, color: MUTED }}>Map out your day in gentle blocks.</div>
         </div>
-        <button onClick={() => setD({ ...d, timeBlockingEnabled: true })} className="pop" style={{ background: SAGE, color: CARD, border: "none", borderRadius: 999, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", letterSpacing: ".04em" }}>Enable time blocking</button>
+        <button onClick={() => setD({ ...d, timeBlockingEnabled: true })} className="pop" style={{ background: SAGE, color: CARD, border: "none", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", letterSpacing: ".04em", whiteSpace: "nowrap" }}>Enable</button>
       </div>
     );
   }
+
 
   const dateLabel = day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   const isToday = dayKey(day) === dayKey(new Date(now));
