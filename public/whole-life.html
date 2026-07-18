@@ -1758,8 +1758,13 @@ function dayBundle(d, dt) {
   const todos = [];
   if (todoBlock) {
     (todoBlock.items || []).forEach((it, idx) => {
-      const matchDate = it.date ? it.date === k : isToday;
-      if (matchDate) todos.push({ ...it, idx, blockId: todoBlock.id });
+      const isRecurring = it.recurring === true || it.daily === true;
+      let show = false;
+      if (it.date) show = it.date === k;
+      else if (isRecurring) show = true;
+      else if (it.time) show = true; // timed but undated ⇒ every day at that time
+      else show = isToday;
+      if (show) todos.push({ ...it, idx, blockId: todoBlock.id });
     });
   }
   return { habits, medsList, workouts, mood, bills, meal, weekdayShort, events, todos, todoBlockId: todoBlock ? todoBlock.id : null };
@@ -1947,7 +1952,7 @@ function DashboardCalendar({ d, setD, now, go, isDesktop }) {
     <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "minmax(0, 1.05fr) minmax(0, 1fr)" : "1fr", gap: isDesktop ? 16 : 14, alignItems: "start" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: isDesktop ? 16 : 14 }}>
         <TrackerCalendar d={d} setD={setD} now={now} go={go} isDesktop={isDesktop} selectedDay={selectedDay} onSelectDay={(dt) => { setSelectedDay(dt); setView("day"); }} />
-        <TimeBlocking d={d} setD={setD} now={now} isDesktop={isDesktop} />
+        <TimeBlocking d={d} setD={setD} now={now} isDesktop={isDesktop} selectedDay={selectedDay} />
       </div>
       <SidePanel d={d} setD={setD} go={go} isDesktop={isDesktop} selectedDay={selectedDay} setSelectedDay={setSelectedDay} view={view} setView={setView} />
     </div>
@@ -1973,17 +1978,18 @@ const tbAddHour = (hhmm) => {
   return `${String(nh).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
 };
 
-function TimeBlocking({ d, setD, now, isDesktop }) {
-  const [day, setDay] = useState(new Date(now));
+function TimeBlocking({ d, setD, now, isDesktop, selectedDay }) {
+  const day = selectedDay || new Date(now);
   const [editingId, setEditingId] = useState(null);
   const [adding, setAdding] = useState(false);
   const dk = dayKey(day);
   const blocks = (d.timeBlocks && d.timeBlocks[dk]) || [];
   const sorted = [...blocks].sort((a, b) => (a.start || "").localeCompare(b.start || ""));
 
+  // When the shared date changes, close any open inline editor.
+  useEffect(() => { setEditingId(null); setAdding(false); }, [dk]);
+
   const setBlocks = (next) => setD({ ...d, timeBlocks: { ...(d.timeBlocks || {}), [dk]: next } });
-  const shiftDay = (delta) => { const nd = new Date(day); nd.setDate(nd.getDate() + delta); setDay(nd); setEditingId(null); setAdding(false); };
-  const jumpToday = () => { setDay(new Date(now)); setEditingId(null); setAdding(false); };
 
   const saveBlock = (b) => {
     const exists = sorted.find((x) => x.id === b.id);
@@ -2004,10 +2010,6 @@ function TimeBlocking({ d, setD, now, isDesktop }) {
       </div>
     );
   }
-
-
-  const dateLabel = day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-  const isToday = dayKey(day) === dayKey(new Date(now));
 
   return (
     <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: isDesktop ? "14px 18px 12px" : "12px 14px 10px" }}>
@@ -2181,7 +2183,10 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     ...d.habitDefs.map((h) => ({ kind: "habit", id: h.id, label: h.n, done: !!habitChecks[h.id], color: SAGE, onToggle: () => toggleHabit(h.id) })),
     ...oneoffs.map((o) => ({ kind: "habit", id: o.id, label: o.n, done: !!o.done, color: SAGE, onToggle: () => toggleOneoff(o.id) })),
   ] : [];
-  const todoRows = bundle.todos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx), onBump: () => bumpTodo(it.idx) }));
+  // Split todos: timed ones merge with events; untimed ones fall into the task list.
+  const timedTodos = bundle.todos.filter((it) => !!it.time);
+  const untimedTodos = bundle.todos.filter((it) => !it.time);
+  const todoRows = untimedTodos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx), onBump: () => bumpTodo(it.idx) }));
   const medRows = isToday ? d.meds.flatMap((m) => {
     const t = medTimes(m);
     const arr = medDoseArr((d.medChecks[tk] || {})[m.id], t);
@@ -2198,7 +2203,12 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     section: b.section,
     color: b.color || AMBER,
   }));
-  const eventRows = bundle.events;
+  // Merged timed stream: events + timed todos, sorted by time.
+  const timedRows = [
+    ...bundle.events.map((e) => ({ kind: "event", key: "e" + e.id, sortKey: e.start || "99:99", ev: e })),
+    ...timedTodos.map((it) => ({ kind: "todo", key: "tt" + it.idx, sortKey: it.time || "99:99", it })),
+  ].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const eventRows = bundle.events; // kept for the "nothing scheduled" check below
 
   const taskRows = [...habitRows, ...todoRows];
   const all = [...taskRows, ...medRows];
@@ -2226,14 +2236,22 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
         <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: AMBER }}>Open →</span>
       </button>
 
-      {eventRows.length > 0 && (
+      {timedRows.length > 0 && (
         <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED }}>Events</div>
-          {eventRows.map((e) => (
-            <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: PAPER, border: `1px solid ${LINE}`, borderRadius: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED }}>Scheduled</div>
+          {timedRows.map((r) => r.kind === "event" ? (
+            <div key={r.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: PAPER, border: `1px solid ${LINE}`, borderRadius: 8 }}>
               <span style={{ width: 7, height: 7, borderRadius: 999, background: "#6E8597", flexShrink: 0 }} />
-              <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: TEXT, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title || "Untitled"}{e.start ? ` · ${e.start}` : ""}</span>
-              <button onClick={() => delEvent(e.blockId, e.id)} className="pop" title="Remove event" style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }}>×</button>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: TEXT, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.ev.title || "Untitled"}{r.ev.start ? ` · ${r.ev.start}` : ""}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED }}>Event</span>
+              <button onClick={() => delEvent(r.ev.blockId, r.ev.id)} className="pop" title="Remove event" style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }}>×</button>
+            </div>
+          ) : (
+            <div key={r.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: PAPER, border: `1px solid ${LINE}`, borderRadius: 8 }}>
+              <input type="checkbox" checked={!!r.it.done} onChange={() => toggleTodo(r.it.idx)} style={{ width: 16, height: 16, accentColor: AMBER, cursor: "pointer", flexShrink: 0 }} />
+              <span style={{ width: 5, height: 5, borderRadius: 999, background: AMBER, flexShrink: 0 }} />
+              <span onClick={() => toggleTodo(r.it.idx)} style={{ flex: 1, minWidth: 0, fontSize: 13, color: r.it.done ? MUTED : TEXT, fontWeight: 700, textDecoration: r.it.done ? "line-through" : "none", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.it.t || "Untitled"} · {fmtTime(r.it.time)}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED }}>To do</span>
             </div>
           ))}
         </div>
@@ -2381,17 +2399,30 @@ function SidePanel({ d, setD, go, isDesktop, selectedDay, setSelectedDay, view, 
     >{label}</button>
   );
 
+  const shiftDate = (delta, e) => { if (e) e.stopPropagation(); const nd = new Date(selectedDay); nd.setDate(nd.getDate() + delta); setSelectedDay(nd); };
+  const jumpToday = (e) => { if (e) e.stopPropagation(); setSelectedDay(new Date()); };
+
+  const arrowBtn = (label, onClick, aria) => (
+    <button onClick={onClick} aria-label={aria} className="pop" style={{ background: "rgba(255,255,255,.12)", border: "none", color: PAPER, borderRadius: 999, width: 28, height: 28, cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 0, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>{label}</button>
+  );
+
   return (
     <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)", overflow: "hidden", display: "flex", flexDirection: "column", minHeight: isDesktop ? 480 : "auto" }}>
       <div style={{ background: INK, color: PAPER, padding: isDesktop ? "16px 18px 14px" : (expanded ? "14px 16px 12px" : "12px 16px") }}>
         <div onClick={isDesktop ? undefined : () => setOpenMobile((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: expanded ? 12 : 0, cursor: isDesktop ? "default" : "pointer" }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
+          {expanded && view === "day" && arrowBtn("‹", (e) => shiftDate(-1, e), "Previous day")}
+          <div style={{ minWidth: 0, flex: 1, textAlign: expanded && view === "day" ? "center" : "left" }}>
             <div style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{expanded ? sub : "Daily / weekly view"}</div>
-            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: expanded ? 22 : 18, fontWeight: 600, lineHeight: 1.15, marginTop: 4, letterSpacing: "-.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{expanded ? title : "Tap to open"}</div>
+            {expanded && view === "day" ? (
+              <button onClick={jumpToday} className="pop" style={{ background: "transparent", border: "none", color: PAPER, cursor: "pointer", padding: 0, textAlign: "center" }}>
+                <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, fontWeight: 600, lineHeight: 1.15, marginTop: 4, letterSpacing: "-.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
+                {!isToday && <div style={{ fontSize: 9, letterSpacing: ".16em", textTransform: "uppercase", color: MIST, fontWeight: 700, marginTop: 2 }}>Tap for today</div>}
+              </button>
+            ) : (
+              <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: expanded ? 22 : 18, fontWeight: 600, lineHeight: 1.15, marginTop: 4, letterSpacing: "-.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{expanded ? title : "Tap to open"}</div>
+            )}
           </div>
-          {expanded && view === "day" && !isToday && (
-            <button onClick={(e) => { e.stopPropagation(); setSelectedDay(new Date()); }} className="pop" style={{ background: "rgba(255,255,255,.12)", border: "none", color: PAPER, borderRadius: 999, padding: "6px 12px", fontSize: 9, fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", cursor: "pointer" }}>Today</button>
-          )}
+          {expanded && view === "day" && arrowBtn("›", (e) => shiftDate(1, e), "Next day")}
           {!isDesktop && (
             <span style={{ color: MIST, fontSize: 18, fontWeight: 700, transition: "transform .2s", transform: openMobile ? "rotate(180deg)" : "none", lineHeight: 1, padding: "0 4px" }}>⌄</span>
           )}
