@@ -2060,16 +2060,17 @@ function TimeBlocking({ d, setD, now, isDesktop }) {
 
 function TBRow({ block, onEdit, onDelete }) {
   return (
-    <div className="pop" style={{ display: "flex", alignItems: "stretch", gap: 10, background: PAPER, borderRadius: 10, overflow: "hidden", border: `1px solid ${LINE}` }}>
-      <div style={{ width: 4, background: block.color || MIST }} />
-      <button onClick={onEdit} style={{ flex: 1, background: "transparent", border: "none", textAlign: "left", padding: "10px 4px", cursor: "pointer", display: "flex", flexDirection: "column", gap: 2 }}>
-        <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{fmtTime(block.start)} – {fmtTime(block.end)}</div>
-        <div style={{ fontSize: 14, color: TEXT, fontFamily: "'DM Serif Display',serif" }}>{block.label || "(untitled)"}</div>
+    <div className="pop" style={{ display: "flex", alignItems: "stretch", gap: 8, background: PAPER, borderRadius: 8, overflow: "hidden", border: `1px solid ${LINE}` }}>
+      <div style={{ width: 3, background: block.color || MIST }} />
+      <button onClick={onEdit} style={{ flex: 1, background: "transparent", border: "none", textAlign: "left", padding: "8px 4px", cursor: "pointer", display: "flex", flexDirection: "column", gap: 1 }}>
+        <div style={{ fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{fmtTime(block.start)} – {fmtTime(block.end)}</div>
+        <div style={{ fontSize: 13, color: TEXT, fontFamily: "'DM Serif Display',serif" }}>{block.label || "(untitled)"}</div>
       </button>
-      <button onClick={onDelete} aria-label="Delete block" style={{ background: "transparent", border: "none", color: MUTED, padding: "0 14px", cursor: "pointer", fontSize: 16 }}>×</button>
+      <button onClick={onDelete} aria-label="Delete block" style={{ background: "transparent", border: "none", color: MUTED, padding: "0 12px", cursor: "pointer", fontSize: 14 }}>×</button>
     </div>
   );
 }
+
 
 function TBEditor({ initial, onSave, onCancel, onDelete, keepOpen, resetSignal }) {
   const [label, setLabel] = useState(initial.label || "");
