@@ -2098,29 +2098,30 @@ function TBEditor({ initial, onSave, onCancel, onDelete, keepOpen, resetSignal }
   const onKey = (e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } if (e.key === "Escape") onCancel && onCancel(); };
 
   return (
-    <div style={{ display: "flex", alignItems: "stretch", gap: 10, background: PAPER, borderRadius: 10, overflow: "hidden", border: `1.5px solid ${SAGE}` }}>
-      <div style={{ width: 4, background: color }} />
-      <div style={{ flex: 1, padding: "10px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
-        <input ref={inputRef} value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={onKey} placeholder="What's this block?" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 8, background: CARD, padding: "8px 10px", fontSize: 14, color: TEXT, fontFamily: "inherit", outline: "none" }} />
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <input type="time" value={start} onChange={(e) => setStart(e.target.value)} onKeyDown={onKey} style={{ border: `1px solid ${LINE}`, borderRadius: 8, background: CARD, padding: "6px 8px", fontSize: 13, color: TEXT, fontFamily: "inherit" }} />
-          <span style={{ color: MUTED, fontSize: 12 }}>to</span>
-          <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} onKeyDown={onKey} style={{ border: `1px solid ${LINE}`, borderRadius: 8, background: CARD, padding: "6px 8px", fontSize: 13, color: TEXT, fontFamily: "inherit" }} />
-          <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+    <div style={{ display: "flex", alignItems: "stretch", gap: 8, background: PAPER, borderRadius: 8, overflow: "hidden", border: `1.5px solid ${SAGE}` }}>
+      <div style={{ width: 3, background: color }} />
+      <div style={{ flex: 1, padding: "8px 6px", display: "flex", flexDirection: "column", gap: 6 }}>
+        <input ref={inputRef} value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={onKey} placeholder="What's this block?" style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 6, background: CARD, padding: "6px 8px", fontSize: 13, color: TEXT, fontFamily: "inherit", outline: "none" }} />
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <input type="time" value={start} onChange={(e) => setStart(e.target.value)} onKeyDown={onKey} style={{ border: `1px solid ${LINE}`, borderRadius: 6, background: CARD, padding: "4px 6px", fontSize: 12, color: TEXT, fontFamily: "inherit" }} />
+          <span style={{ color: MUTED, fontSize: 11 }}>to</span>
+          <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} onKeyDown={onKey} style={{ border: `1px solid ${LINE}`, borderRadius: 6, background: CARD, padding: "4px 6px", fontSize: 12, color: TEXT, fontFamily: "inherit" }} />
+          <div style={{ display: "flex", gap: 5, marginLeft: "auto" }}>
             {TB_COLORS.map((c) => (
-              <button key={c} onClick={() => setColor(c)} aria-label={"Color " + c} style={{ width: 20, height: 20, borderRadius: 999, background: c, border: color === c ? `2px solid ${TEXT}` : `1px solid ${LINE}`, cursor: "pointer", padding: 0 }} />
+              <button key={c} onClick={() => setColor(c)} aria-label={"Color " + c} style={{ width: 16, height: 16, borderRadius: 999, background: c, border: color === c ? `2px solid ${TEXT}` : `1px solid ${LINE}`, cursor: "pointer", padding: 0 }} />
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
-          {onDelete && <button onClick={onDelete} style={{ background: "transparent", border: "none", color: MUTED, fontSize: 12, cursor: "pointer", marginRight: "auto" }}>Delete</button>}
-          <button onClick={onCancel} style={{ background: "transparent", border: `1px solid ${LINE}`, borderRadius: 999, padding: "6px 14px", fontSize: 12, color: MUTED, cursor: "pointer" }}>{keepOpen ? "Done" : "Cancel"}</button>
-          <button onClick={commit} style={{ background: SAGE, color: CARD, border: "none", borderRadius: 999, padding: "6px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{keepOpen ? "Save & add next" : "Save"}</button>
+        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
+          {onDelete && <button onClick={onDelete} style={{ background: "transparent", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", marginRight: "auto" }}>Delete</button>}
+          <button onClick={onCancel} style={{ background: "transparent", border: `1px solid ${LINE}`, borderRadius: 999, padding: "5px 12px", fontSize: 11, color: MUTED, cursor: "pointer" }}>{keepOpen ? "Done" : "Cancel"}</button>
+          <button onClick={commit} style={{ background: SAGE, color: CARD, border: "none", borderRadius: 999, padding: "5px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>{keepOpen ? "Save & add next" : "Save"}</button>
         </div>
       </div>
     </div>
   );
 }
+
 
 function TodayList({ d, setD, dt, go, isDesktop }) {
   const tk = dayKey(dt);
