@@ -2183,7 +2183,10 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     ...d.habitDefs.map((h) => ({ kind: "habit", id: h.id, label: h.n, done: !!habitChecks[h.id], color: SAGE, onToggle: () => toggleHabit(h.id) })),
     ...oneoffs.map((o) => ({ kind: "habit", id: o.id, label: o.n, done: !!o.done, color: SAGE, onToggle: () => toggleOneoff(o.id) })),
   ] : [];
-  const todoRows = bundle.todos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx), onBump: () => bumpTodo(it.idx) }));
+  // Split todos: timed ones merge with events; untimed ones fall into the task list.
+  const timedTodos = bundle.todos.filter((it) => !!it.time);
+  const untimedTodos = bundle.todos.filter((it) => !it.time);
+  const todoRows = untimedTodos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx), onBump: () => bumpTodo(it.idx) }));
   const medRows = isToday ? d.meds.flatMap((m) => {
     const t = medTimes(m);
     const arr = medDoseArr((d.medChecks[tk] || {})[m.id], t);
@@ -2200,7 +2203,12 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     section: b.section,
     color: b.color || AMBER,
   }));
-  const eventRows = bundle.events;
+  // Merged timed stream: events + timed todos, sorted by time.
+  const timedRows = [
+    ...bundle.events.map((e) => ({ kind: "event", key: "e" + e.id, sortKey: e.start || "99:99", ev: e })),
+    ...timedTodos.map((it) => ({ kind: "todo", key: "tt" + it.idx, sortKey: it.time || "99:99", it })),
+  ].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const eventRows = bundle.events; // kept for the "nothing scheduled" check below
 
   const taskRows = [...habitRows, ...todoRows];
   const all = [...taskRows, ...medRows];
