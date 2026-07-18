@@ -2236,14 +2236,22 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
         <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: AMBER }}>Open →</span>
       </button>
 
-      {eventRows.length > 0 && (
+      {timedRows.length > 0 && (
         <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED }}>Events</div>
-          {eventRows.map((e) => (
-            <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: PAPER, border: `1px solid ${LINE}`, borderRadius: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED }}>Scheduled</div>
+          {timedRows.map((r) => r.kind === "event" ? (
+            <div key={r.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: PAPER, border: `1px solid ${LINE}`, borderRadius: 8 }}>
               <span style={{ width: 7, height: 7, borderRadius: 999, background: "#6E8597", flexShrink: 0 }} />
-              <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: TEXT, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title || "Untitled"}{e.start ? ` · ${e.start}` : ""}</span>
-              <button onClick={() => delEvent(e.blockId, e.id)} className="pop" title="Remove event" style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }}>×</button>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: TEXT, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.ev.title || "Untitled"}{r.ev.start ? ` · ${r.ev.start}` : ""}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED }}>Event</span>
+              <button onClick={() => delEvent(r.ev.blockId, r.ev.id)} className="pop" title="Remove event" style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }}>×</button>
+            </div>
+          ) : (
+            <div key={r.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: PAPER, border: `1px solid ${LINE}`, borderRadius: 8 }}>
+              <input type="checkbox" checked={!!r.it.done} onChange={() => toggleTodo(r.it.idx)} style={{ width: 16, height: 16, accentColor: AMBER, cursor: "pointer", flexShrink: 0 }} />
+              <span style={{ width: 5, height: 5, borderRadius: 999, background: AMBER, flexShrink: 0 }} />
+              <span onClick={() => toggleTodo(r.it.idx)} style={{ flex: 1, minWidth: 0, fontSize: 13, color: r.it.done ? MUTED : TEXT, fontWeight: 700, textDecoration: r.it.done ? "line-through" : "none", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.it.t || "Untitled"} · {fmtTime(r.it.time)}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED }}>To do</span>
             </div>
           ))}
         </div>
