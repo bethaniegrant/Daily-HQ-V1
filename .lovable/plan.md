@@ -1,53 +1,49 @@
-## Goal
-Prevent cross-device clobbers on the planner JSON doc by adding optimistic concurrency control. Last-write-wins becomes "last-write-wins only if you saw the latest version."
+## Two changes to the dashboard day overview
 
-## Scope
-All changes in `public/whole-life.html`, inside `useCloudSync`. No new tables, no schema migration, no realtime, no per-field merge.
+Both edits are in `public/whole-life.html`, in the `DashboardCalendar` + `TimeBlocking` + `TodayList` region.
 
-## Where `version` lives
-Store `version` as an integer field *inside* the JSON `value` of the existing `user_data` row (same row, key `"planner"`). Keeping it in JSON means zero schema change and the check is atomic with the write.
+### 1. One shared selected date on the dashboard
 
-- New docs start at `version: 1`.
-- Existing docs without `version` are treated as `version: 0` on first load and bumped to `1` on next save.
+`DashboardCalendar` already owns `selectedDay` state (line ~1944). It passes it down to the calendar and to `SidePanel` → `TodayList`. `TimeBlocking` currently keeps its own `day` state (line ~1977) with its own ‹ / today / › switcher.
 
-## Load behavior
-1. Read the row as today.
-2. Stash `loadedVersion = cloud.value.version ?? 0` on `ctx.current`.
-3. Local/cloud reconciliation stays as-is for now; whichever value is chosen, record its `version` as `loadedVersion`. (If local-newer wins and gets pushed, that push goes through the new conditional-save path so it still respects the server version.)
+Changes:
+- `TimeBlocking`: remove the internal `useState` for `day`, remove `shiftDay` / `jumpToday`, and delete the ‹ label › row entirely. Accept `selectedDay` (and `setSelectedDay`, only so it can silently reset "today" if ever needed — otherwise read-only). Everything keyed off `dk = dayKey(selectedDay)` instead. When `selectedDay` changes, the card just re-renders showing that day's blocks; close any open inline editor via a `useEffect` on the date key.
+- `DashboardCalendar`: pass `selectedDay` (and `setSelectedDay`) into `TimeBlocking`.
+- Add ‹ date › controls to the day-overview header, inside `SidePanel`'s header when `view === "day"`:
+  - `‹` shifts `selectedDay` by −1 day.
+  - `›` shifts `selectedDay` by +1 day.
+  - The date label (the existing `title`) becomes a button; tapping it resets to today. The existing standalone "Today" pill can go away since the label doubles as it — keep a subtle "Tap for today" hint under it when not today, matching the pattern used in the old TimeBlocking card.
+  - Arrows are visible on both desktop and mobile whenever the panel is expanded and `view === "day"`. In week view the arrows are hidden (week already has its own navigation model via day pick).
+- Result: one date control (in the day-overview header) drives both the day overview and the time-blocking card. No week-view detour required.
 
-## Save behavior (replaces current debounced upsert)
-On each debounced save:
-1. Compute `nextDoc = { ...d, version: loadedVersion + 1 }`.
-2. Conditional write — switch from `upsert` to:
-   ```
-   client.from("user_data")
-     .update({ value: nextDoc, updated_at })
-     .eq("user_id", userId).eq("key", "planner")
-     .eq("value->>version", String(loadedVersion))
-     .select("value")
-   ```
-   The `value->>version` equality is the optimistic lock: the row only updates if the stored version still matches what we loaded.
-3. If `data.length === 1` → success. Set `loadedVersion = nextDoc.version`. Write local cache with the new version included.
-4. If `data.length === 0` → conflict (another device wrote). Run the rejection flow.
-5. First-time insert (no row yet) keeps using `upsert` with `version: 1`; subsequent saves use the conditional update path.
+### 2. To-dos on the overview come from the same store
 
-## Rejection flow (conflict resolution)
-1. Snapshot the user's current in-memory doc as `localDoc` (the in-flight edit).
-2. Refetch the row: `select("value").eq(...).maybeSingle()` → `serverDoc`, `serverVersion = serverDoc.version ?? 0`.
-3. Merge: start from `serverDoc`, then overlay `localDoc` on top at the **top-level key** granularity (shallow `{ ...serverDoc, ...localDoc, version: serverVersion }`). This preserves unrelated top-level sections the other device added (e.g. a med dose) while keeping the user's in-flight edit for sections they touched. This is the agreed "re-apply the user's current edit on top" — not per-field merge, just shallow overlay so the in-flight edit isn't lost.
-4. Set `loadedVersion = serverVersion`, `setD(mergedDoc)` (with `skipNextSave` guard set so the merge itself doesn't trigger an immediate save), then schedule a fresh save which will write `version: serverVersion + 1` through the conditional path.
-5. If the immediate re-save also conflicts (rare double-conflict), repeat once; after 2 failed attempts, log a warning and leave local state as-is so the next user edit retries.
+`TodayList` already reads to-dos through `dayBundle(d, dt)` → `bundle.todos`, which pulls straight from the single "To Do" checklist block. Toggling already writes back to that block (`toggleTodo` → `setD` on `d.blocks`), so the to-do tab reflects the change instantly. Two gaps versus the request:
 
-## Local cache
-`localStorage` payload becomes `{ value, updated_at, version }`. On boot, if local-wins, push uses the conditional path with `loadedVersion` derived from the cloud read so it still respects the server lock.
+a. `dayBundle`'s `todos` filter currently maps un-dated items to "today only" and dated items to their exact date. Update the filter so a to-do item is included on a given day `dt` when **any** of these are true:
+   - `it.date === dayKey(dt)` (explicit date match — unchanged), or
+   - `it.recurring === true` or `it.daily === true` (recurring items appear every day), or
+   - `it.time` is set and the item has no `date` restriction (timed but undated ⇒ appears every day at that time), or
+   - `!it.date && !it.recurring && !it.time && isToday` (existing default: un-dated items still show on today).
 
-## Out of scope (explicit)
-- No realtime subscriptions.
-- No deep/per-field merge — shallow top-level overlay only, as the minimum needed to "re-apply the in-flight edit."
-- No new tables or migrations.
-- No UI for conflict notifications (silent recovery; `console.warn` on conflict for debugging).
+   This is a pure read; the to-do tab's underlying items are untouched.
 
-## Technical notes
-- Supabase JS supports `.eq("value->>version", "N")` for JSONB field equality in a conditional update. Comparing as text is fine since we control both sides.
-- `.select()` on the update returns affected rows; length 0 = lock failed, length 1 = success. This is the standard OCC pattern and avoids a read-then-write race.
-- Debounce stays at 800ms. The conflict flow runs inside the same debounced callback.
+b. In `TodayList`, split `todoRows` into two groups by whether the source item has `it.time`:
+   - Timed to-dos merge into the same time-ordered stream that already holds events and (optionally) time blocks context. Concretely: extend the existing `eventRows` render loop into a single "Timed" list that concatenates `events` + timed todos, sorted by `start`/`time`. Checkbox for todo rows uses the existing `toggleTodo(idx)`; event rows keep their current delete button. No new editor UI.
+   - Untimed to-dos render below, in the existing `taskRows` section, unchanged.
+
+Rules honored:
+- No duplication: rows read directly from `d.blocks` via `dayBundle`; `toggleTodo` mutates the same block.
+- Recurring/timed items appear on every applicable day without cloning.
+- Toggling from the overview updates the source to-do, so the To Do tab reflects it immediately.
+
+### Explicit non-goals (per the request)
+
+- No new to-do editor on the overview (Quick Add modal at the bottom is untouched).
+- No drag and drop.
+- No changes to the To Do tab layout.
+- No notifications.
+
+### Assumption to confirm
+
+The current to-do item shape has `{ t, done, date? }` — there is no `recurring`/`daily` or `time` field yet. This plan reads those fields **if present** (forward-compatible) but does not add an editor to set them. Items already saved with just `{t, done}` continue to behave exactly as today. If you want an actual "daily" or "time" toggle exposed on the To Do tab, that's a separate change and not in scope here.
