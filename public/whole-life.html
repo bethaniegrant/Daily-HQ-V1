@@ -514,6 +514,7 @@ function App() {
         enabledCategories: { money: true, health: true, plan: true, trackers: true, ...(p.enabledCategories || {}) },
         timeBlockingEnabled: p.timeBlockingEnabled === true,
         timeBlocks: p.timeBlocks || {},
+        timeBlockTemplates: p.timeBlockTemplates || {},
       }));
     }
   }, [synced, displayName]); // eslint-disable-line
