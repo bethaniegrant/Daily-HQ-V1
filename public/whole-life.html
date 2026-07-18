@@ -1978,17 +1978,18 @@ const tbAddHour = (hhmm) => {
   return `${String(nh).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
 };
 
-function TimeBlocking({ d, setD, now, isDesktop }) {
-  const [day, setDay] = useState(new Date(now));
+function TimeBlocking({ d, setD, now, isDesktop, selectedDay }) {
+  const day = selectedDay || new Date(now);
   const [editingId, setEditingId] = useState(null);
   const [adding, setAdding] = useState(false);
   const dk = dayKey(day);
   const blocks = (d.timeBlocks && d.timeBlocks[dk]) || [];
   const sorted = [...blocks].sort((a, b) => (a.start || "").localeCompare(b.start || ""));
 
+  // When the shared date changes, close any open inline editor.
+  useEffect(() => { setEditingId(null); setAdding(false); }, [dk]);
+
   const setBlocks = (next) => setD({ ...d, timeBlocks: { ...(d.timeBlocks || {}), [dk]: next } });
-  const shiftDay = (delta) => { const nd = new Date(day); nd.setDate(nd.getDate() + delta); setDay(nd); setEditingId(null); setAdding(false); };
-  const jumpToday = () => { setDay(new Date(now)); setEditingId(null); setAdding(false); };
 
   const saveBlock = (b) => {
     const exists = sorted.find((x) => x.id === b.id);
@@ -2009,10 +2010,6 @@ function TimeBlocking({ d, setD, now, isDesktop }) {
       </div>
     );
   }
-
-
-  const dateLabel = day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-  const isToday = dayKey(day) === dayKey(new Date(now));
 
   return (
     <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: isDesktop ? "14px 18px 12px" : "12px 14px 10px" }}>
