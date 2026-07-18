@@ -2273,24 +2273,37 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
             </div>
           )}
           {medRows.length > 0 && (
-            <div style={{ display: "grid", gap: 6, marginTop: taskRows.length > 0 ? 4 : 0, paddingTop: taskRows.length > 0 ? 10 : 0, borderTop: taskRows.length > 0 ? `1px dashed ${LINE}` : "none" }}>
+            <div style={{ display: "grid", gap: 8, marginTop: taskRows.length > 0 ? 4 : 0, paddingTop: taskRows.length > 0 ? 10 : 0, borderTop: taskRows.length > 0 ? `1px dashed ${LINE}` : "none" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: PLUM }}>Medications</div>
                 <div style={{ fontSize: 10, fontWeight: 700, color: MUTED }}>{medsDoneCount}/{medRows.length}</div>
               </div>
-              {medRows.map((r) => (
-                <label key={"med:" + r.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 8px", background: r.done ? "transparent" : "rgba(122,90,124,.06)", border: `1px solid ${r.done ? "transparent" : LINE}`, borderRadius: 8 }}>
-                  <input type="checkbox" checked={r.done} onChange={r.onToggle} style={{ width: 16, height: 16, accentColor: PLUM, cursor: "pointer", flexShrink: 0 }} />
-                  {r.time ? (
-                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".06em", color: r.done ? MUTED : PLUM, minWidth: 58, fontVariantNumeric: "tabular-nums" }}>{fmtTime(r.time)}</span>
-                  ) : (
-                    <span style={{ width: 5, height: 5, borderRadius: 999, background: PLUM, flexShrink: 0 }} />
-                  )}
-                  <span style={{ flex: 1, fontSize: 13, color: r.done ? MUTED : TEXT, textDecoration: r.done ? "line-through" : "none", fontWeight: 600 }}>
-                    {r.label}{!r.time && r.sub ? ` · ${r.sub}` : ""}
-                  </span>
-                </label>
-              ))}
+              {d.meds.map((m) => {
+                const t = medTimes(m);
+                const sched = medSchedule(m);
+                const doses = medDoseArr((d.medChecks[tk] || {})[m.id], t);
+                const doneCount = doses.filter(Boolean).length;
+                const allTaken = doneCount >= t;
+                return (
+                  <div key={m.id} style={{ background: allTaken ? INK : CARD, color: allTaken ? PAPER : INK, borderRadius: 6, padding: "10px 12px", display: "grid", gap: 8, border: allTaken ? "none" : `1px solid ${LINE}` }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, textDecoration: allTaken ? "line-through" : "none" }}>{m.n || "Unnamed"}</div>
+                      {m.dose && <div style={{ fontSize: 11, color: allTaken ? "rgba(244,241,234,.6)" : MUTED }}>{m.dose}</div>}
+                      <div style={{ marginLeft: "auto", fontSize: 11, fontWeight: 800, color: allTaken ? "rgba(244,241,234,.7)" : MUTED, letterSpacing: ".06em" }}>{doneCount}/{t}</div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 5 }}>
+                      {doses.map((on, i) => (
+                        <div key={i} className="pop" onClick={() => toggleMedDose(m, i)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", borderRadius: 4, border: `1.5px solid ${on ? SAGEHI : (allTaken ? "rgba(244,241,234,.2)" : PLUM + "55")}`, background: on ? SAGEHI + "22" : "transparent", cursor: "pointer" }}>
+                          <div style={{ width: 16, height: 16, borderRadius: 3, border: `2px solid ${on ? SAGEHI : PLUM}`, background: on ? SAGEHI : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            {on && <CheckIcon c={INK} s={10} />}
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: allTaken ? PAPER : (on ? INK : TEXT), fontVariantNumeric: "tabular-nums" }}>{sched[i] ? fmtTime(sched[i]) : `Dose ${i + 1}`}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </>
