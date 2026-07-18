@@ -331,6 +331,7 @@ const emptyDoc = () => ({
   blocks: [],
   timeBlockingEnabled: false,
   timeBlocks: {},
+  timeBlockTemplates: {},
 });
 
 const seedMoney = (doc) => ({
@@ -513,6 +514,7 @@ function App() {
         enabledCategories: { money: true, health: true, plan: true, trackers: true, ...(p.enabledCategories || {}) },
         timeBlockingEnabled: p.timeBlockingEnabled === true,
         timeBlocks: p.timeBlocks || {},
+        timeBlockTemplates: p.timeBlockTemplates || {},
       }));
     }
   }, [synced, displayName]); // eslint-disable-line
@@ -1978,25 +1980,43 @@ const tbAddHour = (hhmm) => {
   return `${String(nh).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
 };
 
+const WD_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WD_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 function TimeBlocking({ d, setD, now, isDesktop, selectedDay }) {
   const day = selectedDay || new Date(now);
   const [editingId, setEditingId] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [schedOpen, setSchedOpen] = useState(false);
   const dk = dayKey(day);
-  const blocks = (d.timeBlocks && d.timeBlocks[dk]) || [];
+  const wd = String(day.getDay());
+  const savedBlocks = (d.timeBlocks && d.timeBlocks[dk]) || null;
+  const templates = d.timeBlockTemplates || {};
+  const templateBlocks = templates[wd] || null;
+  const isTemplate = !savedBlocks && templateBlocks && templateBlocks.length > 0;
+  const blocks = savedBlocks || templateBlocks || [];
   const sorted = [...blocks].sort((a, b) => (a.start || "").localeCompare(b.start || ""));
 
-  // When the shared date changes, close any open inline editor.
   useEffect(() => { setEditingId(null); setAdding(false); }, [dk]);
 
-  const setBlocks = (next) => setD({ ...d, timeBlocks: { ...(d.timeBlocks || {}), [dk]: next } });
+  const detachedCopy = () => (templateBlocks || []).map((b) => ({ ...b, id: uid() }));
+  const commitBlocks = (next) => setD({ ...d, timeBlocks: { ...(d.timeBlocks || {}), [dk]: next } });
 
   const saveBlock = (b) => {
-    const exists = sorted.find((x) => x.id === b.id);
-    if (exists) setBlocks(blocks.map((x) => x.id === b.id ? b : x));
-    else setBlocks([...blocks, b]);
+    const base = savedBlocks || detachedCopy();
+    const exists = base.find((x) => x.id === b.id);
+    commitBlocks(exists ? base.map((x) => x.id === b.id ? b : x) : [...base, b]);
   };
-  const deleteBlock = (id) => setBlocks(blocks.filter((x) => x.id !== id));
+  const deleteBlock = (id) => {
+    const base = savedBlocks || detachedCopy();
+    commitBlocks(base.filter((x) => x.id !== id));
+  };
+  const resetToTemplate = () => {
+    const next = { ...(d.timeBlocks || {}) };
+    delete next[dk];
+    setD({ ...d, timeBlocks: next });
+    setEditingId(null); setAdding(false);
+  };
 
   const enabled = d.timeBlockingEnabled === true;
   if (!enabled) {
@@ -2011,13 +2031,28 @@ function TimeBlocking({ d, setD, now, isDesktop, selectedDay }) {
     );
   }
 
+  const canDetachReset = !!savedBlocks && templateBlocks && templateBlocks.length > 0;
+
   return (
     <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: isDesktop ? "14px 18px 12px" : "12px 14px 10px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8 }}>
         <div style={{ fontSize: 14, fontFamily: "'DM Serif Display',serif", color: TEXT }}>Daily Time Blocking</div>
-        <button onClick={() => setD({ ...d, timeBlockingEnabled: false })} title="Turn off time blocking" style={{ background: "transparent", border: "none", color: MUTED, fontSize: 10, cursor: "pointer", letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600 }}>Hide</button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button onClick={() => setSchedOpen(true)} style={{ background: "transparent", border: "none", color: SAGE, fontSize: 10, cursor: "pointer", letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 700 }}>Schedules</button>
+          <button onClick={() => setD({ ...d, timeBlockingEnabled: false })} title="Turn off time blocking" style={{ background: "transparent", border: "none", color: MUTED, fontSize: 10, cursor: "pointer", letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600 }}>Hide</button>
+        </div>
       </div>
 
+      {isTemplate && (
+        <div style={{ background: PAPER, border: `1px dashed ${LINE}`, borderRadius: 8, padding: "6px 10px", marginBottom: 8, fontSize: 11, color: MUTED, letterSpacing: ".04em" }}>
+          Usual {WD_FULL[day.getDay()]} schedule — edits will apply only to this day.
+        </div>
+      )}
+      {canDetachReset && (
+        <div style={{ marginBottom: 8, textAlign: "right" }}>
+          <button onClick={resetToTemplate} style={{ background: "transparent", border: "none", color: SAGE, fontSize: 10, cursor: "pointer", letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 700 }}>Reset to usual schedule</button>
+        </div>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {sorted.length === 0 && !adding && (
@@ -2032,7 +2067,7 @@ function TimeBlocking({ d, setD, now, isDesktop, selectedDay }) {
         {adding ? (
           <TBEditor
             initial={{ id: uid(), label: "", start: tbNextStart(sorted), end: tbAddHour(tbNextStart(sorted)), color: TB_COLORS[sorted.length % TB_COLORS.length] }}
-            onSave={(nb) => { saveBlock(nb); /* keep editor open with next start prefilled */ setAdding(true); }}
+            onSave={(nb) => { saveBlock(nb); setAdding(true); }}
             onCancel={() => setAdding(false)}
             keepOpen
             resetSignal={sorted.length}
@@ -2041,9 +2076,95 @@ function TimeBlocking({ d, setD, now, isDesktop, selectedDay }) {
           <button onClick={() => { setAdding(true); setEditingId(null); }} className="pop" style={{ marginTop: 2, background: PAPER, border: `1px dashed ${LINE}`, borderRadius: 8, padding: "8px 10px", color: SAGE, fontWeight: 600, fontSize: 12, cursor: "pointer", textAlign: "left" }}>+ Add block</button>
         )}
       </div>
+
+      {schedOpen && (
+        <SchedulesModal
+          d={d}
+          setD={setD}
+          currentBlocks={sorted}
+          currentWd={day.getDay()}
+          onClose={() => setSchedOpen(false)}
+        />
+      )}
     </div>
   );
 }
+
+function SchedulesModal({ d, setD, currentBlocks, currentWd, onClose }) {
+  const templates = d.timeBlockTemplates || {};
+  const [picked, setPicked] = useState(() => {
+    const s = new Set();
+    s.add(currentWd);
+    return s;
+  });
+  const toggle = (i) => {
+    const s = new Set(picked);
+    if (s.has(i)) s.delete(i); else s.add(i);
+    setPicked(s);
+  };
+  const canSave = currentBlocks.length > 0 && picked.size > 0;
+  const saveTemplate = () => {
+    if (!canSave) return;
+    const clean = currentBlocks.map((b) => ({ id: uid(), label: b.label || "", start: b.start, end: b.end, color: b.color }));
+    const nextT = { ...templates };
+    picked.forEach((i) => { nextT[String(i)] = clean; });
+    setD({ ...d, timeBlockTemplates: nextT });
+    onClose();
+  };
+  const deleteTemplate = (i) => {
+    const nextT = { ...templates };
+    delete nextT[String(i)];
+    setD({ ...d, timeBlockTemplates: nextT });
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(30,32,28,0.42)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: CARD, borderRadius: 14, border: `1px solid ${LINE}`, maxWidth: 440, width: "100%", padding: 20, maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 20, color: TEXT }}>Recurring schedules</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: MUTED, fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>Save today as usual for…</div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+          {WD_NAMES.map((n, i) => {
+            const on = picked.has(i);
+            return (
+              <button key={i} onClick={() => toggle(i)} style={{ padding: "6px 10px", borderRadius: 999, border: `1px solid ${on ? SAGE : LINE}`, background: on ? SAGE : PAPER, color: on ? CARD : TEXT, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{n}</button>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+          <button onClick={() => setPicked(new Set([1, 2, 3, 4, 5]))} style={{ background: "transparent", border: "none", color: SAGE, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Mon–Fri</button>
+          <button onClick={() => setPicked(new Set([0, 6]))} style={{ background: "transparent", border: "none", color: SAGE, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Sat–Sun</button>
+          <button onClick={() => setPicked(new Set([0, 1, 2, 3, 4, 5, 6]))} style={{ background: "transparent", border: "none", color: SAGE, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Every day</button>
+        </div>
+        {currentBlocks.length === 0 && <div style={{ fontSize: 11, color: MUTED, marginBottom: 8 }}>Add at least one block to save as a template.</div>}
+        <button onClick={saveTemplate} disabled={!canSave} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", background: canSave ? SAGE : LINE, color: CARD, fontWeight: 700, cursor: canSave ? "pointer" : "not-allowed", fontSize: 13, marginBottom: 18 }}>Save schedule</button>
+
+        <div style={{ fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>Existing schedules</div>
+        {Object.keys(templates).length === 0 && (
+          <div style={{ fontSize: 12, color: MUTED, padding: "6px 0" }}>None yet.</div>
+        )}
+        {WD_FULL.map((name, i) => {
+          const t = templates[String(i)];
+          if (!t || t.length === 0) return null;
+          return (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${LINE}` }}>
+              <div>
+                <div style={{ fontSize: 13, color: TEXT, fontFamily: "'DM Serif Display',serif" }}>{name}</div>
+                <div style={{ fontSize: 11, color: MUTED }}>{t.length} block{t.length === 1 ? "" : "s"}</div>
+              </div>
+              <button onClick={() => deleteTemplate(i)} style={{ background: "transparent", border: `1px solid ${LINE}`, color: MUTED, borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}>Delete</button>
+            </div>
+          );
+        })}
+        <div style={{ fontSize: 11, color: MUTED, marginTop: 12 }}>To edit a schedule, view a day it applies to, adjust the blocks, then save as usual for that weekday again.</div>
+      </div>
+    </div>
+  );
+}
+
 
 
 function TBRow({ block, onEdit, onDelete }) {
