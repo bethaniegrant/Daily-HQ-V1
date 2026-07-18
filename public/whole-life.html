@@ -1758,8 +1758,13 @@ function dayBundle(d, dt) {
   const todos = [];
   if (todoBlock) {
     (todoBlock.items || []).forEach((it, idx) => {
-      const matchDate = it.date ? it.date === k : isToday;
-      if (matchDate) todos.push({ ...it, idx, blockId: todoBlock.id });
+      const isRecurring = it.recurring === true || it.daily === true;
+      let show = false;
+      if (it.date) show = it.date === k;
+      else if (isRecurring) show = true;
+      else if (it.time) show = true; // timed but undated ⇒ every day at that time
+      else show = isToday;
+      if (show) todos.push({ ...it, idx, blockId: todoBlock.id });
     });
   }
   return { habits, medsList, workouts, mood, bills, meal, weekdayShort, events, todos, todoBlockId: todoBlock ? todoBlock.id : null };
