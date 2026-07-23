@@ -3299,8 +3299,27 @@ function Budget({ d, setD, back, ctx }) {
           <label style={{ ...lbl, color: MIST }}>Take-home pay</label>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MIST }}>{cadenceLabel}</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, color: SAGEHI }}>$</span><input inputMode="decimal" value={d.pay} onChange={(e) => setD({ ...d, pay: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, background: "none", color: PAPER }} /></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+          <span style={{ fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, color: SAGEHI }}>$</span>
+          <span style={{ fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, color: PAPER, flex: 1 }}>{money(pay)}</span>
+        </div>
+        {latestPaycheck ? (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 12, color: MIST }}>
+              Latest paycheck · {new Date(latestPaycheck.date_received + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+              {" · "}Expected ${money(Number(latestPaycheck.expected_amount) || 0)}
+              {latestPaycheck.actual_amount != null && (<>{" · "}Actual ${money(Number(latestPaycheck.actual_amount) || 0)}</>)}
+            </div>
+            <button onClick={() => setLogOpen(true)} style={{ background: "rgba(255,255,255,.14)", color: PAPER, border: `1px solid rgba(255,255,255,.25)`, borderRadius: 3, padding: "7px 12px", fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer" }}>Log a paycheck</button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 12, color: MIST }}>{paychecksReady ? "No paycheck logged yet." : "Loading…"}</div>
+            <button onClick={() => setLogOpen(true)} style={{ background: SAGEHI, color: INK, border: "none", borderRadius: 3, padding: "8px 14px", fontSize: 12, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer" }}>Log a paycheck</button>
+          </div>
+        )}
       </div>
+      {logOpen && <LogPaycheckModal ctx={ctx} defaultFreq={payFreq} onClose={() => setLogOpen(false)} onSaved={() => { setLogOpen(false); reloadPaychecks(); }} />}
       {allSections.map((sec) => {
         const weeklyReserveMode = isWeekly && sec.key === "fixed";
         const rows = d.budget[sec.key] || [];
