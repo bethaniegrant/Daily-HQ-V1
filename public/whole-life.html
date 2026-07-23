@@ -3223,26 +3223,105 @@ function Budget({ d, setD, back }) {
 
   const payFreq = d.pay_frequency || "biweekly";
   const isMonthly = payFreq === "monthly";
+  const isWeekly = payFreq === "weekly";
+
+  // Weekly reserve model helpers
+  const reserveOf = (r) => Math.round(((Number(r.a) || 0)) / 4.33);
+  const weekKeyOf = (dt) => { const x = new Date(dt); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; };
+  const curWeek = weekKeyOf(new Date());
+  const fixedRows = (d.budget?.fixed) || [];
+  const reservesThisWeek = isWeekly ? fixedRows.reduce((s, r) => s + reserveOf(r), 0) : 0;
+
+  // Auto-accumulate reserved_so_far once per week per fixed row (view-time)
+  useEffect(() => {
+    if (!isWeekly) return;
+    let changed = false;
+    const next = fixedRows.map((r) => {
+      const monthly = Number(r.a) || 0;
+      if (monthly <= 0) return r;
+      const already = Number(r.reserved_so_far) || 0;
+      if (r.last_reserved_week === curWeek) return r;
+      if (already >= monthly) {
+        if (r.last_reserved_week !== curWeek) { changed = true; return { ...r, last_reserved_week: curWeek }; }
+        return r;
+      }
+      changed = true;
+      const add = reserveOf(r);
+      return { ...r, reserved_so_far: Math.min(monthly, already + add), last_reserved_week: curWeek };
+    });
+    if (changed) setD({ ...d, budget: { ...d.budget, fixed: next } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWeekly, curWeek, fixedRows.length]);
+
+  // Weekly left-to-allocate: weekly take-home − this week's reserves − variable spending
+  const variableTotal = sectionTotal(d, "variable");
+  const weeklyAssigned = reservesThisWeek + variableTotal;
+  const weeklyLeft = pay - weeklyAssigned;
+  const weeklyPct = pay ? Math.min(1, weeklyAssigned / pay) : 0;
+  const displayLeft = isWeekly ? weeklyLeft : left;
+  const displayAssigned = isWeekly ? weeklyAssigned : spent;
+  const displayPct = isWeekly ? weeklyPct : pct;
+
+  const subLabel = isWeekly ? "This week" : (isMonthly ? "This month" : "This paycheck");
+  const cadenceLabel = isWeekly ? "4-5x per month" : (isMonthly ? "1x per month" : "2x per month");
+
   return (
-    <Screen title="Budget" sub={isMonthly ? "This month" : "This paycheck"} back={back} accent={AMBER}>
+    <Screen title="Budget" sub={subLabel} back={back} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
           <label style={{ ...lbl, color: MIST }}>Take-home pay</label>
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MIST }}>{isMonthly ? "1x per month" : "2x per month"}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MIST }}>{cadenceLabel}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, color: SAGEHI }}>$</span><input inputMode="decimal" value={d.pay} onChange={(e) => setD({ ...d, pay: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, background: "none", color: PAPER }} /></div>
       </div>
-      {allSections.map((sec) => (
+      {allSections.map((sec) => {
+        const weeklyReserveMode = isWeekly && sec.key === "fixed";
+        const rows = d.budget[sec.key] || [];
+        const headerTotal = weeklyReserveMode
+          ? rows.reduce((s, r) => s + reserveOf(r), 0)
+          : sectionTotal(d, sec.key);
+        return (
         <div key={sec.key} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${sec.color}`, borderRadius: 4, padding: "15px 16px", marginBottom: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12, gap: 8 }}>
-            <div style={{ minWidth: 0 }}><div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.01em" }}>{sec.label}</div><div style={{ fontSize: 12, color: MUTED }}>{sec.hint}</div></div>
+            <div style={{ minWidth: 0 }}><div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.01em" }}>{sec.label}</div><div style={{ fontSize: 12, color: MUTED }}>{weeklyReserveMode ? "Reserve a slice each week" : sec.hint}</div></div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: sec.color, whiteSpace: "nowrap" }}>${money(sectionTotal(d, sec.key))}</div>
+              <div style={{ fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 18, color: sec.color, whiteSpace: "nowrap" }}>${money(headerTotal)}{weeklyReserveMode && <span style={{ fontSize: 11, fontFamily: "inherit", fontWeight: 700, color: MUTED, marginLeft: 4 }}>/ wk</span>}</div>
               {sec.custom && <div className="pop" onClick={() => delSection(sec.key)} title="Remove category" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>}
             </div>
           </div>
+          {weeklyReserveMode ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              {rows.map((r) => {
+                const monthly = Number(r.a) || 0;
+                const saved = Math.min(monthly, Number(r.reserved_so_far) || 0);
+                const rpct = monthly > 0 ? Math.min(1, saved / monthly) : 0;
+                const perWeek = reserveOf(r);
+                const full = monthly > 0 && saved >= monthly;
+                return (
+                  <div key={r.id} style={{ display: "grid", gap: 6 }}>
+                    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                      <input value={r.n} onChange={(e) => setRow(sec.key, r.id, "n", e.target.value)} placeholder="Bill name" style={{ flex: 1, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 500 }} />
+                      <div title="Monthly amount" style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", width: 96, background: PAPER }}><span style={{ color: MUTED, fontSize: 13 }}>$</span><input inputMode="decimal" value={r.a} onChange={(e) => setRow(sec.key, r.id, "a", e.target.value)} placeholder="0" style={{ border: "none", width: "100%", textAlign: "right", padding: "9px 0 9px 4px", fontSize: 14, fontWeight: 600, background: "none" }} /></div>
+                      <div className="pop" onClick={() => delRow(sec.key, r.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: MUTED, fontWeight: 600 }}>
+                      <span>${money(saved)} of ${money(monthly)} saved</span>
+                      <span>{monthly > 0 ? `$${money(perWeek)}/wk` : "—"}</span>
+                    </div>
+                    {full ? (
+                      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", color: "#C4717A" }}>Fully reserved</div>
+                    ) : (
+                      <div style={{ height: 4, background: PAPER, border: `1px solid ${LINE}`, borderRadius: 999, overflow: "hidden" }}>
+                        <div style={{ width: `${rpct * 100}%`, height: "100%", background: "#C4717A", transition: "width .4s" }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
           <div style={{ display: "grid", gap: 7 }}>
-            {(d.budget[sec.key] || []).length > 0 && (
+            {rows.length > 0 && (
               <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", fontSize: 10, fontWeight: 700, letterSpacing: ".12em", color: MUTED, textTransform: "uppercase" }}>
                 <div style={{ flex: "1 1 120px", minWidth: 0 }}>Item</div>
                 <div style={{ width: 78, textAlign: "center" }}>Due</div>
@@ -3250,7 +3329,7 @@ function Budget({ d, setD, back }) {
                 <div style={{ width: 15 }} />
               </div>
             )}
-            {(d.budget[sec.key] || []).map((r) => (
+            {rows.map((r) => (
               <div key={r.id} style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
                 <input value={r.n} onChange={(e) => setRow(sec.key, r.id, "n", e.target.value)} placeholder="What for" style={{ flex: "1 1 120px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 500 }} />
                 <div title="Day of month due (1–31)" style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 8px", width: 78, background: PAPER }}>
@@ -3261,18 +3340,21 @@ function Budget({ d, setD, back }) {
               </div>
             ))}
           </div>
+          )}
           <button onClick={() => addRow(sec.key)} style={{ marginTop: 10, background: "none", border: "none", color: sec.color, fontWeight: 700, fontSize: 13, cursor: "pointer", padding: 0 }}>+ Add a line</button>
         </div>
-      ))}
+        );
+      })}
       <button onClick={addSection} style={{ ...addBtn, borderColor: PLUM, color: PLUM, marginBottom: 14 }}>+ Add expense category</button>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "22px 24px", marginTop: 6 }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MIST, marginBottom: 6 }}><span>Take-home pay</span><span style={{ fontWeight: 700, color: PAPER }}>${money(pay)}</span></div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MIST, marginBottom: 10 }}><span>Everything assigned</span><span style={{ fontWeight: 700, color: PAPER }}>− ${money(spent)}</span></div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MIST, marginBottom: 10 }}><span>{isWeekly ? "Reserves + spending" : "Everything assigned"}</span><span style={{ fontWeight: 700, color: PAPER }}>− ${money(displayAssigned)}</span></div>
         <div style={{ height: 1, background: "rgba(255,255,255,.15)", margin: "4px 0 12px" }} />
-        <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: left < 0 ? AMBER : MIST }}>{left < 0 ? "Over by" : "Left to allocate"}</div>
-        <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 46, fontWeight: 600, margin: "4px 0 14px", letterSpacing: "-.02em", color: left < 0 ? AMBER : PAPER }}>${money(Math.abs(left))}</div>
-        <div style={{ height: 8, background: "rgba(255,255,255,.15)", overflow: "hidden" }}><div style={{ width: `${pct * 100}%`, height: "100%", background: left < 0 ? AMBER : SAGEHI, transition: "width .5s" }} /></div>
+        <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: displayLeft < 0 ? AMBER : MIST }}>{displayLeft < 0 ? "Over by" : "Left to allocate"}</div>
+        <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 46, fontWeight: 600, margin: "4px 0 14px", letterSpacing: "-.02em", color: displayLeft < 0 ? AMBER : PAPER }}>${money(Math.abs(displayLeft))}</div>
+        <div style={{ height: 8, background: "rgba(255,255,255,.15)", overflow: "hidden" }}><div style={{ width: `${displayPct * 100}%`, height: "100%", background: displayLeft < 0 ? AMBER : SAGEHI, transition: "width .5s" }} /></div>
       </div>
+
 
       {/* Savings Tracker */}
       <div style={{ marginTop: 22 }}>
