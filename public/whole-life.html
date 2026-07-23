@@ -3248,7 +3248,7 @@ function Budget({ d, setD, back, ctx }) {
   const delGoal = (id) => setD({ ...d, savingsGoals: goals.filter((g) => g.id !== id) });
   const goalColors = [SAGE, AMBER, PLUM, BLUE, "#9aa777"];
 
-  const payFreq = d.pay_frequency || "biweekly";
+  const payFreq = payFreqEarly;
   const isMonthly = payFreq === "monthly";
   const isWeekly = payFreq === "weekly";
 
