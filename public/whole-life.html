@@ -561,25 +561,43 @@ function App() {
     }));
   }, [now, synced]); // eslint-disable-line
 
-  const go = (tabId, pageId = null) => { setTab(tabId); setPage(pageId); };
+  const [history, setHistory] = useState([]); // stack of { tab, page }
+  const go = (tabId, pageId = null) => {
+    setHistory((h) => [...h, { tab, page }]);
+    setTab(tabId); setPage(pageId);
+  };
+  const goBack = () => {
+    setHistory((h) => {
+      if (h.length === 0) {
+        // fallback: page -> hub, hub -> home
+        if (page) setPage(null);
+        else if (tab !== "home") { setTab("home"); setPage(null); }
+        return h;
+      }
+      const prev = h[h.length - 1];
+      setTab(prev.tab); setPage(prev.page);
+      return h.slice(0, -1);
+    });
+  };
+  const canGoBack = history.length > 0 || page !== null || tab !== "home";
 
   // listen for parent (app shell) messages — Home, admin context, etc.
   useEffect(() => {
     const handler = (e) => {
       const m = e && e.data;
       if (!m || typeof m !== "object") return;
-      if (m.type === "go") { setTab(m.tab || "home"); setPage(m.page || null); }
+      if (m.type === "go") { setHistory((h) => [...h, { tab, page }]); setTab(m.tab || "home"); setPage(m.page || null); }
       else if (m.type === "shell:context") { setIsAdmin(!!m.isAdmin); }
     };
     window.addEventListener("message", handler);
     try { window.parent && window.parent.postMessage({ type: "shell:ready" }, "*"); } catch (_) {}
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, [tab, page]);
 
   const signOutFromShell = () => { try { window.parent && window.parent.postMessage({ type: "shell:signOut" }, "*"); } catch (_) {} };
   const openAdmin = () => { try { window.parent && window.parent.postMessage({ type: "shell:navigate", to: "/admin" }, "*"); } catch (_) {} };
 
-  const common = { d, setD, now, go, back: () => { if (page) setPage(null); else go("home"); }, openMenu: () => setMenuOpen(true), isDesktop, displayName };
+  const common = { d, setD, now, go, back: goBack, openMenu: () => setMenuOpen(true), isDesktop, displayName };
 
   // resolve current page
   let view;
