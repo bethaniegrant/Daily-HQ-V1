@@ -3186,11 +3186,136 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
   );
 }
 
+// ═══ Paycheck period helpers ════════════════
+function paycheckPeriods(y, m, freq) {
+  const pad = (n) => String(n).padStart(2, "0");
+  const mm = pad(m + 1);
+  if (freq === "monthly") return [{ label: "", date: `${y}-${mm}-01` }];
+  if (freq === "biweekly") return [
+    { label: "Paycheck 1", date: `${y}-${mm}-01` },
+    { label: "Paycheck 2", date: `${y}-${mm}-15` },
+  ];
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const out = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dt = new Date(y, m, day);
+    if (dt.getDay() === 1) out.push({ label: `Week ${out.length + 1}`, date: `${y}-${mm}-${pad(day)}` });
+  }
+  if (out.length === 0) out.push({ label: "Week 1", date: `${y}-${mm}-01` });
+  return out;
+}
+
+function findPaycheck(paychecks, freq, date) {
+  return paychecks.find((p) => p.pay_frequency === freq && p.date_received === date) || null;
+}
+
+function PaycheckRow({ ctx, freq, period, existing, onSaved, readOnly }) {
+  const [exp, setExp] = useState(existing?.expected_amount != null ? String(existing.expected_amount) : "");
+  const [act, setAct] = useState(existing?.actual_amount != null ? String(existing.actual_amount) : "");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setExp(existing?.expected_amount != null ? String(existing.expected_amount) : "");
+    setAct(existing?.actual_amount != null ? String(existing.actual_amount) : "");
+  }, [existing?.id, existing?.expected_amount, existing?.actual_amount]);
+
+  const commit = async (nextExp, nextAct) => {
+    if (readOnly) return;
+    const client = ctx && ctx.current && ctx.current.client;
+    const uid_ = ctx && ctx.current && ctx.current.userId;
+    if (!client || !uid_) return;
+    const expNum = nextExp === "" ? null : Number(nextExp);
+    const actNum = nextAct === "" ? null : Number(nextAct);
+    if (expNum != null && !Number.isFinite(expNum)) return;
+    if (actNum != null && !Number.isFinite(actNum)) return;
+    if (!existing && (expNum == null || expNum <= 0) && actNum == null) return;
+    const sameExp = existing && Number(existing.expected_amount || 0) === (expNum || 0);
+    const sameAct = existing && ((existing.actual_amount == null && actNum == null) ||
+      (existing.actual_amount != null && actNum != null && Number(existing.actual_amount) === actNum));
+    if (existing && sameExp && sameAct) return;
+    setBusy(true);
+    if (existing) {
+      await client.from("paychecks").update({
+        expected_amount: expNum != null ? expNum : 0,
+        actual_amount: actNum,
+      }).eq("id", existing.id);
+    } else {
+      await client.from("paychecks").insert({
+        user_id: uid_,
+        date_received: period.date,
+        pay_frequency: freq,
+        expected_amount: expNum != null ? expNum : 0,
+        actual_amount: actNum,
+      });
+    }
+    setBusy(false);
+    onSaved && onSaved();
+  };
+
+  const hasAct = existing && existing.actual_amount != null;
+  const rdiff = hasAct ? Number(existing.actual_amount) - Number(existing.expected_amount || 0) : 0;
+  const badgeText = readOnly
+    ? (!hasAct ? "Not logged" : rdiff === 0 ? "On target" : `${rdiff > 0 ? "+" : "−"}$${money(Math.abs(rdiff))}`)
+    : null;
+  const badgeBg = !hasAct ? "rgba(154,144,130,.15)" : rdiff >= 0 ? "rgba(122,138,94,.18)" : "rgba(196,113,122,.16)";
+  const badgeColor = !hasAct ? MUTED : rdiff >= 0 ? "#5a6b4d" : "#C4717A";
+
+  const inputStyle = { border: "none", flex: 1, textAlign: "right", padding: "8px 0", fontSize: 14, fontWeight: 700, background: "none", minWidth: 0, color: TEXT, opacity: busy ? 0.6 : 1 };
+  const wrap = { display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER };
+  const dt = new Date(period.date + "T00:00:00");
+  const dateLabel = dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "12px 14px", display: "grid", gridTemplateColumns: readOnly ? "minmax(0,1.1fr) 1fr 1fr auto" : "minmax(0,1.1fr) 1fr 1fr", gap: 10, alignItems: "center" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: TEXT, letterSpacing: ".02em" }}>{period.label || "Paycheck"}</div>
+        <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{dateLabel}</div>
+      </div>
+      <div>
+        <div style={{ fontSize: 9, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 3 }}>Expected</div>
+        <div style={wrap}>
+          <span style={{ color: MUTED, fontSize: 13 }}>$</span>
+          <input inputMode="decimal" value={exp} readOnly={readOnly} onChange={(e) => setExp(e.target.value)} onBlur={() => commit(exp, act)} placeholder="0" style={inputStyle} />
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: 9, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 3 }}>Actual</div>
+        <div style={wrap}>
+          <span style={{ color: MUTED, fontSize: 13 }}>$</span>
+          <input inputMode="decimal" value={act} readOnly={readOnly} onChange={(e) => setAct(e.target.value)} onBlur={() => commit(exp, act)} placeholder="—" style={inputStyle} />
+        </div>
+      </div>
+      {readOnly && (
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", padding: "6px 8px", borderRadius: 999, background: badgeBg, color: badgeColor, whiteSpace: "nowrap" }}>{badgeText}</div>
+      )}
+    </div>
+  );
+}
+
+function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnly }) {
+  const periods = React.useMemo(() => paycheckPeriods(year, month, freq), [year, month, freq]);
+  const extras = React.useMemo(() => {
+    const pad = (n) => String(n).padStart(2, "0");
+    const prefix = `${year}-${pad(month + 1)}-`;
+    const canonical = new Set(periods.map((p) => p.date));
+    return paychecks
+      .filter((p) => p.pay_frequency === freq && p.date_received.startsWith(prefix) && !canonical.has(p.date_received))
+      .sort((a, b) => a.date_received.localeCompare(b.date_received))
+      .map((p, i) => ({ label: freq === "biweekly" ? `Paycheck ${periods.length + i + 1}` : freq === "weekly" ? `Week ${periods.length + i + 1}` : "Paycheck", date: p.date_received }));
+  }, [paychecks, periods, year, month, freq]);
+  const rows = [...periods, ...extras];
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      {rows.map((p) => (
+        <PaycheckRow key={p.date} ctx={ctx} freq={freq} period={p} existing={findPaycheck(paychecks, freq, p.date)} onSaved={reload} readOnly={readOnly} />
+      ))}
+    </div>
+  );
+}
+
 // ═══ EXISTING TOOLS (budget, habits, goals, meals) ════════════════
 function Budget({ d, setD, back, ctx }) {
   const payFreqEarly = d.pay_frequency || "biweekly";
   const [paychecks, setPaychecks] = useState([]);
-  const [logOpen, setLogOpen] = useState(false);
   const [paychecksReady, setPaychecksReady] = useState(false);
   const reloadPaychecks = React.useCallback(async () => {
     const client = ctx && ctx.current && ctx.current.client;
@@ -3205,21 +3330,28 @@ function Budget({ d, setD, back, ctx }) {
   }, [ctx]);
   useEffect(() => { reloadPaychecks(); }, [reloadPaychecks]);
 
-  const latestPaycheck = React.useMemo(() => {
-    const matches = paychecks.filter((p) => p.pay_frequency === payFreqEarly);
-    return matches[0] || paychecks[0] || null;
-  }, [paychecks, payFreqEarly]);
-  const payFromPaycheck = latestPaycheck
-    ? Number(latestPaycheck.actual_amount != null ? latestPaycheck.actual_amount : latestPaycheck.expected_amount) || 0
-    : 0;
-  const pay = payFromPaycheck || (Number(d.pay) || 0);
+  const now = new Date();
+  const curY = now.getFullYear(), curM = now.getMonth();
+  const periodTotals = React.useMemo(() => {
+    let expected = 0, actual = 0, effective = 0, anyActual = false;
+    const pad = (n) => String(n).padStart(2, "0");
+    const prefix = `${curY}-${pad(curM + 1)}-`;
+    paychecks.filter((p) => p.pay_frequency === payFreqEarly && p.date_received.startsWith(prefix)).forEach((r) => {
+      const ex = Number(r.expected_amount) || 0;
+      expected += ex;
+      if (r.actual_amount != null) { const a = Number(r.actual_amount) || 0; actual += a; anyActual = true; effective += a; }
+      else effective += ex;
+    });
+    return { expected, actual, effective, anyActual };
+  }, [paychecks, payFreqEarly, curY, curM]);
+
+  const pay = periodTotals.effective || (Number(d.pay) || 0);
   const spent = budgetSpent(d), left = pay - spent, pct = pay ? Math.min(1, spent / pay) : 0;
 
   const setRow = (key, id, field, v) => setD({ ...d, budget: { ...d.budget, [key]: (d.budget[key]||[]).map((r) => r.id === id ? { ...r, [field]: v } : r) } });
   const addRow = (key) => setD({ ...d, budget: { ...d.budget, [key]: [...(d.budget[key]||[]), { id: uid(), n: "", a: "", due: "" }] } });
   const delRow = (key, id) => setD({ ...d, budget: { ...d.budget, [key]: (d.budget[key]||[]).filter((r) => r.id !== id) } });
 
-  // custom expense categories
   const customSections = d.customBudgetSections || [];
   const sectionColors = ["#8a6b9c", "#4f7a8c", "#C4717A", "#7d8a5e", "#a05b5b", "#5a8a7d"];
   const addSection = () => {
@@ -3241,7 +3373,6 @@ function Budget({ d, setD, back, ctx }) {
   };
   const allSections = [...BUDGET_SECTIONS, ...customSections.map((s) => ({ ...s, custom: true }))];
 
-  // savings goals
   const goals = d.savingsGoals || [];
   const setGoal = (id, patch) => setD({ ...d, savingsGoals: goals.map((g) => g.id === id ? { ...g, ...patch } : g) });
   const addGoal = () => setD({ ...d, savingsGoals: [...goals, { id: uid(), n: "", target: "", saved: "", color: SAGE }] });
@@ -3252,14 +3383,12 @@ function Budget({ d, setD, back, ctx }) {
   const isMonthly = payFreq === "monthly";
   const isWeekly = payFreq === "weekly";
 
-  // Weekly reserve model helpers
   const reserveOf = (r) => Math.round(((Number(r.a) || 0)) / 4.33);
   const weekKeyOf = (dt) => { const x = new Date(dt); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; };
   const curWeek = weekKeyOf(new Date());
   const fixedRows = (d.budget?.fixed) || [];
   const reservesThisWeek = isWeekly ? fixedRows.reduce((s, r) => s + reserveOf(r), 0) : 0;
 
-  // Auto-accumulate reserved_so_far once per week per fixed row (view-time)
   useEffect(() => {
     if (!isWeekly) return;
     let changed = false;
@@ -3280,7 +3409,6 @@ function Budget({ d, setD, back, ctx }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWeekly, curWeek, fixedRows.length]);
 
-  // Weekly left-to-allocate: weekly take-home − this week's reserves − variable spending
   const variableTotal = sectionTotal(d, "variable");
   const weeklyAssigned = reservesThisWeek + variableTotal;
   const weeklyLeft = pay - weeklyAssigned;
@@ -3291,6 +3419,8 @@ function Budget({ d, setD, back, ctx }) {
 
   const subLabel = isWeekly ? "This week" : (isMonthly ? "This month" : "This paycheck");
   const cadenceLabel = isWeekly ? "4-5x per month" : (isMonthly ? "1x per month" : "2x per month");
+  const monthName = new Date(curY, curM, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const diffMonth = periodTotals.actual - periodTotals.expected;
 
   return (
     <Screen title="Budget" sub={subLabel} back={back} accent={AMBER}>
@@ -3303,23 +3433,16 @@ function Budget({ d, setD, back, ctx }) {
           <span style={{ fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, color: SAGEHI }}>$</span>
           <span style={{ fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, color: PAPER, flex: 1 }}>{money(pay)}</span>
         </div>
-        {latestPaycheck ? (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 12, color: MIST }}>
-              Latest paycheck · {new Date(latestPaycheck.date_received + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-              {" · "}Expected ${money(Number(latestPaycheck.expected_amount) || 0)}
-              {latestPaycheck.actual_amount != null && (<>{" · "}Actual ${money(Number(latestPaycheck.actual_amount) || 0)}</>)}
-            </div>
-            <button onClick={() => setLogOpen(true)} style={{ background: "rgba(255,255,255,.14)", color: PAPER, border: `1px solid rgba(255,255,255,.25)`, borderRadius: 3, padding: "7px 12px", fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer" }}>Log a paycheck</button>
-          </div>
-        ) : (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 12, color: MIST }}>{paychecksReady ? "No paycheck logged yet." : "Loading…"}</div>
-            <button onClick={() => setLogOpen(true)} style={{ background: SAGEHI, color: INK, border: "none", borderRadius: 3, padding: "8px 14px", fontSize: 12, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer" }}>Log a paycheck</button>
-          </div>
-        )}
+        <div style={{ fontSize: 12, color: MIST, marginTop: 6 }}>
+          {paychecksReady ? (
+            <>Expected ${money(periodTotals.expected)}{periodTotals.anyActual && <> · Actual <span style={{ color: PAPER, fontWeight: 700 }}>${money(periodTotals.actual)}</span> · {diffMonth === 0 ? "on target" : `${diffMonth > 0 ? "+" : "−"}$${money(Math.abs(diffMonth))}`}</>} · {monthName}</>
+          ) : "Loading paychecks…"}
+        </div>
       </div>
-      {logOpen && <LogPaycheckModal ctx={ctx} defaultFreq={payFreq} onClose={() => setLogOpen(false)} onSaved={() => { setLogOpen(false); reloadPaychecks(); }} />}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>Paychecks · {monthName}</div>
+        <PaycheckPeriodList ctx={ctx} year={curY} month={curM} freq={payFreq} paychecks={paychecks} reload={reloadPaychecks} />
+      </div>
       {allSections.map((sec) => {
         const weeklyReserveMode = isWeekly && sec.key === "fixed";
         const rows = d.budget[sec.key] || [];
