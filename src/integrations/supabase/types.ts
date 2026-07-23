@@ -143,6 +143,36 @@ export type Database = {
         }
         Relationships: []
       }
+      paychecks: {
+        Row: {
+          actual_amount: number | null
+          created_at: string
+          date_received: string
+          expected_amount: number
+          id: string
+          pay_frequency: string
+          user_id: string
+        }
+        Insert: {
+          actual_amount?: number | null
+          created_at?: string
+          date_received: string
+          expected_amount: number
+          id?: string
+          pay_frequency: string
+          user_id: string
+        }
+        Update: {
+          actual_amount?: number | null
+          created_at?: string
+          date_received?: string
+          expected_amount?: number
+          id?: string
+          pay_frequency?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           access_revoked: boolean
