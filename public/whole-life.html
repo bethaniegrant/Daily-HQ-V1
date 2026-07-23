@@ -627,6 +627,7 @@ function App() {
     { label: "", items: [{ icon: HomeIcon, color: SAGE, title: "Home", onClick: () => navGo("home") }] },
     ...(enabledCats.money ? [{ label: "Money", items: [
       { icon: WalletIcon, color: AMBER, title: "Budget", onClick: () => navGo("money", "budget") },
+      { icon: WalletIcon, color: AMBER, title: "Paycheck history", onClick: () => navGo("money", "paychist") },
       ...blocksFor("money"),
     ]}] : []),
     ...(enabledCats.health ? [{ label: "Health", items: [
