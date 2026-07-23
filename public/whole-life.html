@@ -3187,8 +3187,34 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
 }
 
 // ═══ EXISTING TOOLS (budget, habits, goals, meals) ════════════════
-function Budget({ d, setD, back }) {
-  const pay = Number(d.pay) || 0, spent = budgetSpent(d), left = pay - spent, pct = pay ? Math.min(1, spent / pay) : 0;
+function Budget({ d, setD, back, ctx }) {
+  const payFreqEarly = d.pay_frequency || "biweekly";
+  const [paychecks, setPaychecks] = useState([]);
+  const [logOpen, setLogOpen] = useState(false);
+  const [paychecksReady, setPaychecksReady] = useState(false);
+  const reloadPaychecks = React.useCallback(async () => {
+    const client = ctx && ctx.current && ctx.current.client;
+    const uid_ = ctx && ctx.current && ctx.current.userId;
+    if (!client || !uid_) { setPaychecksReady(true); return; }
+    const { data, error } = await client.from("paychecks")
+      .select("id,date_received,expected_amount,actual_amount,pay_frequency,created_at")
+      .order("date_received", { ascending: false })
+      .limit(200);
+    if (!error) setPaychecks(data || []);
+    setPaychecksReady(true);
+  }, [ctx]);
+  useEffect(() => { reloadPaychecks(); }, [reloadPaychecks]);
+
+  const latestPaycheck = React.useMemo(() => {
+    const matches = paychecks.filter((p) => p.pay_frequency === payFreqEarly);
+    return matches[0] || paychecks[0] || null;
+  }, [paychecks, payFreqEarly]);
+  const payFromPaycheck = latestPaycheck
+    ? Number(latestPaycheck.actual_amount != null ? latestPaycheck.actual_amount : latestPaycheck.expected_amount) || 0
+    : 0;
+  const pay = payFromPaycheck || (Number(d.pay) || 0);
+  const spent = budgetSpent(d), left = pay - spent, pct = pay ? Math.min(1, spent / pay) : 0;
+
   const setRow = (key, id, field, v) => setD({ ...d, budget: { ...d.budget, [key]: (d.budget[key]||[]).map((r) => r.id === id ? { ...r, [field]: v } : r) } });
   const addRow = (key) => setD({ ...d, budget: { ...d.budget, [key]: [...(d.budget[key]||[]), { id: uid(), n: "", a: "", due: "" }] } });
   const delRow = (key, id) => setD({ ...d, budget: { ...d.budget, [key]: (d.budget[key]||[]).filter((r) => r.id !== id) } });
