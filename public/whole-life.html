@@ -3408,7 +3408,7 @@ function Budget({ d, setD, back }) {
 
       {(() => {
         const savedTotal = goals.reduce((s, g) => s + (Number(g.saved) || 0), 0);
-        const leftFinal = left - savedTotal;
+        const leftFinal = displayLeft - savedTotal;
         return (
           <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 22px", marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div>
