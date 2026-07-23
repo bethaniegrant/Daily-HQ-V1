@@ -4345,83 +4345,9 @@ function Tile({ accent, icon: Icon, title, big, sub, onClick, dark }) {
 function SectionLabel({ text }) {
   return <div style={{ padding: "24px 22px 12px", display: "flex", alignItems: "center", gap: 10 }}><div style={{ fontSize: 12, letterSpacing: ".18em", textTransform: "uppercase", color: TEXT, fontWeight: 700 }}>{text}</div><div style={{ flex: 1, height: 1, background: LINE }} /></div>;
 }
-function LogPaycheckModal({ ctx, defaultFreq, onClose, onSaved, initial }) {
-  const today = new Date();
-  const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
-  const [dateReceived, setDateReceived] = useState(initial?.date_received || iso(today));
-  const [expected, setExpected] = useState(initial?.expected_amount != null ? String(initial.expected_amount) : "");
-  const [actual, setActual] = useState(initial?.actual_amount != null ? String(initial.actual_amount) : "");
-  const [freq, setFreq] = useState(initial?.pay_frequency || defaultFreq || "biweekly");
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState("");
-  const save = async () => {
-    setErr("");
-    const client = ctx && ctx.current && ctx.current.client;
-    const uid_ = ctx && ctx.current && ctx.current.userId;
-    if (!client || !uid_) { setErr("You need to be signed in to log paychecks."); return; }
-    const exp = Number(expected);
-    if (!dateReceived || !Number.isFinite(exp) || exp <= 0) { setErr("Enter a date and expected amount."); return; }
-    const act = actual === "" ? null : Number(actual);
-    if (act != null && !Number.isFinite(act)) { setErr("Actual amount is not a number."); return; }
-    setSaving(true);
-    const { error } = await client.from("paychecks").insert({
-      user_id: uid_, date_received: dateReceived, expected_amount: exp,
-      actual_amount: act, pay_frequency: freq,
-    });
-    setSaving(false);
-    if (error) { setErr(error.message || "Could not save."); return; }
-    onSaved && onSaved();
-  };
-  const field = { border: `1px solid ${LINE}`, borderRadius: 3, padding: "10px 12px", fontSize: 14, fontWeight: 600, background: PAPER, width: "100%" };
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(22,32,28,.55)", backdropFilter: "blur(4px)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: CARD, borderRadius: 6, padding: "22px 22px 18px", width: "100%", maxWidth: 420, boxShadow: "0 30px 60px -20px rgba(22,32,28,.5)" }}>
-        <div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Money</div>
-        <h3 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, fontWeight: 600, letterSpacing: "-.01em", margin: "4px 0 14px" }}>Log a paycheck</h3>
-        <div style={{ display: "grid", gap: 10 }}>
-          <div>
-            <label style={lbl}>Date received</label>
-            <input type="date" value={dateReceived} onChange={(e) => setDateReceived(e.target.value)} style={field} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label style={lbl}>Expected</label>
-              <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
-                <span style={{ color: MUTED, fontSize: 13 }}>$</span>
-                <input inputMode="decimal" value={expected} onChange={(e) => setExpected(e.target.value)} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "10px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
-              </div>
-            </div>
-            <div>
-              <label style={lbl}>Actual (optional)</label>
-              <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
-                <span style={{ color: MUTED, fontSize: 13 }}>$</span>
-                <input inputMode="decimal" value={actual} onChange={(e) => setActual(e.target.value)} placeholder="—" style={{ border: "none", flex: 1, textAlign: "right", padding: "10px 0", fontSize: 14, fontWeight: 700, background: "none" }} />
-              </div>
-            </div>
-          </div>
-          <div>
-            <label style={lbl}>Pay frequency</label>
-            <select value={freq} onChange={(e) => setFreq(e.target.value)} style={field}>
-              <option value="weekly">Weekly</option>
-              <option value="biweekly">Biweekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </div>
-          {err && <div style={{ fontSize: 12, color: AMBER, fontWeight: 700 }}>{err}</div>}
-        </div>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-          <button onClick={onClose} style={{ background: "none", border: `1px solid ${LINE}`, color: TEXT, borderRadius: 3, padding: "9px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-          <button onClick={save} disabled={saving} style={{ background: INK, color: PAPER, border: "none", borderRadius: 3, padding: "9px 16px", fontSize: 13, fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", cursor: saving ? "wait" : "pointer", opacity: saving ? .6 : 1 }}>{saving ? "Saving…" : "Save paycheck"}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function PaycheckHistory({ d, back, ctx }) {
   const [rows, setRows] = useState([]);
   const [ready, setReady] = useState(false);
-  const [logOpen, setLogOpen] = useState(false);
   const [cursor, setCursor] = useState(() => { const t = new Date(); return { y: t.getFullYear(), m: t.getMonth() }; });
   const reload = React.useCallback(async () => {
     const client = ctx && ctx.current && ctx.current.client;
@@ -4446,6 +4372,10 @@ function PaycheckHistory({ d, back, ctx }) {
   const monthLabel = new Date(cursor.y, cursor.m, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const shift = (n) => setCursor((c) => { const dt = new Date(c.y, c.m + n, 1); return { y: dt.getFullYear(), m: dt.getMonth() }; });
 
+  const freq = d.pay_frequency || "biweekly";
+  const today = new Date();
+  const isCurrent = cursor.y === today.getFullYear() && cursor.m === today.getMonth();
+
   return (
     <Screen title="Paycheck history" sub="Money" back={back} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 20px", marginBottom: 14 }}>
@@ -4469,38 +4399,15 @@ function PaycheckHistory({ d, back, ctx }) {
           </div>
         </div>
       </div>
-      <button onClick={() => setLogOpen(true)} style={{ ...addBtn, borderColor: AMBER, color: AMBER, marginBottom: 14 }}>+ Log a paycheck</button>
       {!ready ? (
         <div style={{ fontSize: 13, color: MUTED, padding: 12 }}>Loading…</div>
-      ) : monthRows.length === 0 ? (
-        <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "22px 18px", textAlign: "center", color: MUTED, fontSize: 13 }}>No paychecks logged for {monthLabel}.</div>
       ) : (
-        <div style={{ display: "grid", gap: 8 }}>
-          {monthRows.map((r) => {
-            const exp = Number(r.expected_amount) || 0;
-            const hasAct = r.actual_amount != null;
-            const act = hasAct ? (Number(r.actual_amount) || 0) : null;
-            const rdiff = hasAct ? act - exp : 0;
-            const badgeText = !hasAct ? "Not logged" : rdiff === 0 ? "On target" : `${rdiff > 0 ? "+" : "−"}$${money(Math.abs(rdiff))}`;
-            const badgeBg = !hasAct ? "rgba(154,144,130,.15)" : rdiff >= 0 ? "rgba(122,138,94,.18)" : "rgba(196,113,122,.16)";
-            const badgeColor = !hasAct ? MUTED : rdiff >= 0 ? "#5a6b4d" : "#C4717A";
-            const dt = new Date(r.date_received + "T00:00:00");
-            return (
-              <div key={r.id} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</div>
-                  <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Expected ${money(exp)}{hasAct && <> · Actual <span style={{ color: TEXT, fontWeight: 700 }}>${money(act)}</span></>} · {r.pay_frequency}</div>
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", padding: "6px 10px", borderRadius: 999, background: badgeBg, color: badgeColor, whiteSpace: "nowrap" }}>{badgeText}</div>
-              </div>
-            );
-          })}
-        </div>
+        <PaycheckPeriodList ctx={ctx} year={cursor.y} month={cursor.m} freq={freq} paychecks={rows} reload={reload} readOnly={!isCurrent} />
       )}
-      {logOpen && <LogPaycheckModal ctx={ctx} defaultFreq={d.pay_frequency || "biweekly"} onClose={() => setLogOpen(false)} onSaved={() => { setLogOpen(false); reload(); }} />}
     </Screen>
   );
 }
+
 
 function Screen({ title, sub, back, accent = SAGE, children }) {
   return (
