@@ -3371,20 +3371,57 @@ function Budget({ d, setD, back, ctx }) {
               <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", fontSize: 10, fontWeight: 700, letterSpacing: ".12em", color: MUTED, textTransform: "uppercase" }}>
                 <div style={{ flex: "1 1 120px", minWidth: 0 }}>Item</div>
                 <div style={{ width: 78, textAlign: "center" }}>Due</div>
-                <div style={{ width: 96, textAlign: "center" }}>Amount</div>
+                <div style={{ width: 96, textAlign: "center" }}>{sec.key === "variable" ? "Amount / Goal" : "Amount"}</div>
                 <div style={{ width: 15 }} />
               </div>
             )}
-            {rows.map((r) => (
-              <div key={r.id} style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
-                <input value={r.n} onChange={(e) => setRow(sec.key, r.id, "n", e.target.value)} placeholder="What for" style={{ flex: "1 1 120px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 500 }} />
-                <div title="Day of month due (1–31)" style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 8px", width: 78, background: PAPER }}>
-                  <input inputMode="numeric" maxLength={2} value={r.due || ""} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0,2); setRow(sec.key, r.id, "due", v); }} placeholder="—" style={{ border: "none", width: "100%", textAlign: "center", padding: "9px 0", fontSize: 13, fontWeight: 700, background: "none" }} />
+            {rows.map((r) => {
+              const trackable = sec.key === "variable";
+              const tracking = trackable && !!r.tracking_enabled;
+              const goalAmt = Number(r.a) || 0;
+              const savedAmt = Number(r.saved_so_far) || 0;
+              const vpct = goalAmt > 0 ? Math.min(1, savedAmt / goalAmt) : 0;
+              return (
+              <div key={r.id} style={{ display: "grid", gap: 6 }}>
+                <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
+                  <input value={r.n} onChange={(e) => setRow(sec.key, r.id, "n", e.target.value)} placeholder="What for" style={{ flex: "1 1 120px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px", fontSize: 14, fontWeight: 500 }} />
+                  <div title="Day of month due (1–31)" style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 8px", width: 78, background: PAPER }}>
+                    <input inputMode="numeric" maxLength={2} value={r.due || ""} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0,2); setRow(sec.key, r.id, "due", v); }} placeholder="—" style={{ border: "none", width: "100%", textAlign: "center", padding: "9px 0", fontSize: 13, fontWeight: 700, background: "none" }} />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", width: 96 }}><span style={{ color: MUTED, fontSize: 13 }}>$</span><input inputMode="decimal" value={r.a} onChange={(e) => setRow(sec.key, r.id, "a", e.target.value)} placeholder="0" style={{ border: "none", width: "100%", textAlign: "right", padding: "9px 0 9px 4px", fontSize: 14, fontWeight: 600, background: "none" }} /></div>
+                  <div className="pop" onClick={() => delRow(sec.key, r.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", width: 96 }}><span style={{ color: MUTED, fontSize: 13 }}>$</span><input inputMode="decimal" value={r.a} onChange={(e) => setRow(sec.key, r.id, "a", e.target.value)} placeholder="0" style={{ border: "none", width: "100%", textAlign: "right", padding: "9px 0 9px 4px", fontSize: 14, fontWeight: 600, background: "none" }} /></div>
-                <div className="pop" onClick={() => delRow(sec.key, r.id)} style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
+                {trackable && !tracking && (
+                  <button onClick={() => setRow(sec.key, r.id, "tracking_enabled", true)} style={{ alignSelf: "flex-start", background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 600, letterSpacing: ".04em", cursor: "pointer", padding: "0 0 2px 2px" }}>+ Track savings for this</button>
+                )}
+                {trackable && tracking && (
+                  <div style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 3, padding: "10px 12px", display: "grid", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em", marginBottom: 4 }}>SAVED</div>
+                        <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER }}>
+                          <span style={{ color: MUTED, fontSize: 13 }}>$</span>
+                          <input inputMode="decimal" value={r.saved_so_far ?? ""} onChange={(e) => setRow(sec.key, r.id, "saved_so_far", e.target.value)} placeholder="0" style={{ border: "none", flex: 1, textAlign: "right", padding: "8px 0", fontSize: 13, fontWeight: 700, background: "none" }} />
+                        </div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: MUTED, fontWeight: 700, letterSpacing: ".12em", marginBottom: 4 }}>GOAL</div>
+                        <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: "#F5F0EA" }}>
+                          <span style={{ color: MUTED, fontSize: 13 }}>$</span>
+                          <div style={{ flex: 1, textAlign: "right", padding: "8px 0", fontSize: 13, fontWeight: 700, color: TEXT }}>{money(goalAmt)}</div>
+                        </div>
+                      </div>
+                      <button onClick={() => setRow(sec.key, r.id, "tracking_enabled", false)} title="Stop tracking" style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 600, cursor: "pointer", padding: "0 0 8px" }}>Hide</button>
+                    </div>
+                    <div style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}>${money(Math.min(goalAmt, savedAmt))} of ${money(goalAmt)} saved</div>
+                    <div style={{ height: 4, background: "#F0E9E1", border: `1px solid ${LINE}`, borderRadius: 999, overflow: "hidden" }}>
+                      <div style={{ width: `${vpct * 100}%`, height: "100%", background: "#C4717A", transition: "width .4s" }} />
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
           )}
           <button onClick={() => addRow(sec.key)} style={{ marginTop: 10, background: "none", border: "none", color: sec.color, fontWeight: 700, fontSize: 13, cursor: "pointer", padding: 0 }}>+ Add a line</button>
