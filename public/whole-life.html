@@ -1173,6 +1173,22 @@ function AccountSettingsModal({ d, setD, ctx, onClose, onOpenAppearance }) {
         </div>
 
         <div style={sectionStyle}>
+          <label style={labelStyle}>Pay frequency</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[{ v: "biweekly", l: "Biweekly", s: "2x per month" }, { v: "monthly", l: "Monthly", s: "1x per month" }].map((opt) => {
+              const active = (d.pay_frequency || "biweekly") === opt.v;
+              return (
+                <button key={opt.v} onClick={() => setD({ ...d, pay_frequency: opt.v })} className="pop" style={{ flex: 1, background: active ? "#1B3652" : "transparent", color: active ? "#FDFAF4" : TEXT, border: `1px solid ${active ? "#1B3652" : LINE}`, borderRadius: 12, padding: "10px 12px", textAlign: "left", cursor: "pointer" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{opt.l}</div>
+                  <div style={{ fontSize: 11, opacity: .75, marginTop: 2 }}>{opt.s}</div>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 12, color: MUTED, marginTop: 8 }}>Controls how the Budget page frames your paycheck.</div>
+        </div>
+
+        <div style={sectionStyle}>
           <label style={labelStyle}>Reset planner data</label>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div style={{ fontSize: 13, color: MUTED }}>Clears your data and restarts onboarding. Account stays active.</div>
@@ -3205,10 +3221,15 @@ function Budget({ d, setD, back }) {
   const delGoal = (id) => setD({ ...d, savingsGoals: goals.filter((g) => g.id !== id) });
   const goalColors = [SAGE, AMBER, PLUM, BLUE, "#9aa777"];
 
+  const payFreq = d.pay_frequency || "biweekly";
+  const isMonthly = payFreq === "monthly";
   return (
-    <Screen title="Budget" sub="This paycheck" back={back} accent={AMBER}>
+    <Screen title="Budget" sub={isMonthly ? "This month" : "This paycheck"} back={back} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14 }}>
-        <label style={{ ...lbl, color: MIST }}>Take-home pay</label>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+          <label style={{ ...lbl, color: MIST }}>Take-home pay</label>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MIST }}>{isMonthly ? "1x per month" : "2x per month"}</span>
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, color: SAGEHI }}>$</span><input inputMode="decimal" value={d.pay} onChange={(e) => setD({ ...d, pay: e.target.value })} placeholder="0" style={{ border: "none", flex: 1, fontSize: 30, fontFamily: "'DM Serif Display',serif", fontWeight: 600, background: "none", color: PAPER }} /></div>
       </div>
       {allSections.map((sec) => (
