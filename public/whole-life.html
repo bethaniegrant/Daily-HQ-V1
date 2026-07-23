@@ -610,7 +610,7 @@ function App() {
     const w = d.workouts.find((x) => x.id === page.split(":")[1]);
     view = w ? <WorkoutEditor workout={w} {...common} /> : <HealthHub {...common} />;
   } else {
-    view = { budget: <Budget {...common} />, habits: <Habits {...common} />, goals: <Goals {...common} />, yearly: <YearlyGoals {...common} />, meals: <Meals {...common} />, meds: <Meds {...common} />, workouts: <Workouts {...common} /> }[page] || <Home {...common} />;
+    view = { budget: <Budget {...common} />, paychist: <PaycheckHistory {...common} />, habits: <Habits {...common} />, goals: <Goals {...common} />, yearly: <YearlyGoals {...common} />, meals: <Meals {...common} />, meds: <Meds {...common} />, workouts: <Workouts {...common} /> }[page] || <Home {...common} />;
   }
 
   const closeMenu = () => setMenuOpen(false);
