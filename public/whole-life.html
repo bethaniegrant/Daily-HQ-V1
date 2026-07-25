@@ -3335,7 +3335,16 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
       .sort((a, b) => a.date_received.localeCompare(b.date_received))
       .map((p, i) => ({ label: freq === "biweekly" ? `Paycheck ${periods.length + i + 1}` : freq === "weekly" ? `Week ${periods.length + i + 1}` : "Paycheck", date: p.date_received }));
   }, [paychecks, periods, year, month, freq]);
-  const rows = [...periods, ...extras];
+  const deletedExtras = React.useMemo(() => {
+    const pad = (n) => String(n).padStart(2, "0");
+    const prefix = `${year}-${pad(month + 1)}-`;
+    const visible = new Set([...periods, ...extras].map((p) => p.date));
+    return Object.values(deleted)
+      .filter((p) => p && p.pay_frequency === freq && p.date_received && p.date_received.startsWith(prefix) && !visible.has(p.date_received))
+      .sort((a, b) => a.date_received.localeCompare(b.date_received))
+      .map((p, i) => ({ label: "Deleted paycheck", date: p.date_received }));
+  }, [deleted, extras, periods, year, month, freq]);
+  const rows = [...periods, ...extras, ...deletedExtras];
   return (
     <div style={{ display: "grid", gap: 8 }}>
       {rows.map((p) => (
