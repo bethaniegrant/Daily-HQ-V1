@@ -3244,6 +3244,19 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, readOnly }) {
     onSaved && onSaved();
   };
 
+  const remove = async () => {
+    if (readOnly || !existing) return;
+    const client = ctx && ctx.current && ctx.current.client;
+    if (!client) return;
+    if (!window.confirm("Delete this paycheck entry?")) return;
+    setBusy(true);
+    await client.from("paychecks").delete().eq("id", existing.id);
+    setBusy(false);
+    setExp(""); setAct("");
+    onSaved && onSaved();
+  };
+
+
   const hasAct = existing && existing.actual_amount != null;
   const rdiff = hasAct ? Number(existing.actual_amount) - Number(existing.expected_amount || 0) : 0;
   const badgeText = readOnly
@@ -3258,7 +3271,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, readOnly }) {
   const dateLabel = dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
   return (
-    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "12px 14px", display: "grid", gridTemplateColumns: readOnly ? "minmax(0,1.1fr) 1fr 1fr auto" : "minmax(0,1.1fr) 1fr 1fr", gap: 10, alignItems: "center" }}>
+    <div style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "12px 14px", display: "grid", gridTemplateColumns: (readOnly || existing) ? "minmax(0,1.1fr) 1fr 1fr auto" : "minmax(0,1.1fr) 1fr 1fr", gap: 10, alignItems: "center" }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: TEXT, letterSpacing: ".02em" }}>{period.label || "Paycheck"}</div>
         <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{dateLabel}</div>
@@ -3277,12 +3290,16 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, readOnly }) {
           <input inputMode="decimal" value={act} readOnly={readOnly} onChange={(e) => setAct(e.target.value)} onBlur={() => commit(exp, act)} placeholder="—" style={inputStyle} />
         </div>
       </div>
-      {readOnly && (
+      {readOnly ? (
         <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", padding: "6px 8px", borderRadius: 999, background: badgeBg, color: badgeColor, whiteSpace: "nowrap" }}>{badgeText}</div>
-      )}
+      ) : existing ? (
+        <button onClick={remove} disabled={busy} title="Delete this paycheck" aria-label="Delete this paycheck"
+          style={{ border: `1px solid ${LINE}`, background: PAPER, color: MUTED, borderRadius: 3, padding: "6px 9px", cursor: "pointer", fontSize: 13, lineHeight: 1, opacity: busy ? 0.5 : 1 }}>✕</button>
+      ) : null}
     </div>
   );
 }
+
 
 function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnly }) {
   const periods = React.useMemo(() => paycheckPeriods(year, month, freq), [year, month, freq]);
