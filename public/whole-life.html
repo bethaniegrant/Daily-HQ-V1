@@ -2796,7 +2796,7 @@ function HubLink({ icon: Icon, color, title, sub, onClick }) {
 }
 
 // ═══ NEW TOOL: MEDS ═══════════════════════════════════════════════
-function Meds({ d, setD, now, back }) {
+function Meds({ d, setD, now, back, openMenu, goHome, canGoBack, isHome }) {
   const [view, setView] = useState("week");
   const [sel, setSel] = useState(new Date(now));
   const selKey = dayKey(sel);
@@ -2841,7 +2841,7 @@ function Meds({ d, setD, now, back }) {
   const selLabel = sel.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 
   return (
-    <Screen title="Medications" sub="Daily doses" back={back} accent={PLUM}>
+    <Screen title="Medications" sub="Daily doses" back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={PLUM}>
       <DayViewToggle view={view} setView={setView} />
       {view === "week"
         ? <WeekStrip weekDays={weekDays} sel={sel} setSel={setSel} now={now} doneFor={(dt) => medsTakenOn(dt)} totalFor={() => d.meds.length} />
@@ -2927,7 +2927,7 @@ function Meds({ d, setD, now, back }) {
 }
 
 // ═══ NEW TOOL: WORKOUTS ═══════════════════════════════════════════
-function Workouts({ d, setD, go, back, now }) {
+function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome }) {
   const [sel, setSel] = useState(new Date(now));
   const addWorkout = () => {
     const w = { id: uid(), n: "New workout", cat: "other", ex: [{ id: uid(), n: "", sets: "", reps: "", w: "" }] };
@@ -2965,7 +2965,7 @@ function Workouts({ d, setD, go, back, now }) {
   const selCats = catsDoneOn(sel);
 
   return (
-    <Screen title="Workouts" sub="Train, log, track" back={back} accent={BLUE}>
+    <Screen title="Workouts" sub="Train, log, track" back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={BLUE}>
       {/* CALENDAR */}
       <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px 14px", marginBottom: 14 }}>
         <div style={{ textAlign: "center", fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 10, fontFamily: "'DM Serif Display',serif" }}>
@@ -3319,7 +3319,7 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
 }
 
 // ═══ EXISTING TOOLS (budget, habits, goals, meals) ════════════════
-function Budget({ d, setD, back, ctx }) {
+function Budget({ d, setD, back, ctx, openMenu, goHome, canGoBack, isHome }) {
   const payFreqEarly = d.pay_frequency || "biweekly";
   const [paychecks, setPaychecks] = useState([]);
   const [paychecksReady, setPaychecksReady] = useState(false);
@@ -3429,7 +3429,7 @@ function Budget({ d, setD, back, ctx }) {
   const diffMonth = periodTotals.actual - periodTotals.expected;
 
   return (
-    <Screen title="Budget" sub={subLabel} back={back} accent={AMBER}>
+    <Screen title="Budget" sub={null} back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "16px 18px", marginBottom: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
           <label style={{ ...lbl, color: MIST }}>Take-home pay</label>
@@ -3637,7 +3637,7 @@ function Budget({ d, setD, back, ctx }) {
   );
 }
 
-function Habits({ d, setD, now, back }) {
+function Habits({ d, setD, now, back, openMenu, goHome, canGoBack, isHome }) {
   const [view, setView] = useState("week");
   const [sel, setSel] = useState(new Date(now));
   const selKey = dayKey(sel);
@@ -3657,7 +3657,7 @@ function Habits({ d, setD, now, back }) {
   const weekDays = Array.from({ length: 7 }, (_, i) => { const dt = new Date(weekStart); dt.setDate(weekStart.getDate() + i); return dt; });
 
   return (
-    <Screen title="Habits" sub={dayKey(now) === selKey ? "Today" : "Selected day"} back={back} accent={SAGE}>
+    <Screen title="Habits" sub={dayKey(now) === selKey ? "Today" : "Selected day"} back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={SAGE}>
       <DayViewToggle view={view} setView={setView} />
       {view === "week"
         ? <WeekStrip weekDays={weekDays} sel={sel} setSel={setSel} now={now} doneFor={(dt) => dayCompletion(d, dt).done} totalFor={(dt) => dayCompletion(d, dt).total} />
@@ -3711,11 +3711,11 @@ function Habits({ d, setD, now, back }) {
   );
 }
 
-function Goals({ d, setD, back }) {
+function Goals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
   const toggle = (i) => setD({ ...d, goals: d.goals.map((g, j) => j === i ? { ...g, done: !g.done } : g) });
   const rename = (i, v) => setD({ ...d, goals: d.goals.map((g, j) => j === i ? { ...g, n: v } : g) });
   return (
-    <Screen title="Goals" sub="This month" back={back} accent={AMBER}>
+    <Screen title="Goals" sub="This month" back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 20px", marginBottom: 14 }}>
         <label style={{ ...lbl, color: MIST }}>Word of the month</label>
         <input value={d.intention} onChange={(e) => setD({ ...d, intention: e.target.value })} placeholder="e.g. Steady" style={{ border: "none", fontSize: 26, fontFamily: "'DM Serif Display',serif", fontWeight: 600, width: "100%", background: "none", color: PAPER }} />
@@ -3733,7 +3733,7 @@ function Goals({ d, setD, back }) {
   );
 }
 
-function YearlyGoals({ d, setD, back }) {
+function YearlyGoals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
   const list = d.yearlyGoals || [];
   const update = (next) => setD({ ...d, yearlyGoals: next });
   const toggle = (i) => update(list.map((g, j) => j === i ? { ...g, done: !g.done } : g));
@@ -3742,7 +3742,7 @@ function YearlyGoals({ d, setD, back }) {
   const remove = (i) => update(list.filter((_, j) => j !== i));
   const year = new Date().getFullYear();
   return (
-    <Screen title="Yearly Goals" sub={`The arc of ${year}`} back={back} accent={AMBER}>
+    <Screen title="Yearly Goals" sub={`The arc of ${year}`} back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 20px", marginBottom: 14 }}>
         <label style={{ ...lbl, color: MIST }}>Word of the year</label>
         <input value={d.yearIntention || ""} onChange={(e) => setD({ ...d, yearIntention: e.target.value })} placeholder="e.g. Build" style={{ border: "none", fontSize: 26, fontFamily: "'DM Serif Display',serif", fontWeight: 600, width: "100%", background: "none", color: PAPER }} />
@@ -3762,7 +3762,7 @@ function YearlyGoals({ d, setD, back }) {
   );
 }
 
-function Meals({ d, setD, back }) {
+function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const setSlot = (day, slot, v) => {
     const cur = mealsFor(d.meals[day]);
@@ -3776,7 +3776,7 @@ function Meals({ d, setD, back }) {
   const today = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];
   const [openDay, setOpenDay] = useState(today);
   return (
-    <Screen title="Meals" sub="This week" back={back} accent={SAGE}>
+    <Screen title="Meals" sub="This week" back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={SAGE}>
       <div style={{ display: "grid", gap: 8 }}>
         {days.map((day, i) => {
           const m = mealsFor(d.meals[day]);
@@ -4351,7 +4351,7 @@ function Tile({ accent, icon: Icon, title, big, sub, onClick, dark }) {
 function SectionLabel({ text }) {
   return <div style={{ padding: "24px 22px 12px", display: "flex", alignItems: "center", gap: 10 }}><div style={{ fontSize: 12, letterSpacing: ".18em", textTransform: "uppercase", color: TEXT, fontWeight: 700 }}>{text}</div><div style={{ flex: 1, height: 1, background: LINE }} /></div>;
 }
-function PaycheckHistory({ d, back, ctx }) {
+function PaycheckHistory({ d, back, ctx, openMenu, goHome, canGoBack, isHome }) {
   const [rows, setRows] = useState([]);
   const [ready, setReady] = useState(false);
   const [cursor, setCursor] = useState(() => { const t = new Date(); return { y: t.getFullYear(), m: t.getMonth() }; });
@@ -4383,7 +4383,7 @@ function PaycheckHistory({ d, back, ctx }) {
   const isCurrent = cursor.y === today.getFullYear() && cursor.m === today.getMonth();
 
   return (
-    <Screen title="Paycheck history" sub="Money" back={back} accent={AMBER}>
+    <Screen title="Paycheck history" sub="Money" back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={AMBER}>
       <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "18px 20px", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
           <button onClick={() => shift(-1)} className="pop" style={{ background: "rgba(255,255,255,.14)", border: `1px solid rgba(255,255,255,.25)`, color: PAPER, borderRadius: 3, width: 32, height: 32, cursor: "pointer", fontWeight: 700 }}>‹</button>
