@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import logoAsset from "@/assets/bethanie-rose-logo.png.asset.json";
+import logoAsset from "@/assets/daily-hq-logo.png.asset.json";
 const logoUrl = logoAsset.url;
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -205,7 +205,7 @@ function AuthPage() {
             aria-label="Back to homepage"
             className="inline-block transition-opacity hover:opacity-80"
           >
-            <img src={logoUrl} alt="Bethanie Rose" className="h-20 w-auto mb-2" />
+            <img src={logoUrl} alt="Daily HQ" className="h-20 w-auto mb-2" />
           </Link>
           <CardTitle>Daily HQ</CardTitle>
           <CardDescription>
