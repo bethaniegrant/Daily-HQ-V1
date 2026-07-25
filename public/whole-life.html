@@ -3260,7 +3260,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
     if (!existing) return;
     const client = ctx && ctx.current && ctx.current.client;
     if (!client) return;
-    if (!window.confirm("Delete this paycheck entry?")) return;
+    setExp(""); setAct("");
     setBusy(true);
     onDeleted && onDeleted(period.date, existing);
     await client.from("paychecks").delete().eq("id", existing.id);
