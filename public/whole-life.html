@@ -597,7 +597,11 @@ function App() {
   const signOutFromShell = () => { try { window.parent && window.parent.postMessage({ type: "shell:signOut" }, "*"); } catch (_) {} };
   const openAdmin = () => { try { window.parent && window.parent.postMessage({ type: "shell:navigate", to: "/admin" }, "*"); } catch (_) {} };
 
-  const common = { d, setD, now, go, back: goBack, openMenu: () => setMenuOpen(true), isDesktop, displayName, ctx };
+  const isHome = tab === "home" && page === null;
+  const canGoBack = history.length > 0 || page !== null || tab !== "home";
+  const goHome = () => { if (!isHome) { setHistory((h) => [...h, { tab, page }]); setTab("home"); setPage(null); } };
+  const isScreenPage = ["budget", "paychist", "habits", "goals", "yearly", "meals", "meds", "workouts"].includes(page);
+  const common = { d, setD, now, go, back: goBack, canGoBack, openMenu: () => setMenuOpen(true), goHome, isHome, isDesktop, displayName, ctx };
 
   // resolve current page
   let view;
