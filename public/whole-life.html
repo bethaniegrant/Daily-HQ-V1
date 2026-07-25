@@ -3244,6 +3244,19 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, readOnly }) {
     onSaved && onSaved();
   };
 
+  const remove = async () => {
+    if (readOnly || !existing) return;
+    const client = ctx && ctx.current && ctx.current.client;
+    if (!client) return;
+    if (!window.confirm("Delete this paycheck entry?")) return;
+    setBusy(true);
+    await client.from("paychecks").delete().eq("id", existing.id);
+    setBusy(false);
+    setExp(""); setAct("");
+    onSaved && onSaved();
+  };
+
+
   const hasAct = existing && existing.actual_amount != null;
   const rdiff = hasAct ? Number(existing.actual_amount) - Number(existing.expected_amount || 0) : 0;
   const badgeText = readOnly
