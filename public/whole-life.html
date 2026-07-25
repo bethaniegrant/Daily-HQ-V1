@@ -3336,15 +3336,50 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
       .sort((a, b) => a.date_received.localeCompare(b.date_received))
       .map((p, i) => ({ label: "Deleted paycheck", date: p.date_received }));
   }, [deleted, extras, periods, year, month, freq]);
-  const rows = [...periods, ...extras, ...deletedExtras];
+  const [manual, setManual] = useState([]);
+  const manualRows = React.useMemo(() => {
+    const taken = new Set([...periods, ...extras, ...deletedExtras].map((p) => p.date));
+    return manual.filter((dte) => !taken.has(dte)).map((dte, i) => ({
+      label: freq === "weekly" ? `Week ${periods.length + extras.length + i + 1}` : freq === "biweekly" ? `Paycheck ${periods.length + extras.length + i + 1}` : "Extra paycheck",
+      date: dte,
+    }));
+  }, [manual, periods, extras, deletedExtras, freq]);
+  const rows = [...periods, ...extras, ...deletedExtras, ...manualRows];
+
+  const addRow = () => {
+    const pad = (n) => String(n).padStart(2, "0");
+    const taken = new Set(rows.map((p) => p.date));
+    const last = rows.length ? rows[rows.length - 1].date : `${year}-${pad(month + 1)}-01`;
+    const step = freq === "weekly" ? 7 : freq === "biweekly" ? 14 : 15;
+    let d0 = new Date(last + "T00:00:00");
+    d0.setDate(d0.getDate() + step);
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    if (d0.getMonth() !== month || d0.getFullYear() !== year) d0 = new Date(year, month, lastDay);
+    let day = d0.getDate();
+    while (day > 1 && taken.has(`${year}-${pad(month + 1)}-${pad(day)}`)) day -= 1;
+    while (day <= lastDay && taken.has(`${year}-${pad(month + 1)}-${pad(day)}`)) day += 1;
+    if (day > lastDay) return;
+    setManual((prev) => [...prev, `${year}-${pad(month + 1)}-${pad(day)}`]);
+  };
+
+  const addLabel = freq === "weekly" ? "+ Add another week" : freq === "monthly" ? "+ Add another paycheck" : "+ Add another paycheck";
+
   return (
     <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+        <div style={{ flex: "1 1 120px", minWidth: 0 }} />
+        <div style={{ width: 96, textAlign: "center", fontSize: 9, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: MUTED }}>Planned</div>
+        <div style={{ width: 96, textAlign: "center", fontSize: 9, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: MUTED }}>Actual</div>
+        <div style={{ width: 15 }} />
+      </div>
       {rows.map((p) => (
         <PaycheckRow key={p.date} ctx={ctx} freq={freq} period={p} existing={findPaycheck(paychecks, freq, p.date)} onSaved={reload} onDeleted={(date, row) => setDeleted((prev) => ({ ...prev, [date]: row }))} lastDeleted={deleted[p.date]} clearDeleted={(date) => setDeleted((prev) => { const next = { ...prev }; delete next[date]; return next; })} readOnly={readOnly} />
       ))}
+      <button onClick={addRow} style={{ justifySelf: "start", background: "none", border: `1px dashed ${LINE}`, color: MUTED, borderRadius: 3, padding: "7px 12px", fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", cursor: "pointer" }}>{addLabel}</button>
     </div>
   );
 }
+
 
 // ═══ EXISTING TOOLS (budget, habits, goals, meals) ════════════════
 function Budget({ d, setD, back, ctx, openMenu, goHome, canGoBack, isHome }) {
