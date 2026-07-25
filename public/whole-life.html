@@ -1274,7 +1274,7 @@ function AddCategoriesModal({ d, setD, onClose }) {
 }
 
 // ═══ HOME ═════════════════════════════════════════════════════════
-function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
+function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isDesktop, displayName }) {
   const cats = d.enabledCategories || { money: true, health: true, plan: true, trackers: true };
   const hour = now.getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -1294,9 +1294,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
       <div style={{ position: "sticky", top: 0, zIndex: 30, padding: isDesktop ? "20px 32px 8px" : "14px 16px 6px", background: `linear-gradient(${PAPER} 70%, rgba(236,230,220,0))` }}>
         <nav style={{ background: INK, borderRadius: 999, padding: "10px 16px 10px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={openMenu} aria-label="Menu" className="pop" style={{ width: 32, height: 32, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.2)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-            </button>
+            <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={32} />
             <img src={LOGO_URL} alt="Daily HQ" style={{ width: 28, height: 28, borderRadius: 999, background: PAPER, padding: 2, objectFit: "contain" }} />
             <span style={{ color: PAPER, fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 15, letterSpacing: "-.01em" }}>Daily <span style={{ color: AMBER }}>HQ</span></span>
           </span>
