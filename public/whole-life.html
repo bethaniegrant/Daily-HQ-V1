@@ -3292,7 +3292,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
             {badgeText ? <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", padding: "2px 6px", borderRadius: 999, background: badgeBg, color: badgeColor, whiteSpace: "nowrap" }}>{badgeText}</span> : null}
           </div>
         </div>
-        <div title="Expected" style={{ ...wrap, width: 96 }}>
+        <div title="Planned" style={{ ...wrap, width: 96 }}>
           <span style={{ color: MUTED, fontSize: 13 }}>$</span>
           <input inputMode="decimal" value={exp} onChange={(e) => setExp(e.target.value)} onBlur={() => commit(exp, act, { forceCreate: !!(exp || act) })} placeholder="0" style={inputStyle} />
         </div>
@@ -3300,6 +3300,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
           <span style={{ color: MUTED, fontSize: 13 }}>$</span>
           <input inputMode="decimal" value={act} onChange={(e) => setAct(e.target.value)} onBlur={() => commit(exp, act, { forceCreate: !!(exp || act) })} placeholder="—" style={inputStyle} />
         </div>
+
         {existing ? (
           <div className="pop" onClick={busy ? undefined : remove} title="Delete this paycheck" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
         ) : <div style={{ width: 15 }} />}
