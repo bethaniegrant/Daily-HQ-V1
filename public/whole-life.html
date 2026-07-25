@@ -675,45 +675,9 @@ function App() {
         .backdrop{transition:opacity .28s ease;}
       `}</style>
 
-      <div style={{ width: "100%", maxWidth: isDesktop ? 1180 : 440, minHeight: "100vh", background: PAPER, position: "relative", paddingTop: 68 }}>
+      <div style={{ width: "100%", maxWidth: isDesktop ? 1180 : 440, minHeight: "100vh", background: PAPER, position: "relative" }}>
         {view}
 
-        {/* top-left controls: menu + back + home — always visible on non-Screen pages */}
-        {!isScreenPage && (
-        <div style={{ position: "fixed", top: "max(14px, env(safe-area-inset-top))", left: 14, zIndex: 60, display: "flex", gap: 8 }}>
-          <button
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
-            style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(22,32,28,.85)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(22,32,28,.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round">
-              <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" />
-            </svg>
-          </button>
-          <button
-            onClick={goBack}
-            disabled={!canGoBack}
-            aria-label="Back"
-            title={canGoBack ? "Back" : "No previous screen"}
-            style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(22,32,28,.85)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(22,32,28,.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: canGoBack ? "pointer" : "not-allowed", padding: 0, opacity: canGoBack ? 1 : 0.35 }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 6l-6 6 6 6" />
-            </svg>
-          </button>
-          <button
-            onClick={goHome}
-            disabled={isHome}
-            aria-label="Go to dashboard"
-            title="Dashboard"
-            style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(22,32,28,.85)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(22,32,28,.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: isHome ? "not-allowed" : "pointer", padding: 0, opacity: isHome ? 0.35 : 1 }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" />
-            </svg>
-          </button>
-        </div>
-        )}
 
         {/* backdrop */}
         <div
@@ -1310,7 +1274,7 @@ function AddCategoriesModal({ d, setD, onClose }) {
 }
 
 // ═══ HOME ═════════════════════════════════════════════════════════
-function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
+function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isDesktop, displayName }) {
   const cats = d.enabledCategories || { money: true, health: true, plan: true, trackers: true };
   const hour = now.getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -1330,9 +1294,7 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
       <div style={{ position: "sticky", top: 0, zIndex: 30, padding: isDesktop ? "20px 32px 8px" : "14px 16px 6px", background: `linear-gradient(${PAPER} 70%, rgba(236,230,220,0))` }}>
         <nav style={{ background: INK, borderRadius: 999, padding: "10px 16px 10px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px -14px rgba(22,32,28,.45)" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={openMenu} aria-label="Menu" className="pop" style={{ width: 32, height: 32, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.2)", color: PAPER, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-            </button>
+            <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={32} />
             <img src={LOGO_URL} alt="Daily HQ" style={{ width: 28, height: 28, borderRadius: 999, background: PAPER, padding: 2, objectFit: "contain" }} />
             <span style={{ color: PAPER, fontFamily: "'DM Serif Display',serif", fontWeight: 600, fontSize: 15, letterSpacing: "-.01em" }}>Daily <span style={{ color: AMBER }}>HQ</span></span>
           </span>
@@ -1488,17 +1450,38 @@ function Home({ d, setD, now, go, openMenu, isDesktop, displayName }) {
 }
 
 // ═══ HUBS ═════════════════════════════════════════════════════════
-function Hub({ title, sub, children }) {
+function NavRow({ openMenu, back, canGoBack, goHome, isHome, size = 40 }) {
+  const btn = (onClick, icon, label, disabled) => (
+    <button onClick={onClick} disabled={disabled} aria-label={label} title={label} className="pop"
+      style={{ width: size, height: size, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer", padding: 0, opacity: disabled ? 0.35 : 1, flexShrink: 0 }}>
+      {icon}
+    </button>
+  );
+  const s = Math.round(size * 0.5);
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      {btn(openMenu, <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" /></svg>, "Open menu")}
+      {btn(back, <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>, "Back", !canGoBack)}
+      {btn(goHome, <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></svg>, "Dashboard", isHome)}
+    </div>
+  );
+}
+
+function Hub({ title, sub, nav, children }) {
   return (
     <div className="fade">
-      <div style={{ background: INK, color: PAPER, padding: "30px 70px 26px 22px" }}>
-        <div style={{ fontSize: 12, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div>
-        <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 34, fontWeight: 600, lineHeight: 1, marginTop: 4, letterSpacing: "-.02em" }}>{title}</h1>
+      <div style={{ background: INK, color: PAPER, padding: "22px 22px 26px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {nav && <NavRow {...nav} />}
+        <div>
+          <div style={{ fontSize: 12, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div>
+          <h1 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 34, fontWeight: 600, lineHeight: 1, marginTop: 4, letterSpacing: "-.02em" }}>{title}</h1>
+        </div>
       </div>
       <div className="stagger" style={{ padding: "20px 18px 30px", display: "grid", gap: 12 }}>{children}</div>
     </div>
   );
 }
+
 function ToolRow({ icon: Icon, color, title, sub, stat, onClick }) {
   return (
     <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${color}`, borderRadius: 4, padding: "17px 18px", display: "flex", alignItems: "center", gap: 15 }}>
@@ -1513,19 +1496,21 @@ function ToolRow({ icon: Icon, color, title, sub, stat, onClick }) {
   );
 }
 
-function MoneyHub({ d, go }) {
+function MoneyHub(p) {
+  const { d, go } = p;
   const left = (Number(d.pay) || 0) - budgetSpent(d);
   return (
-    <Hub title="Money" sub="Spend with intention">
+    <Hub title="Money" sub="Spend with intention" nav={p}>
       <ToolRow icon={WalletIcon} color={AMBER} title="Budget" sub="Paycheck, savings, debt — all in one" stat={d.pay ? `$${money(left)}` : ""} onClick={() => go("money", "budget")} />
 
     </Hub>
   );
 }
-function HealthHub({ d, setD, now, go }) {
+function HealthHub(p) {
+  const { d, setD, now, go } = p;
   const medsTaken = d.meds.filter((m) => medFullyTaken((d.medChecks[dayKey(now)] || {})[m.id], medTimes(m))).length;
   return (
-    <Hub title="Health" sub="Care for the basics">
+    <Hub title="Health" sub="Care for the basics" nav={p}>
       <ToolRow icon={PillIcon} color={PLUM} title="Medications" sub="Track your daily doses" stat={d.meds.length ? `${medsTaken}/${d.meds.length}` : ""} onClick={() => go("health", "meds")} />
       <ToolRow icon={DumbbellIcon} color={BLUE} title="Workouts" sub="Build and log your training" stat={`${d.workouts.length}`} onClick={() => go("health", "workouts")} />
       <ToolRow icon={PlateIcon} color={SAGE} title="Meal Plan" sub="Week of meals + shopping list" stat={`${daysPlanned(d)}/7`} onClick={() => go("health", "meals")} />
@@ -1537,13 +1522,14 @@ function HealthHub({ d, setD, now, go }) {
     </Hub>
   );
 }
-function PlanHub({ d, setD, go }) {
+function PlanHub(p) {
+  const { d, setD, go } = p;
   const goalsSet = d.goals.filter((g) => g.n.trim()).length;
   const yearlySet = (d.yearlyGoals || []).filter((g) => g.n.trim()).length;
   const todoBlock = d.blocks.find((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
   const todoOpen = todoBlock ? (todoBlock.items || []).filter((it) => !it.done).length : 0;
   return (
-    <Hub title="Plan" sub="Shape your days">
+    <Hub title="Plan" sub="Shape your days" nav={p}>
       {todoBlock && <ToolRow icon={GridIcon} color={AMBER} title="To Do" sub="Today's checklist" stat={todoOpen ? `${todoOpen}` : ""} onClick={() => go("plan", "block:" + todoBlock.id)} />}
       <ToolRow icon={LeafIcon} color={SAGE} title="Habits" sub="Daily, with streaks" onClick={() => go("plan", "habits")} />
       <ToolRow icon={StarIcon} color={AMBER} title="Monthly Goals" sub="Three that matter" stat={goalsSet ? `${goalsSet}` : ""} onClick={() => go("plan", "goals")} />
@@ -1555,7 +1541,8 @@ function PlanHub({ d, setD, go }) {
     </Hub>
   );
 }
-function SpacesHub({ d, setD, go }) {
+function SpacesHub(p) {
+  const { d, setD, go } = p;
   const goalsSet = d.goals.filter((g) => g.n.trim()).length;
   const yearlySet = (d.yearlyGoals || []).filter((g) => g.n.trim()).length;
   const todayK = dayKey(new Date());
@@ -1568,7 +1555,7 @@ function SpacesHub({ d, setD, go }) {
   const customCats = cats.filter((c) => !builtin.includes(c));
   const customByCat = customCats.map((c) => ({ c, blocks: d.blocks.filter((b) => (b.category || "plan") === c) })).filter((g) => g.blocks.length > 0);
   return (
-    <Hub title="Your Spaces" sub="Everything you've built">
+    <Hub title="Your Spaces" sub="Everything you've built" nav={p}>
       <SectionMini text="Money" />
       <ToolRow icon={WalletIcon} color={AMBER} title="Budget" sub="Paycheck, savings, debt" onClick={() => go("money", "budget")} />
       {allBudgetSecs.map((sec) => (
@@ -1600,9 +1587,10 @@ function SpacesHub({ d, setD, go }) {
     </Hub>
   );
 }
-function MoreHub({ d, setD, go }) {
+function MoreHub(p) {
+  const { d, setD, go } = p;
   return (
-    <Hub title="More" sub="Settings and extras">
+    <Hub title="More" sub="Settings and extras" nav={p}>
       <Note>This is where account, install help, reminders, themes and backup will live in the full app. For now it's a placeholder.</Note>
       <ToolRow icon={GridIcon} color={SAGE} title="Add a space" sub="Checklist, list, schedule, notes, mood" onClick={() => go("spaces")} />
       
@@ -3063,7 +3051,7 @@ function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome 
     </Screen>
   );
 }
-function WorkoutEditor({ workout, d, setD, now, back }) {
+function WorkoutEditor({ workout, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const [mode, setMode] = useState("log"); // log | build
   const [sel, setSel] = useState(new Date(now));
   const selKey = dayKey(sel);
@@ -3088,7 +3076,7 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: cat.color }} /> {cat.label}
@@ -3950,7 +3938,7 @@ function AddBlockMenu({ d, setD, go, defaultCat, lockCat, label }) {
 
 
 // Because AddBlockMenu needs setD, we implement Plan hub's add inline:
-function TrackerEditor({ block, d, setD, now, back }) {
+function TrackerEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const del = () => { if (confirm("Delete this tracker?")) { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); } };
   const kind = block.kind || "daily";
@@ -3960,7 +3948,7 @@ function TrackerEditor({ block, d, setD, now, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><meta.icon c={MIST} s={13} /> Tracker · {kindLabel}</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
@@ -4081,7 +4069,7 @@ function TrackerNotes({ block, update }) {
     </>
   );
 }
-function MoodEditor({ block, d, setD, now, back }) {
+function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
   const [selected, setSelected] = useState(now.getDate());
@@ -4097,7 +4085,7 @@ function MoodEditor({ block, d, setD, now, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><HeartIcon c={MIST} s={13} /> Mood Tracker</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
@@ -4141,7 +4129,7 @@ function MoodEditor({ block, d, setD, now, back }) {
     </div>
   );
 }
-function BlockEditor({ block, d, setD, back }) {
+function BlockEditor({ block, d, setD, back, openMenu, canGoBack, goHome, isHome }) {
   const meta = BLOCK_META[block.type];
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
@@ -4152,7 +4140,7 @@ function BlockEditor({ block, d, setD, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><meta.icon c={MIST} s={13} /> {meta.label}</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
@@ -4171,7 +4159,7 @@ function BlockEditor({ block, d, setD, back }) {
     </div>
   );
 }
-function EventsEditor({ block, d, setD, now, back }) {
+function EventsEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const meta = BLOCK_META.events;
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
@@ -4195,7 +4183,7 @@ function EventsEditor({ block, d, setD, now, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><CalendarIcon c={MIST} s={13} /> Calendar</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
