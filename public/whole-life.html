@@ -679,7 +679,8 @@ function App() {
       <div style={{ width: "100%", maxWidth: isDesktop ? 1180 : 440, minHeight: "100vh", background: PAPER, position: "relative", paddingTop: 68 }}>
         {view}
 
-        {/* top-left controls: menu + back — always visible */}
+        {!isScreenPage && (
+        {/* top-left controls: menu + back + home — always visible on non-Screen pages */}
         <div style={{ position: "fixed", top: "max(14px, env(safe-area-inset-top))", left: 14, zIndex: 60, display: "flex", gap: 8 }}>
           <button
             onClick={() => setMenuOpen(true)}
@@ -702,17 +703,18 @@ function App() {
             </svg>
           </button>
           <button
-            onClick={() => { if (!(tab === "home" && page === null)) { setHistory((h) => [...h, { tab, page }]); setTab("home"); setPage(null); } }}
-            disabled={tab === "home" && page === null}
+            onClick={goHome}
+            disabled={isHome}
             aria-label="Go to dashboard"
             title="Dashboard"
-            style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(22,32,28,.85)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(22,32,28,.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: (tab === "home" && page === null) ? "not-allowed" : "pointer", padding: 0, opacity: (tab === "home" && page === null) ? 0.35 : 1 }}
+            style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(22,32,28,.85)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(22,32,28,.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: isHome ? "not-allowed" : "pointer", padding: 0, opacity: isHome ? 0.35 : 1 }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" />
             </svg>
           </button>
         </div>
+        )}
 
         {/* backdrop */}
         <div
