@@ -3212,7 +3212,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, readOnly }) {
   }, [existing?.id, existing?.expected_amount, existing?.actual_amount]);
 
   const commit = async (nextExp, nextAct) => {
-    if (readOnly) return;
+    // editable in all months, including history
     const client = ctx && ctx.current && ctx.current.client;
     const uid_ = ctx && ctx.current && ctx.current.userId;
     if (!client || !uid_) return;
