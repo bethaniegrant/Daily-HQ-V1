@@ -4410,7 +4410,7 @@ function PaycheckHistory({ d, back, ctx, openMenu, goHome, canGoBack, isHome }) 
       {!ready ? (
         <div style={{ fontSize: 13, color: MUTED, padding: 12 }}>Loading…</div>
       ) : (
-        <PaycheckPeriodList ctx={ctx} year={cursor.y} month={cursor.m} freq={freq} paychecks={rows} reload={reload} readOnly={!isCurrent} />
+        <PaycheckPeriodList ctx={ctx} year={cursor.y} month={cursor.m} freq={freq} paychecks={rows} reload={reload} />
       )}
     </Screen>
   );
