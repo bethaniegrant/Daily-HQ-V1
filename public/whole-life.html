@@ -3051,7 +3051,7 @@ function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome 
     </Screen>
   );
 }
-function WorkoutEditor({ workout, d, setD, now, back }) {
+function WorkoutEditor({ workout, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const [mode, setMode] = useState("log"); // log | build
   const [sel, setSel] = useState(new Date(now));
   const selKey = dayKey(sel);
@@ -3076,7 +3076,7 @@ function WorkoutEditor({ workout, d, setD, now, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: cat.color }} /> {cat.label}
@@ -3938,7 +3938,7 @@ function AddBlockMenu({ d, setD, go, defaultCat, lockCat, label }) {
 
 
 // Because AddBlockMenu needs setD, we implement Plan hub's add inline:
-function TrackerEditor({ block, d, setD, now, back }) {
+function TrackerEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const del = () => { if (confirm("Delete this tracker?")) { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); } };
   const kind = block.kind || "daily";
@@ -3948,7 +3948,7 @@ function TrackerEditor({ block, d, setD, now, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><meta.icon c={MIST} s={13} /> Tracker · {kindLabel}</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
@@ -4069,7 +4069,7 @@ function TrackerNotes({ block, update }) {
     </>
   );
 }
-function MoodEditor({ block, d, setD, now, back }) {
+function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
   const [selected, setSelected] = useState(now.getDate());
@@ -4085,7 +4085,7 @@ function MoodEditor({ block, d, setD, now, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><HeartIcon c={MIST} s={13} /> Mood Tracker</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
@@ -4129,7 +4129,7 @@ function MoodEditor({ block, d, setD, now, back }) {
     </div>
   );
 }
-function BlockEditor({ block, d, setD, back }) {
+function BlockEditor({ block, d, setD, back, openMenu, canGoBack, goHome, isHome }) {
   const meta = BLOCK_META[block.type];
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
@@ -4140,7 +4140,7 @@ function BlockEditor({ block, d, setD, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><meta.icon c={MIST} s={13} /> {meta.label}</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
@@ -4159,7 +4159,7 @@ function BlockEditor({ block, d, setD, back }) {
     </div>
   );
 }
-function EventsEditor({ block, d, setD, now, back }) {
+function EventsEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const meta = BLOCK_META.events;
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
@@ -4183,7 +4183,7 @@ function EventsEditor({ block, d, setD, now, back }) {
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
+          <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><CalendarIcon c={MIST} s={13} /> Calendar</div></div>
           <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
         </div>
