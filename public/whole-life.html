@@ -4415,12 +4415,31 @@ function PaycheckHistory({ d, back, ctx }) {
 }
 
 
-function Screen({ title, sub, back, accent = SAGE, children }) {
+function Screen({ title, sub, back, openMenu, goHome, canGoBack, isHome, accent = SAGE, children }) {
+  const topBtn = (onClick, icon, label, disabled) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="pop"
+      style={{ width: 40, height: 40, borderRadius: 999, background: "rgba(244,241,234,.12)", border: "1px solid rgba(244,241,234,.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer", padding: 0, opacity: disabled ? 0.35 : 1 }}
+    >
+      {icon}
+    </button>
+  );
   return (
     <div className="fade">
-      <div style={{ background: INK, color: PAPER, padding: "26px 70px 22px 22px", display: "flex", alignItems: "center", gap: 14 }}>
-        <div onClick={back} className="pop" style={{ width: 40, height: 40, borderRadius: 3, border: `1px solid rgba(255,255,255,.25)`, display: "flex", alignItems: "center", justifyContent: "center" }}><ChevIcon c={PAPER} dir="left" /></div>
-        <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div><h2 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.02em" }}>{title}</h2></div>
+      <div style={{ background: INK, color: PAPER, padding: "22px 22px 22px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {topBtn(openMenu, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" /></svg>, "Open menu")}
+          {topBtn(back, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>, "Back", !canGoBack)}
+          {topBtn(goHome, <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></svg>, "Dashboard", isHome)}
+        </div>
+        <div>
+          {sub && <div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>{sub}</div>}
+          <h2 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.02em", margin: 0 }}>{title}</h2>
+        </div>
       </div>
       <div style={{ padding: "22px 18px 40px" }}>{children}</div>
     </div>
