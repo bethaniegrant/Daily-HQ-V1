@@ -679,8 +679,8 @@ function App() {
       <div style={{ width: "100%", maxWidth: isDesktop ? 1180 : 440, minHeight: "100vh", background: PAPER, position: "relative", paddingTop: 68 }}>
         {view}
 
-        {!isScreenPage && (
         {/* top-left controls: menu + back + home — always visible on non-Screen pages */}
+        {!isScreenPage && (
         <div style={{ position: "fixed", top: "max(14px, env(safe-area-inset-top))", left: 14, zIndex: 60, display: "flex", gap: 8 }}>
           <button
             onClick={() => setMenuOpen(true)}
