@@ -4170,6 +4170,7 @@ function TrackerNotes({ block, update }) {
 }
 function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
+  const [confirmDel, setConfirmDel] = useState(false);
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
   const [selected, setSelected] = useState(now.getDate());
   const [editMoods, setEditMoods] = useState(false);
