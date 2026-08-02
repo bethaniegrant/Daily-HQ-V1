@@ -4261,6 +4261,7 @@ function BlockEditor({ block, d, setD, back, openMenu, canGoBack, goHome, isHome
 function EventsEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, isHome }) {
   const meta = BLOCK_META.events;
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
+  const [confirmDel, setConfirmDel] = useState(false);
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
   const events = block.events || [];
   const sync = block.googleSync || { connected: false, lastSyncAt: null };
