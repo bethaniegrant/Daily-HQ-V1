@@ -4231,6 +4231,7 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
 function BlockEditor({ block, d, setD, back, openMenu, canGoBack, goHome, isHome }) {
   const meta = BLOCK_META[block.type];
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
+  const [confirmDel, setConfirmDel] = useState(false);
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
   const setItem = (i, patch) => update({ items: block.items.map((it, j) => j === i ? { ...it, ...patch } : it) });
   const addItem = () => update({ items: [...block.items, block.type === "schedule" ? { time: "", t: "" } : { t: "", done: false }] });
