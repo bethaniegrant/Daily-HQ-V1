@@ -4241,7 +4241,8 @@ function BlockEditor({ block, d, setD, back, openMenu, canGoBack, goHome, isHome
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
           <NavRow openMenu={openMenu} back={back} canGoBack={canGoBack} goHome={goHome} isHome={isHome} size={36} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", color: MIST, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}><meta.icon c={MIST} s={13} /> {meta.label}</div></div>
-          <div onClick={del} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
+          <div onClick={() => setConfirmDel(true)} className="pop" style={{ cursor: "pointer", color: MIST }}><TrashIcon c={MIST} s={18} /></div>
+          <ConfirmDeleteSpace open={confirmDel} name={block.title} onCancel={() => setConfirmDel(false)} onConfirm={() => { setConfirmDel(false); del(); }} />
         </div>
         <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this space" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'DM Serif Display',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
       </div>
