@@ -1378,7 +1378,7 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
 
       {/* Today's notes — always available */}
       <section style={{ padding: isDesktop ? "20px 32px 0" : "18px 18px 0" }}>
-        <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px" }}>
+        <div style={{ background: CARD, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
             <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's notes</span>
             <span style={{ fontSize: 10, color: MUTED, fontWeight: 600 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
