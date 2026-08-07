@@ -3333,9 +3333,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
           <input inputMode="decimal" value={act} onChange={(e) => setAct(e.target.value)} onBlur={() => commit(exp, act, { forceCreate: !!(exp || act) })} placeholder="—" style={inputStyle} />
         </div>
 
-        {existing || period.removable ? (
-          <div className="pop" onClick={busy ? undefined : remove} title="Delete this income" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
-        ) : <div style={{ width: 15 }} />}
+        <div className="pop" onClick={busy ? undefined : remove} title="Delete this income" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
       </div>
       {!existing && lastDeleted ? (
         <button onClick={restore} disabled={busy} style={{ alignSelf: "flex-start", background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 600, letterSpacing: ".04em", cursor: "pointer", padding: "0 0 2px 2px" }}>+ Add this income back</button>
