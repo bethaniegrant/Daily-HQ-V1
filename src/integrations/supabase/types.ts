@@ -150,6 +150,8 @@ export type Database = {
           date_received: string
           expected_amount: number
           id: string
+          income_type: string
+          label: string | null
           pay_frequency: string
           user_id: string
         }
@@ -159,6 +161,8 @@ export type Database = {
           date_received: string
           expected_amount: number
           id?: string
+          income_type?: string
+          label?: string | null
           pay_frequency: string
           user_id: string
         }
@@ -168,6 +172,8 @@ export type Database = {
           date_received?: string
           expected_amount?: number
           id?: string
+          income_type?: string
+          label?: string | null
           pay_frequency?: string
           user_id?: string
         }
