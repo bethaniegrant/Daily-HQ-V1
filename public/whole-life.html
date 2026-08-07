@@ -297,7 +297,7 @@ function applyTheme(name, customDoc) {
   BLUE = t.BLUE; PLUM = t.PLUM;
 }
 
-const WORKOUT_CATS = [
+const DEFAULT_WORKOUT_CATS = [
   { id: "push",   label: "Push day", color: "#C8783C" },
   { id: "pull",   label: "Pull day", color: "#6E8597" },
   { id: "leg",    label: "Leg day",  color: "#9C7E96" },
@@ -305,7 +305,11 @@ const WORKOUT_CATS = [
   { id: "cardio", label: "Cardio",   color: "#B5564E" },
   { id: "other",  label: "Other",    color: "#6E6A60" },
 ];
-const catOf = (id) => WORKOUT_CATS.find((c) => c.id === id) || WORKOUT_CATS[5];
+const CAT_PALETTE = ["#C8783C", "#6E8597", "#9C7E96", "#7E9266", "#B5564E", "#6E6A60", "#4F7C7A", "#A8734B", "#7B6BA8", "#B0894A"];
+let WORKOUT_CATS = DEFAULT_WORKOUT_CATS;
+const applyWorkoutCats = (list) => { WORKOUT_CATS = Array.isArray(list) && list.length ? list : DEFAULT_WORKOUT_CATS; };
+const catOf = (id) => WORKOUT_CATS.find((c) => c.id === id) || WORKOUT_CATS[WORKOUT_CATS.length - 1] || DEFAULT_WORKOUT_CATS[5];
+
 
 const money = (n) => (isNaN(n) || n === "" ? "" : Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 }));
 const uid = () => Math.random().toString(36).slice(2, 9);
