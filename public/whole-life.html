@@ -1846,7 +1846,7 @@ function OverviewShell({ title, sub, onClose, children, width }) {
 
 function OverviewBlock({ label, color, count, children, onClick }) {
   return (
-    <div onClick={onClick} className={onClick ? "pop" : ""} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${color}`, borderRadius: 8, padding: "12px 14px", cursor: onClick ? "pointer" : "default" }}>
+    <div onClick={onClick} className={onClick ? "pop" : ""} style={{ background: CARD, borderLeft: `4px solid ${color}`, borderRadius: 8, padding: "12px 14px", cursor: onClick ? "pointer" : "default", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: count != null || children ? 8 : 0 }}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED }}>{label}</div>
         {count != null && <div style={{ fontSize: 12, fontWeight: 700, color }}>{count}</div>}
