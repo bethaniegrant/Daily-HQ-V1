@@ -211,6 +211,27 @@ function useCloudSync(d, setD) {
   return { ready, displayName, ctx };
 }
 
+function useScrollReveal(threshold = 0.1) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setVisible(entry.isIntersecting);
+    }, { threshold, rootMargin: "0px 0px -40px 0px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
+  return [ref, visible];
+}
+
+function Reveal({ children, className, style, as: Tag = "div" }) {
+  const [ref, visible] = useScrollReveal();
+  const cls = (visible ? "fade" : "reveal-hidden") + (className ? " " + className : "");
+  return <Tag ref={ref} className={cls} style={style}>{children}</Tag>;
+}
+
 
 
 
@@ -666,6 +687,7 @@ function App() {
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin:0; }
         input,textarea{font-family:inherit;}
         .pop{transition:transform .12s ease;cursor:pointer;}.pop:active{transform:scale(.96);}
+        .reveal-hidden{opacity:0;transform:translateY(10px);}
         .fade{animation:f .35s cubic-bezier(.2,.8,.2,1);}@keyframes f{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
         .stagger>*{animation:f .5s cubic-bezier(.2,.8,.2,1) backwards;}
         .stagger>*:nth-child(1){animation-delay:.04s}.stagger>*:nth-child(2){animation-delay:.09s}
@@ -1345,18 +1367,18 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
 
 
       {/* Monthly tracker calendar + integrated daily / week panel */}
-      <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
+      <Reveal as="section" style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "0 4px 10px" }}>
           <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Planner calendar</span>
           <span style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: ".12em", textTransform: "uppercase" }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
         </div>
         <DashboardCalendar d={d} setD={setD} now={now} go={go} isDesktop={isDesktop} />
-      </section>
+      </Reveal>
 
       {/* Today list moved into the calendar side panel — see SidePanel */}
 
       {(cats.money || cats.health) && (
-      <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
+      <Reveal as="section" style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
         <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Jump back in</div>
         <div className="stagger" style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(5, 1fr)" : "1fr 1fr", gap: isDesktop ? 16 : 12 }}>
           {cats.money && <Tile accent={AMBER} icon={WalletIcon} title="Budget" big={d.pay ? `$${money(left)}` : "Set up"} sub={d.pay ? "left this pay" : "tap to begin"} onClick={() => go("money")} />}
@@ -1373,11 +1395,11 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
             );
           })()}
         </div>
-      </section>
+      </Reveal>
       )}
 
       {/* Today's notes — always available */}
-      <section style={{ padding: isDesktop ? "20px 32px 0" : "18px 18px 0" }}>
+      <Reveal as="section" style={{ padding: isDesktop ? "20px 32px 0" : "18px 18px 0" }}>
         <div style={{ background: CARD, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
             <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's notes</span>
@@ -1397,10 +1419,10 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
             );
           })()}
         </div>
-      </section>
+      </Reveal>
 
       {/* Explore */}
-      <section style={{ padding: isDesktop ? "30px 32px 30px" : "26px 18px 30px" }}>
+      <Reveal as="section" style={{ padding: isDesktop ? "30px 32px 30px" : "26px 18px 30px" }}>
         <div style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "0 4px 10px" }}>Explore</div>
         <div style={{ display: "grid", gap: isDesktop ? 12 : 8, gridTemplateColumns: isDesktop ? "repeat(3, 1fr)" : "1fr" }}>
           {cats.money && <HubLink icon={WalletIcon} color={AMBER} title="Money" sub="Budget · debt · savings" onClick={() => go("money")} />}
@@ -1416,11 +1438,11 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
             });
           })()}
         </div>
-      </section>
+      </Reveal>
 
       {/* Monthly goals snapshot */}
       {cats.plan && (
-      <section style={{ padding: isDesktop ? "30px 32px 0" : "26px 18px 0" }}>
+      <Reveal as="section" style={{ padding: isDesktop ? "30px 32px 0" : "26px 18px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 4px 10px" }}>
           <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Monthly goals</span>
           <span className="pop" onClick={() => go("plan", "goals")} style={{ fontSize: 10, fontWeight: 700, color: AMBER, letterSpacing: ".12em", textTransform: "uppercase", cursor: "pointer" }}>Edit</span>
@@ -1436,7 +1458,7 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
             );
           })}
         </div>
-      </section>
+      </Reveal>
       )}
 
 
