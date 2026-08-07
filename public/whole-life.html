@@ -2975,6 +2975,45 @@ function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome 
 
   return (
     <Screen title="Workouts" sub="Train, log, track" back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={BLUE}>
+      {/* SELECTED DAY */}
+      <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "14px 16px", marginBottom: 14 }}>
+        <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>
+          {sel.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+        </div>
+        <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 20, fontWeight: 600, marginTop: 2 }}>
+          {selCats.length ? selCats.map((c) => catOf(c).label).join(" · ") : "Rest day"}
+        </div>
+      </div>
+
+      {/* WORKOUTS LIST */}
+      <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700, margin: "4px 0 8px" }}>Your workouts</div>
+      <div style={{ display: "grid", gap: 11 }}>
+        {d.workouts.map((w) => {
+          const c = catOf(w.cat);
+          return (
+            <div key={w.id} className="pop" onClick={() => go("health", "workout:" + w.id)}
+              style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${c.color}`, borderRadius: 4, padding: "16px 17px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 4, background: c.color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <DumbbellIcon c={c.color} s={21} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>{w.n || "Untitled workout"}</div>
+                <div style={{ fontSize: 12, color: MUTED, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: c.color }} />{c.label}
+                  </span>
+                  <span style={{ opacity: .5 }}>·</span>
+                  <span>{w.ex.filter((e) => e.n.trim()).length} exercise{w.ex.filter((e) => e.n.trim()).length === 1 ? "" : "s"}</span>
+                </div>
+              </div>
+              <ChevIcon c={MUTED} />
+            </div>
+          );
+        })}
+      </div>
+      <button onClick={addWorkout} style={{ ...addBtn, marginTop: 14 }}>+ Build a workout</button>
+      <p style={tip}>Each workout is tagged with a category. The calendar below shows colored dots for the categories you trained on each day.</p>
+
       {/* CALENDAR */}
       <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px 14px", marginBottom: 14 }}>
         <div style={{ textAlign: "center", fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 10, fontFamily: "'DM Serif Display',serif" }}>
@@ -3031,45 +3070,6 @@ function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome 
           <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>trained</div>
         </div>
       </div>
-
-      {/* SELECTED DAY */}
-      <div style={{ background: INK, color: PAPER, borderRadius: 4, padding: "14px 16px", marginBottom: 14 }}>
-        <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MIST, fontWeight: 700 }}>
-          {sel.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-        </div>
-        <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 20, fontWeight: 600, marginTop: 2 }}>
-          {selCats.length ? selCats.map((c) => catOf(c).label).join(" · ") : "Rest day"}
-        </div>
-      </div>
-
-      {/* WORKOUTS LIST */}
-      <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700, margin: "4px 0 8px" }}>Your workouts</div>
-      <div style={{ display: "grid", gap: 11 }}>
-        {d.workouts.map((w) => {
-          const c = catOf(w.cat);
-          return (
-            <div key={w.id} className="pop" onClick={() => go("health", "workout:" + w.id)}
-              style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${c.color}`, borderRadius: 4, padding: "16px 17px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 4, background: c.color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <DumbbellIcon c={c.color} s={21} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>{w.n || "Untitled workout"}</div>
-                <div style={{ fontSize: 12, color: MUTED, display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: c.color }} />{c.label}
-                  </span>
-                  <span style={{ opacity: .5 }}>·</span>
-                  <span>{w.ex.filter((e) => e.n.trim()).length} exercise{w.ex.filter((e) => e.n.trim()).length === 1 ? "" : "s"}</span>
-                </div>
-              </div>
-              <ChevIcon c={MUTED} />
-            </div>
-          );
-        })}
-      </div>
-      <button onClick={addWorkout} style={{ ...addBtn, marginTop: 14 }}>+ Build a workout</button>
-      <p style={tip}>Each workout is tagged with a category. The calendar above shows colored dots for the categories you trained on each day.</p>
     </Screen>
   );
 }
