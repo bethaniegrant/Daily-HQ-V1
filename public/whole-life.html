@@ -3367,17 +3367,19 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
     return Object.values(deleted)
       .filter((p) => p && p.pay_frequency === freq && p.date_received && p.date_received.startsWith(prefix) && !visible.has(p.date_received))
       .sort((a, b) => a.date_received.localeCompare(b.date_received))
-      .map((p, i) => ({ label: "Deleted paycheck", date: p.date_received }));
+      .map((p, i) => ({ label: "Deleted income", date: p.date_received }));
   }, [deleted, extras, periods, year, month, freq]);
   const [manual, setManual] = useState([]);
   const manualRows = React.useMemo(() => {
     const taken = new Set([...periods, ...extras, ...deletedExtras].map((p) => p.date));
     return manual.filter((dte) => !taken.has(dte)).map((dte, i) => ({
-      label: freq === "weekly" ? `Week ${periods.length + extras.length + i + 1}` : freq === "biweekly" ? `Paycheck ${periods.length + extras.length + i + 1}` : "Extra paycheck",
+      label: "Income",
       date: dte,
+      removable: true,
     }));
   }, [manual, periods, extras, deletedExtras, freq]);
   const rows = [...periods, ...extras, ...deletedExtras, ...manualRows];
+  const removeManual = (date) => setManual((prev) => prev.filter((dte) => dte !== date));
 
   const addRow = () => {
     const pad = (n) => String(n).padStart(2, "0");
@@ -3395,7 +3397,7 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
     setManual((prev) => [...prev, `${year}-${pad(month + 1)}-${pad(day)}`]);
   };
 
-  const addLabel = freq === "weekly" ? "+ Add another week" : freq === "monthly" ? "+ Add another paycheck" : "+ Add another paycheck";
+  const addLabel = "Add income +";
 
   return (
     <div style={{ display: "grid", gap: 8 }}>
@@ -3406,11 +3408,12 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
         <div style={{ width: 15 }} />
       </div>
       {rows.map((p) => (
-        <PaycheckRow key={p.date} ctx={ctx} freq={freq} period={p} existing={findPaycheck(paychecks, freq, p.date)} onSaved={reload} onDeleted={(date, row) => setDeleted((prev) => ({ ...prev, [date]: row }))} lastDeleted={deleted[p.date]} clearDeleted={(date) => setDeleted((prev) => { const next = { ...prev }; delete next[date]; return next; })} readOnly={readOnly} />
+        <PaycheckRow key={p.date} ctx={ctx} freq={freq} period={p} existing={findPaycheck(paychecks, freq, p.date)} onSaved={reload} onDeleted={(date, row) => setDeleted((prev) => ({ ...prev, [date]: row }))} lastDeleted={deleted[p.date]} clearDeleted={(date) => setDeleted((prev) => { const next = { ...prev }; delete next[date]; return next; })} onRemoveRow={removeManual} readOnly={readOnly} />
       ))}
       <button onClick={addRow} style={{ justifySelf: "start", background: "none", border: `1px dashed ${LINE}`, color: MUTED, borderRadius: 3, padding: "7px 12px", fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", cursor: "pointer" }}>{addLabel}</button>
     </div>
   );
+
 }
 
 
