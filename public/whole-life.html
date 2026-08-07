@@ -3384,6 +3384,8 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
 
   const addRow = () => {
     const pad = (n) => String(n).padStart(2, "0");
+    const hiddenDates = Object.keys(hidden).filter((d) => hidden[d]);
+    if (hiddenDates.length) { unhideRow(hiddenDates.sort()[0]); return; }
     const taken = new Set(rows.map((p) => p.date));
     const last = rows.length ? rows[rows.length - 1].date : `${year}-${pad(month + 1)}-01`;
     const step = freq === "weekly" ? 7 : freq === "biweekly" ? 14 : 15;
