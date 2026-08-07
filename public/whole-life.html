@@ -1367,13 +1367,13 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
 
 
       {/* Monthly tracker calendar + integrated daily / week panel */}
-      <section style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
+      <Reveal as="section" style={{ padding: isDesktop ? "26px 32px 0" : "22px 18px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "0 4px 10px" }}>
           <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Planner calendar</span>
           <span style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: ".12em", textTransform: "uppercase" }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
         </div>
         <DashboardCalendar d={d} setD={setD} now={now} go={go} isDesktop={isDesktop} />
-      </section>
+      </Reveal>
 
       {/* Today list moved into the calendar side panel — see SidePanel */}
 
