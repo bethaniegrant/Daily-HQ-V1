@@ -3202,20 +3202,34 @@ function findPaycheck(paychecks, freq, date) {
   return paychecks.find((p) => p.pay_frequency === freq && p.date_received === date) || null;
 }
 
-function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDeleted, clearDeleted, readOnly }) {
+const INCOME_TYPES = [
+  { v: "paycheck", l: "Paycheck" },
+  { v: "extra", l: "Extra income" },
+  { v: "repayment", l: "Repayment" },
+  { v: "gift", l: "Gift" },
+  { v: "other", l: "Other" },
+];
+
+function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDeleted, clearDeleted, onRemoveRow, readOnly }) {
   const [exp, setExp] = useState(existing?.expected_amount != null ? String(existing.expected_amount) : "");
   const [act, setAct] = useState(existing?.actual_amount != null ? String(existing.actual_amount) : "");
+  const [label, setLabel] = useState(existing?.label || "");
+  const [kind, setKind] = useState(existing?.income_type || "paycheck");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     setExp(existing?.expected_amount != null ? String(existing.expected_amount) : "");
     setAct(existing?.actual_amount != null ? String(existing.actual_amount) : "");
-  }, [existing?.id, existing?.expected_amount, existing?.actual_amount]);
+    setLabel(existing?.label || "");
+    setKind(existing?.income_type || "paycheck");
+  }, [existing?.id, existing?.expected_amount, existing?.actual_amount, existing?.label, existing?.income_type]);
 
   const commit = async (nextExp, nextAct, opts = {}) => {
     // editable in all months, including history
     const client = ctx && ctx.current && ctx.current.client;
     const uid_ = ctx && ctx.current && ctx.current.userId;
     if (!client || !uid_) return;
+    const nextLabel = opts.label !== undefined ? opts.label : label;
+    const nextKind = opts.kind !== undefined ? opts.kind : kind;
     const expNum = nextExp === "" ? null : Number(nextExp);
     const actNum = nextAct === "" ? null : Number(nextAct);
     if (expNum != null && !Number.isFinite(expNum)) return;
@@ -3224,12 +3238,15 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
     const sameExp = existing && Number(existing.expected_amount || 0) === (expNum || 0);
     const sameAct = existing && ((existing.actual_amount == null && actNum == null) ||
       (existing.actual_amount != null && actNum != null && Number(existing.actual_amount) === actNum));
-    if (existing && sameExp && sameAct) return;
+    const sameMeta = existing && (existing.label || "") === (nextLabel || "") && (existing.income_type || "paycheck") === nextKind;
+    if (existing && sameExp && sameAct && sameMeta) return;
     setBusy(true);
     if (existing) {
       await client.from("paychecks").update({
         expected_amount: expNum != null ? expNum : 0,
         actual_amount: actNum,
+        label: nextLabel || null,
+        income_type: nextKind,
       }).eq("id", existing.id);
     } else {
       await client.from("paychecks").insert({
@@ -3238,6 +3255,8 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
         pay_frequency: freq,
         expected_amount: expNum != null ? expNum : 0,
         actual_amount: actNum,
+        label: nextLabel || null,
+        income_type: nextKind,
       });
     }
     clearDeleted && clearDeleted(period.date);
@@ -3252,12 +3271,12 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
     await commit(
       lastDeleted.expected_amount != null ? String(lastDeleted.expected_amount) : "0",
       lastDeleted.actual_amount != null ? String(lastDeleted.actual_amount) : "",
-      { forceCreate: true }
+      { forceCreate: true, label: lastDeleted.label || "", kind: lastDeleted.income_type || "paycheck" }
     );
   };
 
   const remove = async () => {
-    if (!existing) return;
+    if (!existing) { onRemoveRow && onRemoveRow(period.date); return; }
     const client = ctx && ctx.current && ctx.current.client;
     if (!client) return;
     setExp(""); setAct("");
@@ -3266,6 +3285,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
     await client.from("paychecks").delete().eq("id", existing.id);
     setBusy(false);
     setExp(""); setAct("");
+    onRemoveRow && onRemoveRow(period.date);
     onSaved && onSaved();
   };
 
@@ -3278,17 +3298,29 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
 
   const inputStyle = { border: "none", flex: 1, textAlign: "right", padding: "8px 0", fontSize: 14, fontWeight: 700, background: "none", minWidth: 0, color: TEXT, opacity: busy ? 0.6 : 1 };
   const wrap = { display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 3, padding: "0 10px", background: PAPER };
-  const rowAction = { border: `1px solid ${LINE}`, background: PAPER, color: TEXT, borderRadius: 3, padding: "8px 10px", cursor: busy ? "wait" : "pointer", fontSize: 11, lineHeight: 1, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", whiteSpace: "nowrap", minHeight: 34 };
   const dt = new Date(period.date + "T00:00:00");
   const dateLabel = dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
   return (
     <div style={{ display: "grid", gap: 4 }}>
       <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ flex: "1 1 120px", minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{period.label || "Paycheck"}</div>
+        <div style={{ flex: "1 1 130px", minWidth: 0 }}>
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            onBlur={() => commit(exp, act, { forceCreate: !!(exp || act) })}
+            placeholder={period.label || "Paycheck"}
+            style={{ width: "100%", border: "none", background: "none", padding: 0, fontSize: 13, fontWeight: 700, color: TEXT, outline: "none" }}
+          />
           <div style={{ fontSize: 11, color: MUTED, marginTop: 1, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             <span>{dateLabel}</span>
+            <select
+              value={kind}
+              onChange={(e) => { const v = e.target.value; setKind(v); commit(exp, act, { forceCreate: !!(exp || act), kind: v }); }}
+              style={{ border: "none", background: "none", color: MUTED, fontSize: 11, fontWeight: 600, padding: 0, cursor: "pointer", outline: "none" }}
+            >
+              {INCOME_TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+            </select>
             {badgeText ? <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", padding: "2px 6px", borderRadius: 999, background: badgeBg, color: badgeColor, whiteSpace: "nowrap" }}>{badgeText}</span> : null}
           </div>
         </div>
@@ -3301,17 +3333,18 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
           <input inputMode="decimal" value={act} onChange={(e) => setAct(e.target.value)} onBlur={() => commit(exp, act, { forceCreate: !!(exp || act) })} placeholder="—" style={inputStyle} />
         </div>
 
-        {existing ? (
-          <div className="pop" onClick={busy ? undefined : remove} title="Delete this paycheck" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
+        {existing || period.removable ? (
+          <div className="pop" onClick={busy ? undefined : remove} title="Delete this income" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
         ) : <div style={{ width: 15 }} />}
       </div>
       {!existing && lastDeleted ? (
-        <button onClick={restore} disabled={busy} style={{ alignSelf: "flex-start", background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 600, letterSpacing: ".04em", cursor: "pointer", padding: "0 0 2px 2px" }}>+ Add this paycheck back</button>
+        <button onClick={restore} disabled={busy} style={{ alignSelf: "flex-start", background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 600, letterSpacing: ".04em", cursor: "pointer", padding: "0 0 2px 2px" }}>+ Add this income back</button>
       ) : null}
     </div>
   );
 
 }
+
 
 
 
@@ -3334,17 +3367,19 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
     return Object.values(deleted)
       .filter((p) => p && p.pay_frequency === freq && p.date_received && p.date_received.startsWith(prefix) && !visible.has(p.date_received))
       .sort((a, b) => a.date_received.localeCompare(b.date_received))
-      .map((p, i) => ({ label: "Deleted paycheck", date: p.date_received }));
+      .map((p, i) => ({ label: "Deleted income", date: p.date_received }));
   }, [deleted, extras, periods, year, month, freq]);
   const [manual, setManual] = useState([]);
   const manualRows = React.useMemo(() => {
     const taken = new Set([...periods, ...extras, ...deletedExtras].map((p) => p.date));
     return manual.filter((dte) => !taken.has(dte)).map((dte, i) => ({
-      label: freq === "weekly" ? `Week ${periods.length + extras.length + i + 1}` : freq === "biweekly" ? `Paycheck ${periods.length + extras.length + i + 1}` : "Extra paycheck",
+      label: "Income",
       date: dte,
+      removable: true,
     }));
   }, [manual, periods, extras, deletedExtras, freq]);
   const rows = [...periods, ...extras, ...deletedExtras, ...manualRows];
+  const removeManual = (date) => setManual((prev) => prev.filter((dte) => dte !== date));
 
   const addRow = () => {
     const pad = (n) => String(n).padStart(2, "0");
@@ -3362,7 +3397,7 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
     setManual((prev) => [...prev, `${year}-${pad(month + 1)}-${pad(day)}`]);
   };
 
-  const addLabel = freq === "weekly" ? "+ Add another week" : freq === "monthly" ? "+ Add another paycheck" : "+ Add another paycheck";
+  const addLabel = "Add income +";
 
   return (
     <div style={{ display: "grid", gap: 8 }}>
@@ -3373,11 +3408,12 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
         <div style={{ width: 15 }} />
       </div>
       {rows.map((p) => (
-        <PaycheckRow key={p.date} ctx={ctx} freq={freq} period={p} existing={findPaycheck(paychecks, freq, p.date)} onSaved={reload} onDeleted={(date, row) => setDeleted((prev) => ({ ...prev, [date]: row }))} lastDeleted={deleted[p.date]} clearDeleted={(date) => setDeleted((prev) => { const next = { ...prev }; delete next[date]; return next; })} readOnly={readOnly} />
+        <PaycheckRow key={p.date} ctx={ctx} freq={freq} period={p} existing={findPaycheck(paychecks, freq, p.date)} onSaved={reload} onDeleted={(date, row) => setDeleted((prev) => ({ ...prev, [date]: row }))} lastDeleted={deleted[p.date]} clearDeleted={(date) => setDeleted((prev) => { const next = { ...prev }; delete next[date]; return next; })} onRemoveRow={removeManual} readOnly={readOnly} />
       ))}
       <button onClick={addRow} style={{ justifySelf: "start", background: "none", border: `1px dashed ${LINE}`, color: MUTED, borderRadius: 3, padding: "7px 12px", fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", cursor: "pointer" }}>{addLabel}</button>
     </div>
   );
+
 }
 
 
