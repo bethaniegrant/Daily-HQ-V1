@@ -3376,8 +3376,11 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
       removable: true,
     }));
   }, [manual, periods, extras, deletedExtras, freq]);
-  const rows = [...periods, ...extras, ...deletedExtras, ...manualRows];
+  const [hidden, setHidden] = useState({});
+  const rows = [...periods, ...extras, ...deletedExtras, ...manualRows].filter((p) => !hidden[p.date]);
   const removeManual = (date) => setManual((prev) => prev.filter((dte) => dte !== date));
+  const hideRow = (date) => setHidden((prev) => ({ ...prev, [date]: true }));
+  const unhideRow = (date) => setHidden((prev) => { const next = { ...prev }; delete next[date]; return next; });
 
   const addRow = () => {
     const pad = (n) => String(n).padStart(2, "0");
