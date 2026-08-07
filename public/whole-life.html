@@ -627,7 +627,9 @@ function App() {
   const isHome = tab === "home" && page === null;
   const goHome = () => { if (!isHome) { setHistory((h) => [...h, { tab, page }]); setTab("home"); setPage(null); } };
   const isScreenPage = ["budget", "paychist", "habits", "goals", "yearly", "meals", "meds", "workouts"].includes(page) || (tab === "money" && page === null);
+  applyWorkoutCats(d.workoutCats);
   const common = { d, setD, now, go, back: goBack, canGoBack, openMenu: () => setMenuOpen(true), goHome, isHome, isDesktop, displayName, ctx };
+
 
   // resolve current page
   let view;
