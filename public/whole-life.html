@@ -2946,11 +2946,17 @@ function Meds({ d, setD, now, back, openMenu, goHome, canGoBack, isHome }) {
 // ═══ NEW TOOL: WORKOUTS ═══════════════════════════════════════════
 function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome }) {
   const [sel, setSel] = useState(new Date(now));
+  const [editCats, setEditCats] = useState(false);
+  const cats = Array.isArray(d.workoutCats) && d.workoutCats.length ? d.workoutCats : DEFAULT_WORKOUT_CATS;
+  const setCats = (list) => setD({ ...d, workoutCats: list });
   const addWorkout = () => {
-    const w = { id: uid(), n: "New workout", cat: "other", ex: [{ id: uid(), n: "", sets: "", reps: "", w: "" }] };
+    const w = { id: uid(), n: "New workout", cat: cats[cats.length - 1].id, ex: [{ id: uid(), n: "", sets: "", reps: "", w: "" }] };
     setD({ ...d, workouts: [...d.workouts, w] });
     go("health", "workout:" + w.id);
   };
+  const renameWorkout = (id, n) => setD({ ...d, workouts: d.workouts.map((w) => w.id === id ? { ...w, n } : w) });
+  const delWorkout = (id) => setD({ ...d, workouts: d.workouts.filter((w) => w.id !== id) });
+
 
   // categories done on a given date (any exercise of that workout checked)
   const catsDoneOn = (dt) => {
