@@ -3210,7 +3210,7 @@ const INCOME_TYPES = [
   { v: "other", l: "Other" },
 ];
 
-function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDeleted, clearDeleted, onRemoveRow, readOnly }) {
+function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDeleted, clearDeleted, onRemoveRow, onHideRow, readOnly }) {
   const [exp, setExp] = useState(existing?.expected_amount != null ? String(existing.expected_amount) : "");
   const [act, setAct] = useState(existing?.actual_amount != null ? String(existing.actual_amount) : "");
   const [label, setLabel] = useState(existing?.label || "");
@@ -3276,7 +3276,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
   };
 
   const remove = async () => {
-    if (!existing) { onRemoveRow && onRemoveRow(period.date); return; }
+    if (!existing) { onRemoveRow && onRemoveRow(period.date); onHideRow && onHideRow(period.date); return; }
     const client = ctx && ctx.current && ctx.current.client;
     if (!client) return;
     setExp(""); setAct("");
@@ -3333,9 +3333,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
           <input inputMode="decimal" value={act} onChange={(e) => setAct(e.target.value)} onBlur={() => commit(exp, act, { forceCreate: !!(exp || act) })} placeholder="—" style={inputStyle} />
         </div>
 
-        {existing || period.removable ? (
-          <div className="pop" onClick={busy ? undefined : remove} title="Delete this income" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
-        ) : <div style={{ width: 15 }} />}
+        <div className="pop" onClick={busy ? undefined : remove} title="Delete this income" style={{ cursor: "pointer", opacity: .35 }}><XIcon c={MUTED} s={15} /></div>
       </div>
       {!existing && lastDeleted ? (
         <button onClick={restore} disabled={busy} style={{ alignSelf: "flex-start", background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 600, letterSpacing: ".04em", cursor: "pointer", padding: "0 0 2px 2px" }}>+ Add this income back</button>
@@ -3378,11 +3376,16 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
       removable: true,
     }));
   }, [manual, periods, extras, deletedExtras, freq]);
-  const rows = [...periods, ...extras, ...deletedExtras, ...manualRows];
+  const [hidden, setHidden] = useState({});
+  const rows = [...periods, ...extras, ...deletedExtras, ...manualRows].filter((p) => !hidden[p.date]);
   const removeManual = (date) => setManual((prev) => prev.filter((dte) => dte !== date));
+  const hideRow = (date) => setHidden((prev) => ({ ...prev, [date]: true }));
+  const unhideRow = (date) => setHidden((prev) => { const next = { ...prev }; delete next[date]; return next; });
 
   const addRow = () => {
     const pad = (n) => String(n).padStart(2, "0");
+    const hiddenDates = Object.keys(hidden).filter((d) => hidden[d]);
+    if (hiddenDates.length) { unhideRow(hiddenDates.sort()[0]); return; }
     const taken = new Set(rows.map((p) => p.date));
     const last = rows.length ? rows[rows.length - 1].date : `${year}-${pad(month + 1)}-01`;
     const step = freq === "weekly" ? 7 : freq === "biweekly" ? 14 : 15;
@@ -3408,7 +3411,7 @@ function PaycheckPeriodList({ ctx, year, month, freq, paychecks, reload, readOnl
         <div style={{ width: 15 }} />
       </div>
       {rows.map((p) => (
-        <PaycheckRow key={p.date} ctx={ctx} freq={freq} period={p} existing={findPaycheck(paychecks, freq, p.date)} onSaved={reload} onDeleted={(date, row) => setDeleted((prev) => ({ ...prev, [date]: row }))} lastDeleted={deleted[p.date]} clearDeleted={(date) => setDeleted((prev) => { const next = { ...prev }; delete next[date]; return next; })} onRemoveRow={removeManual} readOnly={readOnly} />
+        <PaycheckRow key={p.date} ctx={ctx} freq={freq} period={p} existing={findPaycheck(paychecks, freq, p.date)} onSaved={reload} onDeleted={(date, row) => setDeleted((prev) => ({ ...prev, [date]: row }))} lastDeleted={deleted[p.date]} clearDeleted={(date) => setDeleted((prev) => { const next = { ...prev }; delete next[date]; return next; })} onRemoveRow={removeManual} onHideRow={hideRow} readOnly={readOnly} />
       ))}
       <button onClick={addRow} style={{ justifySelf: "start", background: "none", border: `1px dashed ${LINE}`, color: MUTED, borderRadius: 3, padding: "7px 12px", fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", cursor: "pointer" }}>{addLabel}</button>
     </div>
