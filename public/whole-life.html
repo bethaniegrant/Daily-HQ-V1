@@ -3210,7 +3210,7 @@ const INCOME_TYPES = [
   { v: "other", l: "Other" },
 ];
 
-function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDeleted, clearDeleted, onRemoveRow, readOnly }) {
+function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDeleted, clearDeleted, onRemoveRow, onHideRow, readOnly }) {
   const [exp, setExp] = useState(existing?.expected_amount != null ? String(existing.expected_amount) : "");
   const [act, setAct] = useState(existing?.actual_amount != null ? String(existing.actual_amount) : "");
   const [label, setLabel] = useState(existing?.label || "");
