@@ -297,7 +297,7 @@ function applyTheme(name, customDoc) {
   BLUE = t.BLUE; PLUM = t.PLUM;
 }
 
-const WORKOUT_CATS = [
+const DEFAULT_WORKOUT_CATS = [
   { id: "push",   label: "Push day", color: "#C8783C" },
   { id: "pull",   label: "Pull day", color: "#6E8597" },
   { id: "leg",    label: "Leg day",  color: "#9C7E96" },
@@ -305,7 +305,11 @@ const WORKOUT_CATS = [
   { id: "cardio", label: "Cardio",   color: "#B5564E" },
   { id: "other",  label: "Other",    color: "#6E6A60" },
 ];
-const catOf = (id) => WORKOUT_CATS.find((c) => c.id === id) || WORKOUT_CATS[5];
+const CAT_PALETTE = ["#C8783C", "#6E8597", "#9C7E96", "#7E9266", "#B5564E", "#6E6A60", "#4F7C7A", "#A8734B", "#7B6BA8", "#B0894A"];
+let WORKOUT_CATS = DEFAULT_WORKOUT_CATS;
+const applyWorkoutCats = (list) => { WORKOUT_CATS = Array.isArray(list) && list.length ? list : DEFAULT_WORKOUT_CATS; };
+const catOf = (id) => WORKOUT_CATS.find((c) => c.id === id) || WORKOUT_CATS[WORKOUT_CATS.length - 1] || DEFAULT_WORKOUT_CATS[5];
+
 
 const money = (n) => (isNaN(n) || n === "" ? "" : Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 }));
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -342,7 +346,9 @@ const emptyDoc = () => ({
   meds: [],
   medChecks: {},
   workouts: [],
+  workoutCats: DEFAULT_WORKOUT_CATS,
   workoutDone: {},
+
   goals: [{ n: "", done: false }, { n: "", done: false }, { n: "", done: false }],
   yearlyGoals: [],
   meals: { Mon: {}, Tue: {}, Wed: {}, Thu: {}, Fri: {}, Sat: {}, Sun: {} },
@@ -621,7 +627,9 @@ function App() {
   const isHome = tab === "home" && page === null;
   const goHome = () => { if (!isHome) { setHistory((h) => [...h, { tab, page }]); setTab("home"); setPage(null); } };
   const isScreenPage = ["budget", "paychist", "habits", "goals", "yearly", "meals", "meds", "workouts"].includes(page) || (tab === "money" && page === null);
+  applyWorkoutCats(d.workoutCats);
   const common = { d, setD, now, go, back: goBack, canGoBack, openMenu: () => setMenuOpen(true), goHome, isHome, isDesktop, displayName, ctx };
+
 
   // resolve current page
   let view;
@@ -2938,11 +2946,17 @@ function Meds({ d, setD, now, back, openMenu, goHome, canGoBack, isHome }) {
 // ═══ NEW TOOL: WORKOUTS ═══════════════════════════════════════════
 function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome }) {
   const [sel, setSel] = useState(new Date(now));
+  const [editCats, setEditCats] = useState(false);
+  const cats = Array.isArray(d.workoutCats) && d.workoutCats.length ? d.workoutCats : DEFAULT_WORKOUT_CATS;
+  const setCats = (list) => setD({ ...d, workoutCats: list });
   const addWorkout = () => {
-    const w = { id: uid(), n: "New workout", cat: "other", ex: [{ id: uid(), n: "", sets: "", reps: "", w: "" }] };
+    const w = { id: uid(), n: "New workout", cat: cats[cats.length - 1].id, ex: [{ id: uid(), n: "", sets: "", reps: "", w: "" }] };
     setD({ ...d, workouts: [...d.workouts, w] });
     go("health", "workout:" + w.id);
   };
+  const renameWorkout = (id, n) => setD({ ...d, workouts: d.workouts.map((w) => w.id === id ? { ...w, n } : w) });
+  const delWorkout = (id) => setD({ ...d, workouts: d.workouts.filter((w) => w.id !== id) });
+
 
   // categories done on a given date (any exercise of that workout checked)
   const catsDoneOn = (dt) => {
@@ -2996,8 +3010,10 @@ function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome 
               <div style={{ width: 42, height: 42, borderRadius: 4, background: c.color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <DumbbellIcon c={c.color} s={21} />
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>{w.n || "Untitled workout"}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <input value={w.n} onClick={(ev) => ev.stopPropagation()} onChange={(ev) => renameWorkout(w.id, ev.target.value)}
+                  placeholder="Untitled workout"
+                  style={{ width: "100%", border: "none", background: "none", fontSize: 16, fontWeight: 700, color: TEXT, padding: 0 }} />
                 <div style={{ fontSize: 12, color: MUTED, display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                     <span style={{ width: 7, height: 7, borderRadius: "50%", background: c.color }} />{c.label}
@@ -3006,7 +3022,10 @@ function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome 
                   <span>{w.ex.filter((e) => e.n.trim()).length} exercise{w.ex.filter((e) => e.n.trim()).length === 1 ? "" : "s"}</span>
                 </div>
               </div>
+              <div className="pop" onClick={(ev) => { ev.stopPropagation(); delWorkout(w.id); }} title="Delete workout"
+                style={{ cursor: "pointer", padding: 4, opacity: .55 }}><TrashIcon c={MUTED} s={17} /></div>
               <ChevIcon c={MUTED} />
+
             </div>
           );
         })}
@@ -3048,14 +3067,48 @@ function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome 
         </div>
       </div>
 
-      {/* LEGEND */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-        {WORKOUT_CATS.filter((c) => d.workouts.some((w) => (w.cat || "other") === c.id)).map((c) => (
-          <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: TEXT, background: CARD, border: `1px solid ${LINE}`, borderRadius: 99, padding: "4px 10px" }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.color }} />{c.label}
-          </div>
-        ))}
+      {/* CATEGORIES / LEGEND */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "4px 0 8px" }}>
+        <div style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Categories</div>
+        <div className="pop" onClick={() => setEditCats(!editCats)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: BLUE }}>{editCats ? "Done" : "Customize"}</div>
       </div>
+      {!editCats ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+          {cats.filter((c) => d.workouts.some((w) => (w.cat || "other") === c.id)).map((c) => (
+            <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: TEXT, background: CARD, border: `1px solid ${LINE}`, borderRadius: 99, padding: "4px 10px" }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.color }} />{c.label}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "12px 14px", marginBottom: 14, boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
+          <div style={{ display: "grid", gap: 8 }}>
+            {cats.map((c) => (
+              <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                <div className="pop" title="Change color" onClick={() => {
+                  const i = CAT_PALETTE.indexOf(c.color);
+                  const color = CAT_PALETTE[(i + 1) % CAT_PALETTE.length];
+                  setCats(cats.map((x) => x.id === c.id ? { ...x, color } : x));
+                }} style={{ width: 16, height: 16, borderRadius: "50%", background: c.color, cursor: "pointer", flexShrink: 0 }} />
+                <input value={c.label} onChange={(ev) => setCats(cats.map((x) => x.id === c.id ? { ...x, label: ev.target.value } : x))}
+                  placeholder="Category name"
+                  style={{ flex: 1, border: "none", background: "none", fontSize: 14, fontWeight: 700, color: TEXT, padding: 0 }} />
+                {cats.length > 1 && (
+                  <div className="pop" title="Delete category" onClick={() => {
+                    const rest = cats.filter((x) => x.id !== c.id);
+                    const fallback = rest[rest.length - 1].id;
+                    setD({ ...d, workoutCats: rest, workouts: d.workouts.map((w) => (w.cat || "other") === c.id ? { ...w, cat: fallback } : w) });
+                  }} style={{ cursor: "pointer", opacity: .5 }}><XIcon c={MUTED} s={15} /></div>
+                )}
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setCats([...cats, { id: uid(), label: "New category", color: CAT_PALETTE[cats.length % CAT_PALETTE.length] }])}
+            style={{ ...addBtn, marginTop: 12 }}>+ Add category</button>
+          <p style={tip}>Rename any category, tap its dot to change the color, or remove ones you don't use.</p>
+        </div>
+      )}
+
 
       {/* MONTH STATS */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
