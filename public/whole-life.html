@@ -211,6 +211,27 @@ function useCloudSync(d, setD) {
   return { ready, displayName, ctx };
 }
 
+function useScrollReveal(threshold = 0.1) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setVisible(entry.isIntersecting);
+    }, { threshold, rootMargin: "0px 0px -40px 0px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
+  return [ref, visible];
+}
+
+function Reveal({ children, className, style, as: Tag = "div" }) {
+  const [ref, visible] = useScrollReveal();
+  const cls = (visible ? "fade" : "reveal-hidden") + (className ? " " + className : "");
+  return <Tag ref={ref} className={cls} style={style}>{children}</Tag>;
+}
+
 
 
 
