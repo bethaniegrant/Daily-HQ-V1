@@ -4469,7 +4469,7 @@ function Ring({ pct }) {
 function Tile({ accent, icon: Icon, title, big, sub, onClick, dark }) {
   const bg = dark ? INK : CARD, fg = dark ? PAPER : INK, submuted = dark ? "rgba(244,241,234,.55)" : MUTED;
   return (
-    <div className="pop" onClick={onClick} style={{ background: bg, color: fg, borderRadius: 4, padding: "18px 18px 16px", minHeight: 138, display: "flex", flexDirection: "column", justifyContent: "space-between", border: dark ? "none" : `1px solid ${LINE}`, boxShadow: dark ? "0 14px 30px -14px rgba(22,32,28,.55)" : "none" }}>
+    <div className="pop" onClick={onClick} style={{ background: bg, color: fg, borderRadius: 4, padding: "18px 18px 16px", minHeight: 138, display: "flex", flexDirection: "column", justifyContent: "space-between", border: "none", boxShadow: dark ? "0 14px 30px -14px rgba(22,32,28,.55)" : "0 8px 24px -18px rgba(22,32,28,.4)" }}>
       <div style={{ width: 40, height: 40, borderRadius: 3, background: dark ? "rgba(255,255,255,.1)" : accent + "18", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon c={dark ? PAPER : accent} s={21} /></div>
       <div>
         <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: big.length > 5 ? 22 : 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.01em" }}>{big}</div>
