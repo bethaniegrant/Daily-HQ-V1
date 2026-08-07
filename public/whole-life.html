@@ -1378,7 +1378,7 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
 
       {/* Today's notes — always available */}
       <section style={{ padding: isDesktop ? "20px 32px 0" : "18px 18px 0" }}>
-        <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px" }}>
+        <div style={{ background: CARD, borderRadius: 16, padding: isDesktop ? "16px 18px" : "14px 16px", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
             <span style={{ fontSize: 10, letterSpacing: ".22em", textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>Today's notes</span>
             <span style={{ fontSize: 10, color: MUTED, fontWeight: 600 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
@@ -1429,7 +1429,7 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
           {d.goals.map((g, i) => {
             const empty = !g.n.trim();
             return (
-              <div key={i} className="pop" onClick={() => go("plan", "goals")} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <div key={i} className="pop" onClick={() => go("plan", "goals")} style={{ background: CARD, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
                 <div style={{ width: 26, height: 26, borderRadius: 3, border: `2px solid ${AMBER}`, background: g.done ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "'DM Serif Display',serif", fontWeight: 700, color: g.done ? "#fff" : AMBER, fontSize: 12 }}>{g.done ? <CheckIcon c="#fff" s={14} /> : i + 1}</div>
                 <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: empty ? MUTED : INK, fontStyle: empty ? "italic" : "normal", textDecoration: g.done ? "line-through" : "none" }}>{empty ? `Set goal ${i + 1}` : g.n}</div>
               </div>
@@ -1846,7 +1846,7 @@ function OverviewShell({ title, sub, onClose, children, width }) {
 
 function OverviewBlock({ label, color, count, children, onClick }) {
   return (
-    <div onClick={onClick} className={onClick ? "pop" : ""} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${color}`, borderRadius: 8, padding: "12px 14px", cursor: onClick ? "pointer" : "default" }}>
+    <div onClick={onClick} className={onClick ? "pop" : ""} style={{ background: CARD, borderLeft: `4px solid ${color}`, borderRadius: 8, padding: "12px 14px", cursor: onClick ? "pointer" : "default", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: count != null || children ? 8 : 0 }}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: MUTED }}>{label}</div>
         {count != null && <div style={{ fontSize: 12, fontWeight: 700, color }}>{count}</div>}
@@ -2774,7 +2774,7 @@ function Legend({ color, label, ring }) {
 
 function HubLink({ icon: Icon, color, title, sub, onClick }) {
   return (
-    <div className="pop" onClick={onClick} style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+    <div className="pop" onClick={onClick} style={{ background: CARD, borderRadius: 4, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
       <div style={{ width: 40, height: 40, borderRadius: 4, background: color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon c={color} s={21} /></div>
       <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div><div style={{ fontSize: 12, color: MUTED }}>{sub}</div></div>
       <ChevIcon c={MUTED} />
@@ -4469,7 +4469,7 @@ function Ring({ pct }) {
 function Tile({ accent, icon: Icon, title, big, sub, onClick, dark }) {
   const bg = dark ? INK : CARD, fg = dark ? PAPER : INK, submuted = dark ? "rgba(244,241,234,.55)" : MUTED;
   return (
-    <div className="pop" onClick={onClick} style={{ background: bg, color: fg, borderRadius: 4, padding: "18px 18px 16px", minHeight: 138, display: "flex", flexDirection: "column", justifyContent: "space-between", border: dark ? "none" : `1px solid ${LINE}`, boxShadow: dark ? "0 14px 30px -14px rgba(22,32,28,.55)" : "none" }}>
+    <div className="pop" onClick={onClick} style={{ background: bg, color: fg, borderRadius: 4, padding: "18px 18px 16px", minHeight: 138, display: "flex", flexDirection: "column", justifyContent: "space-between", border: "none", boxShadow: dark ? "0 14px 30px -14px rgba(22,32,28,.55)" : "0 8px 24px -18px rgba(22,32,28,.4)" }}>
       <div style={{ width: 40, height: 40, borderRadius: 3, background: dark ? "rgba(255,255,255,.1)" : accent + "18", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon c={dark ? PAPER : accent} s={21} /></div>
       <div>
         <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: big.length > 5 ? 22 : 30, fontWeight: 600, lineHeight: 1, letterSpacing: "-.01em" }}>{big}</div>
