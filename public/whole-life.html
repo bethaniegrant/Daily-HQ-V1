@@ -3276,7 +3276,7 @@ function PaycheckRow({ ctx, freq, period, existing, onSaved, onDeleted, lastDele
   };
 
   const remove = async () => {
-    if (!existing) { onRemoveRow && onRemoveRow(period.date); return; }
+    if (!existing) { onRemoveRow && onRemoveRow(period.date); onHideRow && onHideRow(period.date); return; }
     const client = ctx && ctx.current && ctx.current.client;
     if (!client) return;
     setExp(""); setAct("");
