@@ -1429,7 +1429,7 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
           {d.goals.map((g, i) => {
             const empty = !g.n.trim();
             return (
-              <div key={i} className="pop" onClick={() => go("plan", "goals")} style={{ background: CARD, border: `1px solid ${LINE}`, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <div key={i} className="pop" onClick={() => go("plan", "goals")} style={{ background: CARD, borderLeft: `4px solid ${AMBER}`, borderRadius: 4, padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
                 <div style={{ width: 26, height: 26, borderRadius: 3, border: `2px solid ${AMBER}`, background: g.done ? AMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "'DM Serif Display',serif", fontWeight: 700, color: g.done ? "#fff" : AMBER, fontSize: 12 }}>{g.done ? <CheckIcon c="#fff" s={14} /> : i + 1}</div>
                 <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: empty ? MUTED : INK, fontStyle: empty ? "italic" : "normal", textDecoration: g.done ? "line-through" : "none" }}>{empty ? `Set goal ${i + 1}` : g.n}</div>
               </div>
