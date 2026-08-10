@@ -3031,41 +3031,43 @@ function Workouts({ d, setD, go, back, now, openMenu, goHome, canGoBack, isHome 
         })}
       </div>
       <button onClick={addWorkout} style={{ ...addBtn, marginTop: 14 }}>+ Build a workout</button>
-      <p style={tip}>Each workout is tagged with a category. The calendar below shows colored dots for the categories you trained on each day.</p>
+      <p style={tip}>Each workout is tagged with a category. Days on the calendar below fill with the colors of what you trained.</p>
 
       {/* CALENDAR */}
-      <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px 14px", marginBottom: 14 }}>
+      <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 20, padding: "18px 16px", marginBottom: 14, boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
         <div style={{ textAlign: "center", fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 10, fontFamily: "'DM Serif Display',serif" }}>
           {sel.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5, marginBottom: 5 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginBottom: 6 }}>
           {["S", "M", "T", "W", "T", "F", "S"].map((w, i) => <div key={i} style={{ textAlign: "center", fontSize: 9.5, fontWeight: 700, color: MUTED }}>{w}</div>)}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
           {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
           {Array.from({ length: dim }).map((_, i) => {
             const day = i + 1;
             const dt = new Date(sel.getFullYear(), sel.getMonth(), day);
-            const cats = catsDoneOn(dt);
+            const dayCats = catsDoneOn(dt);
             const full = fullDoneOn(dt);
             const isSel = day === sel.getDate();
             const isTod = dayKey(dt) === dayKey(now);
+            const colors = dayCats.map((c) => catOf(c).color + (full.has(c) ? "" : "80"));
+            let bg = CARD;
+            if (colors.length === 1) bg = colors[0];
+            else if (colors.length > 1) {
+              const step = 100 / colors.length;
+              bg = `linear-gradient(135deg, ${colors.map((col, k) => `${col} ${(k * step).toFixed(2)}%, ${col} ${((k + 1) * step).toFixed(2)}%`).join(", ")})`;
+            }
+            const filled = colors.length > 0;
             return (
               <div key={day} className="pop" onClick={() => setSel(dt)}
-                style={{ aspectRatio: "1", borderRadius: 4, background: CARD, border: isSel ? `2px solid ${INK}` : isTod ? `2px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "4px 2px" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{day}</div>
-                <div style={{ display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center", minHeight: 6 }}>
-                  {cats.slice(0, 4).map((c) => {
-                    const col = catOf(c).color;
-                    const solid = full.has(c);
-                    return <div key={c} style={{ width: 6, height: 6, borderRadius: "50%", background: solid ? col : col + "55", border: solid ? "none" : `1px solid ${col}` }} />;
-                  })}
-                </div>
+                style={{ aspectRatio: "1", borderRadius: 14, background: bg, border: isSel ? `2px solid ${INK}` : isTod ? `2px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", cursor: "pointer" }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: filled ? PAPER : TEXT, textShadow: filled ? "0 1px 2px rgba(0,0,0,.35)" : "none" }}>{day}</div>
               </div>
             );
           })}
         </div>
       </div>
+
 
       {/* CATEGORIES / LEGEND */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "4px 0 8px" }}>
