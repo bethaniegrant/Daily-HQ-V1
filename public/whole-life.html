@@ -3967,6 +3967,22 @@ function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
   const today = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];
   const [openDay, setOpenDay] = useState(today);
   const [openCat, setOpenCat] = useState("breakfast");
+  const [picker, setPicker] = useState(null);
+  const [newIdea, setNewIdea] = useState("");
+  const pickerSlot = picker ? MEAL_SLOTS.find((s) => s.key === picker.slot) : null;
+  const pickerIdeas = picker ? ideasFor(d, picker.slot) : [];
+  const pickerVal = picker ? (mealsFor(d.meals[picker.day])[picker.slot] || "") : "";
+  const closePicker = () => { setPicker(null); setNewIdea(""); };
+  const choose = (v) => { setSlot(picker.day, picker.slot, v); closePicker(); };
+  const createIdea = () => {
+    const v = newIdea.trim();
+    if (!v) return;
+    const list = ((d.mealIdeas || {})[picker.slot]) || [];
+    const cur = mealsFor(d.meals[picker.day]);
+    setD({ ...d, mealIdeas: { ...(d.mealIdeas || {}), [picker.slot]: [...list, v] }, meals: { ...d.meals, [picker.day]: { ...cur, [picker.slot]: v } } });
+    closePicker();
+  };
+
 
   const tabBtn = (id, label) => (
     <div key={id} className="pop" onClick={() => setTab(id)} style={{ flex: 1, textAlign: "center", padding: "9px 12px", borderRadius: 3, cursor: "pointer", fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", background: tab === id ? SAGE : "transparent", color: tab === id ? "#fff" : MUTED, transition: "background .15s" }}>{label}</div>
