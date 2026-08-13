@@ -352,6 +352,7 @@ const emptyDoc = () => ({
   goals: [{ n: "", done: false }, { n: "", done: false }, { n: "", done: false }],
   yearlyGoals: [],
   meals: { Mon: {}, Tue: {}, Wed: {}, Thu: {}, Fri: {}, Sat: {}, Sun: {} },
+  mealIdeas: { breakfast: [], lunch: [], dinner: [], snacks: [] },
   shopping: [],
   intention: "",
   dayNotes: {},
@@ -404,6 +405,13 @@ const seedHealth = (doc) => ({
     Wed: { breakfast: "Eggs & toast", lunch: "Leftovers", dinner: "Tacos", snacks: "Trail mix" },
     Thu: {}, Fri: {}, Sat: {}, Sun: {},
   },
+  mealIdeas: {
+    breakfast: ["Oatmeal & berries", "Greek yogurt", "Eggs & toast"],
+    lunch: ["Chicken salad", "Turkey wrap", "Leftovers"],
+    dinner: ["Salmon & rice", "Stir fry", "Tacos"],
+    snacks: ["Apple", "Trail mix", "Hummus & veggies"],
+  },
+
   shopping: [
     { t: "Eggs", done: false },
     { t: "Spinach", done: false },
@@ -480,6 +488,7 @@ const mealsFor = (entry) => {
 
 
 
+const ideasFor = (d, slot) => (((d || {}).mealIdeas || {})[slot] || []).filter((x) => (x || "").trim());
 const dayHasMeal = (entry) => {
   const m = mealsFor(entry);
   return MEAL_SLOTS.some((s) => (m[s.key] || "").trim());
@@ -3943,19 +3952,34 @@ function YearlyGoals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
 
 function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const [tab, setTab] = useState("plan");
   const setSlot = (day, slot, v) => {
     const cur = mealsFor(d.meals[day]);
     const next = { ...cur, [slot]: v };
     setD({ ...d, meals: { ...d.meals, [day]: next } });
   };
+  const setIdeas = (slot, list) => setD({ ...d, mealIdeas: { ...(d.mealIdeas || {}), [slot]: list } });
+  const addIdea = (slot, val) => setIdeas(slot, [...(((d.mealIdeas || {})[slot]) || []), val === undefined ? "" : val]);
   const setShop = (i, patch) => setD({ ...d, shopping: d.shopping.map((s, j) => j === i ? { ...s, ...patch } : s) });
   const addShop = () => setD({ ...d, shopping: [...d.shopping, { t: "", done: false }] });
   const delShop = (i) => setD({ ...d, shopping: d.shopping.filter((_, j) => j !== i) });
   const gotCount = d.shopping.filter((s) => s.done && s.t.trim()).length, shopTotal = d.shopping.filter((s) => s.t.trim()).length;
   const today = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];
   const [openDay, setOpenDay] = useState(today);
+  const [openCat, setOpenCat] = useState("breakfast");
+
+  const tabBtn = (id, label) => (
+    <div key={id} className="pop" onClick={() => setTab(id)} style={{ flex: 1, textAlign: "center", padding: "9px 12px", borderRadius: 3, cursor: "pointer", fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", background: tab === id ? SAGE : "transparent", color: tab === id ? "#fff" : MUTED, transition: "background .15s" }}>{label}</div>
+  );
+
   return (
-    <Screen title="Meals" sub="This week" back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={SAGE}>
+    <Screen title="Meals" sub={tab === "plan" ? "This week" : "Your idea library"} back={back} openMenu={openMenu} goHome={goHome} canGoBack={canGoBack} isHome={isHome} accent={SAGE}>
+      <div style={{ display: "flex", gap: 4, background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: 4, marginBottom: 16, boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
+        {tabBtn("plan", "Week plan")}
+        {tabBtn("ideas", "Meal ideas")}
+      </div>
+
+      {tab === "plan" && (<>
       <div style={{ display: "grid", gap: 8 }}>
         {days.map((day, i) => {
           const m = mealsFor(d.meals[day]);
@@ -3963,7 +3987,7 @@ function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
           const isOpen = openDay === day;
           const isToday = day === today;
           return (
-            <div key={day} style={{ background: CARD, borderRadius: 4, border: `1px solid ${isToday ? SAGE : LINE}`, overflow: "hidden" }}>
+            <div key={day} style={{ background: CARD, borderRadius: 4, border: `1px solid ${isToday ? SAGE : LINE}`, overflow: "hidden", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
               <div className="pop" onClick={() => setOpenDay(isOpen ? null : day)} style={{ padding: "13px 16px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
                 <div style={{ width: 38, fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: i > 4 ? AMBER : SAGE }}>{day}</div>
                 <div style={{ flex: 1, fontSize: 13, color: filled ? TEXT : MUTED, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -3973,13 +3997,33 @@ function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
                 <div style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .15s" }}><ChevIcon c={MUTED} s={16} /></div>
               </div>
               {isOpen && (
-                <div style={{ display: "grid", gap: 8, padding: "4px 16px 16px" }}>
-                  {MEAL_SLOTS.map((s) => (
-                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10, background: PAPER, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: SAGE, width: 72, flexShrink: 0 }}>{s.label}</div>
-                      <input value={m[s.key] || ""} onChange={(e) => setSlot(day, s.key, e.target.value)} placeholder={`What's for ${s.label.toLowerCase()}?`} style={{ border: "none", flex: 1, fontSize: 14, fontWeight: 500, background: "none" }} />
-                    </div>
-                  ))}
+                <div style={{ display: "grid", gap: 10, padding: "4px 16px 16px" }}>
+                  {MEAL_SLOTS.map((s) => {
+                    const ideas = ideasFor(d, s.key);
+                    const val = m[s.key] || "";
+                    const isSaved = ideas.some((x) => x.toLowerCase() === val.trim().toLowerCase());
+                    return (
+                      <div key={s.key} style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 3, padding: "10px 12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: SAGE }}>{s.label}</div>
+                          {val.trim() && !isSaved && (
+                            <div className="pop" onClick={() => addIdea(s.key, val.trim())} style={{ cursor: "pointer", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: MUTED }}>+ Save as idea</div>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <select
+                            value={isSaved ? val : ""}
+                            onChange={(e) => { if (e.target.value === "__new") { setTab("ideas"); setOpenCat(s.key); } else setSlot(day, s.key, e.target.value); }}
+                            style={{ flex: "1 1 150px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, background: CARD, padding: "8px 9px", fontSize: 13, fontWeight: 600, color: val ? INK : MUTED, fontFamily: "inherit", appearance: "auto" }}>
+                            <option value="">{ideas.length ? `Choose a ${s.label.toLowerCase()} idea…` : "No saved ideas yet"}</option>
+                            {ideas.map((x, k) => <option key={k} value={x}>{x}</option>)}
+                            <option value="__new">+ Create a new idea…</option>
+                          </select>
+                          <input value={val} onChange={(e) => setSlot(day, s.key, e.target.value)} placeholder="or type something" style={{ flex: "1 1 150px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, background: CARD, padding: "8px 9px", fontSize: 13, fontWeight: 500, fontFamily: "inherit" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -4000,10 +4044,45 @@ function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
         ))}
       </div>
       <button onClick={addShop} style={addBtn}>+ Add an item</button>
-      <p style={tip}>Tap a day to plan breakfast, lunch, dinner and snacks. Today's row is highlighted.</p>
+      <p style={tip}>Tap a day, then pick from your saved ideas or type something new. Today's row is highlighted.</p>
+      </>)}
+
+      {tab === "ideas" && (<>
+      <div style={{ display: "grid", gap: 8 }}>
+        {MEAL_SLOTS.map((s) => {
+          const list = ((d.mealIdeas || {})[s.key]) || [];
+          const isOpen = openCat === s.key;
+          const count = list.filter((x) => (x || "").trim()).length;
+          return (
+            <div key={s.key} style={{ background: CARD, borderRadius: 4, border: `1px solid ${LINE}`, overflow: "hidden", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
+              <div className="pop" onClick={() => setOpenCat(isOpen ? null : s.key)} style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                <div style={{ width: 8, height: 8, borderRadius: 999, background: SAGE, flexShrink: 0 }} />
+                <div style={{ flex: 1, fontSize: 16, fontWeight: 500, fontFamily: "'DM Serif Display',serif", color: INK }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: MUTED, fontWeight: 700 }}>{count} {count === 1 ? "idea" : "ideas"}</div>
+                <div style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .15s" }}><ChevIcon c={MUTED} s={16} /></div>
+              </div>
+              {isOpen && (
+                <div style={{ display: "grid", gap: 8, padding: "2px 16px 16px" }}>
+                  {list.length === 0 && <div style={{ fontSize: 13, color: MUTED, fontWeight: 500, padding: "4px 2px" }}>Nothing here yet — add your go-to {s.label.toLowerCase()}.</div>}
+                  {list.map((x, k) => (
+                    <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, background: PAPER, border: `1px solid ${LINE}`, borderRadius: 3, padding: "9px 11px" }}>
+                      <input value={x} autoFocus={x === ""} onChange={(e) => setIdeas(s.key, list.map((y, j) => j === k ? e.target.value : y))} placeholder={`A ${s.label.toLowerCase()} idea`} style={{ border: "none", flex: 1, fontSize: 14, fontWeight: 500, background: "none", fontFamily: "inherit" }} />
+                      <div className="pop" onClick={() => setIdeas(s.key, list.filter((_, j) => j !== k))} style={{ cursor: "pointer", opacity: .4 }}><XIcon c={MUTED} s={14} /></div>
+                    </div>
+                  ))}
+                  <button onClick={() => addIdea(s.key)} style={{ ...addBtn, marginTop: 2 }}>+ Add a {s.label.toLowerCase()} idea</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p style={tip}>Build a small library of meals you actually love — then pull them into any day from the Week plan tab.</p>
+      </>)}
     </Screen>
   );
 }
+
 
 // ═══ CUSTOM BLOCKS (preview, add menu, editors, mood) ═════════════
 function BlockPreview({ block, onClick, now }) {
