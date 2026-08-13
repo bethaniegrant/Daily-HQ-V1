@@ -488,6 +488,7 @@ const mealsFor = (entry) => {
 
 
 
+const ideasFor = (d, slot) => (((d || {}).mealIdeas || {})[slot] || []).filter((x) => (x || "").trim());
 const dayHasMeal = (entry) => {
   const m = mealsFor(entry);
   return MEAL_SLOTS.some((s) => (m[s.key] || "").trim());
