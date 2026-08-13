@@ -4092,6 +4092,41 @@ function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
       </div>
       <p style={tip}>Build a small library of meals you actually love — then pull them into any day from the Week plan tab.</p>
       </>)}
+
+      {picker && (
+        <div onClick={closePicker} style={{ position: "fixed", inset: 0, background: "rgba(22,32,28,.55)", backdropFilter: "blur(4px)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+          <div onClick={(e) => e.stopPropagation()} className="fade" style={{ background: PAPER, borderRadius: 6, border: `1px solid ${LINE}`, width: "100%", maxWidth: 420, maxHeight: "80vh", overflow: "auto", boxShadow: "0 30px 60px -30px rgba(22,32,28,.55)" }}>
+            <div style={{ padding: "18px 20px 14px", borderBottom: `1px solid ${LINE}` }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: SAGE, marginBottom: 4 }}>{picker.day} · {pickerSlot.label}</div>
+              <div style={{ fontSize: 21, fontFamily: "'DM Serif Display',serif", color: INK }}>Saved ideas</div>
+            </div>
+            <div style={{ padding: "14px 20px", display: "grid", gap: 8 }}>
+              {pickerIdeas.length === 0 && <div style={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>No saved {pickerSlot.label.toLowerCase()} ideas yet — add one below.</div>}
+              {pickerIdeas.map((x, k) => {
+                const active = x.toLowerCase() === pickerVal.trim().toLowerCase();
+                return (
+                  <div key={k} className="pop" onClick={() => choose(x)} style={{ cursor: "pointer", background: active ? SAGE : CARD, color: active ? "#fff" : INK, border: `1px solid ${active ? SAGE : LINE}`, borderRadius: 3, padding: "11px 13px", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ flex: 1 }}>{x}</span>
+                    {active && <CheckIcon c="#fff" s={15} />}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ padding: "4px 20px 18px", display: "grid", gap: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: MUTED }}>Create a new idea</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={newIdea} autoFocus onChange={(e) => setNewIdea(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") createIdea(); }} placeholder={`New ${pickerSlot.label.toLowerCase()} idea`} style={{ flex: 1, minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, background: CARD, padding: "10px 11px", fontSize: 14, fontWeight: 500, fontFamily: "inherit" }} />
+                <div className="pop" onClick={createIdea} style={{ cursor: "pointer", background: SAGE, color: "#fff", borderRadius: 3, padding: "10px 16px", fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", display: "flex", alignItems: "center" }}>Add</div>
+              </div>
+              <div style={{ display: "flex", gap: 14, marginTop: 4 }}>
+                {pickerVal.trim() && <div className="pop" onClick={() => choose("")} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: MUTED }}>Clear this meal</div>}
+                <div className="pop" onClick={closePicker} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: MUTED, marginLeft: "auto" }}>Cancel</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Screen>
   );
 }
