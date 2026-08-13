@@ -4011,16 +4011,13 @@ function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
                           )}
                         </div>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <select
-                            value={isSaved ? val : ""}
-                            onChange={(e) => { if (e.target.value === "__new") { setTab("ideas"); setOpenCat(s.key); } else setSlot(day, s.key, e.target.value); }}
-                            style={{ flex: "1 1 150px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, background: CARD, padding: "8px 9px", fontSize: 13, fontWeight: 600, color: val ? INK : MUTED, fontFamily: "inherit", appearance: "auto" }}>
-                            <option value="">{ideas.length ? `Choose a ${s.label.toLowerCase()} idea…` : "No saved ideas yet"}</option>
-                            {ideas.map((x, k) => <option key={k} value={x}>{x}</option>)}
-                            <option value="__new">+ Create a new idea…</option>
-                          </select>
+                          <div className="pop" onClick={() => setPicker({ day, slot: s.key })} style={{ flex: "1 1 150px", minWidth: 0, cursor: "pointer", border: `1px solid ${LINE}`, borderRadius: 3, background: CARD, padding: "8px 9px", fontSize: 13, fontWeight: 600, color: isSaved ? INK : MUTED, display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{isSaved ? val : `Saved ${s.label.toLowerCase()} ideas`}</span>
+                            <ChevIcon c={MUTED} s={14} />
+                          </div>
                           <input value={val} onChange={(e) => setSlot(day, s.key, e.target.value)} placeholder="or type something" style={{ flex: "1 1 150px", minWidth: 0, border: `1px solid ${LINE}`, borderRadius: 3, background: CARD, padding: "8px 9px", fontSize: 13, fontWeight: 500, fontFamily: "inherit" }} />
                         </div>
+
                       </div>
                     );
                   })}
