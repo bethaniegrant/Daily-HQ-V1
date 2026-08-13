@@ -3996,7 +3996,8 @@ function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
       </div>
 
       {tab === "plan" && (<>
-      <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+      <div style={{ flex: "1 1 60%", minWidth: 0, display: "grid", gap: 8 }}>
         {days.map((day, i) => {
           const m = mealsFor(d.meals[day]);
           const filled = MEAL_SLOTS.filter((s) => (m[s.key] || "").trim()).length;
@@ -4043,7 +4044,7 @@ function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
           );
         })}
       </div>
-      <div style={{ marginTop: 24, background: CARD, borderRadius: 6, border: `1px solid ${LINE}`, boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)", overflow: "hidden" }}>
+      <div style={{ flex: "1 1 40%", minWidth: 280, position: "sticky", top: 8, background: CARD, borderRadius: 6, border: `1px solid ${LINE}`, boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)", overflow: "hidden" }}>
         <div style={{ padding: "14px 18px 12px 26px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `2px solid ${SAGE}33` }}>
           <div style={{ fontSize: 12, letterSpacing: ".16em", textTransform: "uppercase", color: TEXT, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><CartIcon c={INK} s={16} /> Shopping list</div>
           {shopTotal > 0 && <div style={{ fontSize: 12, color: MUTED, fontWeight: 600 }}>{gotCount}/{shopTotal} got</div>}
@@ -4060,6 +4061,7 @@ function Meals({ d, setD, back, openMenu, goHome, canGoBack, isHome }) {
           ))}
           <div className="pop" onClick={addShop} style={{ padding: "0 14px 0 26px", display: "flex", alignItems: "center", gap: 12, minHeight: 42, cursor: "pointer", fontSize: 14, fontWeight: 600, color: MUTED }}>+ Add an item</div>
         </div>
+      </div>
       </div>
 
       <p style={tip}>Tap a day, then pick from your saved ideas or type something new. Today's row is highlighted.</p>
