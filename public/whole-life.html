@@ -4469,17 +4469,22 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
           <ConfirmDeleteSpace open={confirmDel} name={block.title} onCancel={() => setConfirmDel(false)} onConfirm={() => { setConfirmDel(false); del(); }} />
         </div>
         <input value={block.title} onChange={(e) => update({ title: e.target.value })} placeholder="Title this space" style={{ border: "none", background: "none", color: PAPER, fontFamily: "'DM Serif Display',serif", fontSize: 32, fontWeight: 600, width: "100%", letterSpacing: "-.02em" }} />
-        <div style={{ fontSize: 13, color: MIST, fontWeight: 600, marginTop: 2 }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })} · resets at month's end</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+          <div className="pop" onClick={() => shiftMonth(-1)} style={{ cursor: "pointer", width: 28, height: 28, borderRadius: 999, border: `1px solid ${MIST}55`, display: "flex", alignItems: "center", justifyContent: "center", color: MIST, fontWeight: 700 }}>‹</div>
+          <div style={{ fontSize: 13, color: MIST, fontWeight: 600, minWidth: 130, textAlign: "center" }}>{view.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+          <div className="pop" onClick={() => shiftMonth(1)} style={{ cursor: "pointer", width: 28, height: 28, borderRadius: 999, border: `1px solid ${MIST}55`, display: "flex", alignItems: "center", justifyContent: "center", color: MIST, fontWeight: 700 }}>›</div>
+          {!isCurMonth && <div className="pop" onClick={() => { setView(new Date(now.getFullYear(), now.getMonth(), 1)); setSelected(now.getDate()); }} style={{ cursor: "pointer", fontSize: 11, fontWeight: 700, color: MIST, letterSpacing: ".06em", textTransform: "uppercase" }}>This month</div>}
+        </div>
       </div>
       <div style={{ padding: "20px 18px 50px" }}>
         <div style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 18, padding: "22px 20px 18px", boxShadow: "0 10px 30px -22px rgba(22,32,28,.35)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 21, fontWeight: 600, color: TEXT, letterSpacing: "-.01em", lineHeight: 1.2 }}>How was {now.toLocaleDateString("en-US", { month: "short" })} {selected}?</div>
+            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 21, fontWeight: 600, color: TEXT, letterSpacing: "-.01em", lineHeight: 1.2 }}>How was {view.toLocaleDateString("en-US", { month: "short" })} {selected}?</div>
             <div className="pop" onClick={() => setEditMoods(!editMoods)} style={{ fontSize: 11, fontWeight: 700, color: SAGE, cursor: "pointer", letterSpacing: ".04em" }}>{editMoods ? "Done" : "Edit"}</div>
           </div>
           {!editMoods ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {block.moods.map((m) => { const active = block.days[selected] === m.id; return <div key={m.id} className="pop" onClick={() => setDayMood(selected, m.id)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 15px", borderRadius: 999, background: active ? m.color : m.color + "14", border: `1px solid ${active ? m.color : m.color + "55"}`, color: active ? "#fff" : INK, fontWeight: 600, fontSize: 13.5, transition: "all .15s ease" }}><div style={{ width: 11, height: 11, borderRadius: 999, background: active ? "#fff" : m.color }} />{m.label}</div>; })}
+              {block.moods.map((m) => { const active = days[selected] === m.id; return <div key={m.id} className="pop" onClick={() => setDayMood(selected, m.id)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 15px", borderRadius: 999, background: active ? m.color : m.color + "14", border: `1px solid ${active ? m.color : m.color + "55"}`, color: active ? "#fff" : INK, fontWeight: 600, fontSize: 13.5, transition: "all .15s ease" }}><div style={{ width: 11, height: 11, borderRadius: 999, background: active ? "#fff" : m.color }} />{m.label}</div>; })}
             </div>
           ) : (
             <div style={{ display: "grid", gap: 9 }}>
@@ -4515,7 +4520,7 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
           {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
           {Array.from({ length: dim }).map((_, i) => {
-            const day = i + 1, mood = block.days[day] ? moodById(block.days[day]) : null, isToday = day === today, isSel = day === selected;
+            const day = i + 1, mood = days[day] ? moodById(days[day]) : null, isToday = day === today, isSel = day === selected;
             const noted = !!((notes[day] || {}).why || (notes[day] || {}).better);
             return <div key={day} className="pop" onClick={() => setSelected(day)} style={{ aspectRatio: "1", borderRadius: 12, background: mood ? mood.color : CARD, border: isSel ? `2px solid ${INK}` : isToday ? `1.5px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: 5, boxShadow: mood ? "none" : "0 4px 14px -12px rgba(22,32,28,.25)" }}>
               <span style={{ width: 5, height: 5, borderRadius: 999, background: noted ? (mood ? "#fff" : SAGE) : "transparent", marginTop: 3 }} />
@@ -4524,7 +4529,7 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
           })}
         </div>
         {!editMoods && <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 12 }}>{block.moods.map((m) => <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: MUTED, fontWeight: 600 }}><div style={{ width: 11, height: 11, borderRadius: 999, background: m.color }} /> {m.label}</div>)}</div>}
-        <p style={tip}>Tap a day to revisit or edit its mood and reflection. Days with a written entry show a small dot. Wipes clean monthly.</p>
+        <p style={tip}>Tap a day to revisit or edit its mood and reflection. Days with a written entry show a small dot. Each month is saved — use the arrows to look back.</p>
       </div>
     </div>
   );
