@@ -561,7 +561,7 @@ function App() {
     const cur = monthKey(now);
     if (d.monthStamp !== cur) {
       setD((p) => ({ ...p, monthStamp: cur, habitChecks: {}, habitOneoffs: {}, medChecks: {}, workoutDone: {},
-        blocks: p.blocks.map((b) => b.type === "mood" ? { ...b, monthStamp: cur, days: {} } : b) }));
+        blocks: p.blocks.map((b) => b.type === "mood" ? { ...b, monthStamp: cur, days: {}, notes: {} } : b) }));
     }
   }, [now, synced]); // eslint-disable-line
 
