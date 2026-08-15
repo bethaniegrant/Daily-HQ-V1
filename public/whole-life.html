@@ -4444,15 +4444,7 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
         <div style={{ fontSize: 13, color: MIST, fontWeight: 600, marginTop: 2 }}>{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })} · resets at month's end</div>
       </div>
       <div style={{ padding: "20px 18px 50px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginBottom: 8 }}>{["S", "M", "T", "W", "T", "F", "S"].map((w, i) => <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: MUTED }}>{w}</div>)}</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
-          {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
-          {Array.from({ length: dim }).map((_, i) => {
-            const day = i + 1, mood = block.days[day] ? moodById(block.days[day]) : null, isToday = day === today, isSel = day === selected;
-            return <div key={day} className="pop" onClick={() => setSelected(day)} style={{ aspectRatio: "1", borderRadius: 4, background: mood ? mood.color : CARD, border: isSel ? `2px solid ${INK}` : isToday ? `2px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: 4 }}><span style={{ fontSize: 11, fontWeight: 700, color: mood ? "#fff" : MUTED }}>{day}</span></div>;
-          })}
-        </div>
-        <div style={{ marginTop: 20, background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px" }}>
+        <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", boxShadow: "0 8px 24px -18px rgba(22,32,28,.4)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div style={{ fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700, color: TEXT }}>How was {now.toLocaleDateString("en-US", { month: "short" })} {selected}?</div>
             <div className="pop" onClick={() => setEditMoods(!editMoods)} style={{ fontSize: 12, fontWeight: 700, color: SAGE, cursor: "pointer" }}>{editMoods ? "Done" : "Edit moods"}</div>
@@ -4473,9 +4465,38 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
               <button onClick={addMood} style={{ ...addBtn, marginTop: 4 }}>+ Add a mood</button>
             </div>
           )}
+          {!editMoods && (
+            <div style={{ marginTop: 16, borderTop: `1px solid ${LINE}`, paddingTop: 14, display: "grid", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
+                  {selMood ? `Why was today ${selMood.label.toLowerCase()}?` : "Why was today the way it was?"}
+                </div>
+                <textarea value={entry.why} onChange={(e) => setEntry(selected, { why: e.target.value })} placeholder={selMood ? "What made it feel that way…" : "Pick a mood above, then reflect…"} rows={3} style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 4, padding: "10px 11px", fontSize: 14, fontFamily: "inherit", lineHeight: 1.5, resize: "vertical", background: PAPER }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 6 }}>How can tomorrow be better?</div>
+                <textarea value={entry.better} onChange={(e) => setEntry(selected, { better: e.target.value })} placeholder="One small thing…" rows={3} style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 4, padding: "10px 11px", fontSize: 14, fontFamily: "inherit", lineHeight: 1.5, resize: "vertical", background: PAPER }} />
+              </div>
+              {hasEntry && (
+                <div className="pop" onClick={() => clearEntry(selected)} style={{ justifySelf: "start", fontSize: 12, fontWeight: 700, color: "#C8783C", cursor: "pointer" }}>Delete this entry</div>
+              )}
+            </div>
+          )}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, margin: "22px 0 8px" }}>{["S", "M", "T", "W", "T", "F", "S"].map((w, i) => <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: MUTED }}>{w}</div>)}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
+          {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
+          {Array.from({ length: dim }).map((_, i) => {
+            const day = i + 1, mood = block.days[day] ? moodById(block.days[day]) : null, isToday = day === today, isSel = day === selected;
+            const noted = !!((notes[day] || {}).why || (notes[day] || {}).better);
+            return <div key={day} className="pop" onClick={() => setSelected(day)} style={{ aspectRatio: "1", borderRadius: 8, background: mood ? mood.color : CARD, border: isSel ? `2px solid ${INK}` : isToday ? `2px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: 4 }}>
+              <span style={{ width: 5, height: 5, borderRadius: 999, background: noted ? (mood ? "#fff" : SAGE) : "transparent", marginTop: 3 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: mood ? "#fff" : MUTED }}>{day}</span>
+            </div>;
+          })}
         </div>
         {!editMoods && <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 12 }}>{block.moods.map((m) => <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: MUTED, fontWeight: 600 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: m.color }} /> {m.label}</div>)}</div>}
-        <p style={tip}>Tap a day, then choose a mood. The square fills with that mood's color. Wipes clean monthly.</p>
+        <p style={tip}>Tap a day to revisit or edit its mood and reflection. Days with a written entry show a small dot. Wipes clean monthly.</p>
       </div>
     </div>
   );
