@@ -4431,6 +4431,12 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
   const setMood = (i, patch) => update({ moods: block.moods.map((m, j) => j === i ? { ...m, ...patch } : m) });
   const addMood = () => update({ moods: [...block.moods, { id: uid(), label: "New", color: PALETTE[block.moods.length % PALETTE.length] }] });
   const delMood = (i) => update({ moods: block.moods.filter((_, j) => j !== i) });
+  const notes = block.notes || {};
+  const entry = notes[selected] || { why: "", better: "" };
+  const hasEntry = !!(entry.why || entry.better);
+  const selMood = block.days[selected] ? moodById(block.days[selected]) : null;
+  const setEntry = (day, patch) => update({ notes: { ...notes, [day]: { ...(notes[day] || { why: "", better: "" }), ...patch } } });
+  const clearEntry = (day) => { const n = { ...notes }; delete n[day]; update({ notes: n }); };
   return (
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
