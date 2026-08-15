@@ -4431,21 +4431,34 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
   const update = (patch) => setD({ ...d, blocks: d.blocks.map((b) => b.id === block.id ? { ...b, ...patch } : b) });
   const [confirmDel, setConfirmDel] = useState(false);
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
+  const [view, setView] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
   const [selected, setSelected] = useState(now.getDate());
   const [editMoods, setEditMoods] = useState(false);
-  const dim = daysInMonth(now), pad = firstWeekday(now);
-  const today = now.getDate();
-  const setDayMood = (day, moodId) => { const days = { ...block.days }; if (days[day] === moodId) delete days[day]; else days[day] = moodId; update({ days }); };
+  const dim = daysInMonth(view), pad = firstWeekday(view);
+  const isCurMonth = monthKey(view) === monthKey(now);
+  const today = isCurMonth ? now.getDate() : 0;
+  const mk = monthKey(view);
+  const md = moodMonthData(block, view);
+  const days = md.days, notes = md.notes;
+  const writeMonth = (patch) => {
+    const next = { days, notes, ...patch };
+    update({ months: { ...(block.months || {}), [mk]: next }, ...(isCurMonth ? { days: {}, notes: {} } : {}) });
+  };
+  const shiftMonth = (n) => {
+    const nv = new Date(view.getFullYear(), view.getMonth() + n, 1);
+    setView(nv);
+    setSelected(monthKey(nv) === monthKey(now) ? now.getDate() : 1);
+  };
+  const setDayMood = (day, moodId) => { const nd = { ...days }; if (nd[day] === moodId) delete nd[day]; else nd[day] = moodId; writeMonth({ days: nd }); };
   const moodById = (id) => block.moods.find((m) => m.id === id);
   const setMood = (i, patch) => update({ moods: block.moods.map((m, j) => j === i ? { ...m, ...patch } : m) });
   const addMood = () => update({ moods: [...block.moods, { id: uid(), label: "New", color: PALETTE[block.moods.length % PALETTE.length] }] });
   const delMood = (i) => update({ moods: block.moods.filter((_, j) => j !== i) });
-  const notes = block.notes || {};
   const entry = notes[selected] || { why: "", better: "" };
   const hasEntry = !!(entry.why || entry.better);
-  const selMood = block.days[selected] ? moodById(block.days[selected]) : null;
-  const setEntry = (day, patch) => update({ notes: { ...notes, [day]: { ...(notes[day] || { why: "", better: "" }), ...patch } } });
-  const clearEntry = (day) => { const n = { ...notes }; delete n[day]; update({ notes: n }); };
+  const selMood = days[selected] ? moodById(days[selected]) : null;
+  const setEntry = (day, patch) => writeMonth({ notes: { ...notes, [day]: { ...(notes[day] || { why: "", better: "" }), ...patch } } });
+  const clearEntry = (day) => { const n = { ...notes }; delete n[day]; writeMonth({ notes: n }); };
   return (
     <div className="fade">
       <div style={{ background: INK, color: PAPER, padding: "26px 22px 22px" }}>
