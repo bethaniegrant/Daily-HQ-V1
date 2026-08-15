@@ -315,6 +315,14 @@ const money = (n) => (isNaN(n) || n === "" ? "" : Number(n).toLocaleString("en-U
 const uid = () => Math.random().toString(36).slice(2, 9);
 const monthKey = (dt = new Date()) => `${dt.getFullYear()}-${dt.getMonth() + 1}`;
 const dayKey = (dt) => `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
+const moodMonthData = (block, dt = new Date()) => {
+  if (!block) return { days: {}, notes: {} };
+  const mk = monthKey(dt);
+  const m = (block.months || {})[mk];
+  if (m) return { days: m.days || {}, notes: m.notes || {} };
+  if ((block.monthStamp || mk) === mk) return { days: block.days || {}, notes: block.notes || {} };
+  return { days: {}, notes: {} };
+};
 const daysInMonth = (dt) => new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
 const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay();
 const medTimes = (m) => Math.max(1, Number(m && m.times) || (Array.isArray(m && m.schedule) ? m.schedule.length : 1) || 1);
@@ -561,7 +569,7 @@ function App() {
     const cur = monthKey(now);
     if (d.monthStamp !== cur) {
       setD((p) => ({ ...p, monthStamp: cur, habitChecks: {}, habitOneoffs: {}, medChecks: {}, workoutDone: {},
-        blocks: p.blocks.map((b) => b.type === "mood" ? { ...b, monthStamp: cur, days: {}, notes: {} } : b) }));
+        blocks: p.blocks.map((b) => b.type === "mood" ? { ...b, monthStamp: cur, months: { ...(b.months || {}), ...((Object.keys(b.days || {}).length || Object.keys(b.notes || {}).length) ? { [b.monthStamp || cur]: { days: b.days || {}, notes: b.notes || {} } } : {}) }, days: {}, notes: {} } : b) }));
     }
   }, [now, synced]); // eslint-disable-line
 
@@ -1404,8 +1412,9 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
           {cats.health && <Tile accent={SAGE} icon={PlateIcon} title="Meals" big={`${daysPlanned(d)}/7`} sub="days planned" onClick={() => go("health", "meals")} />}
           {cats.health && (() => {
             const mb = d.blocks.find((b) => b.type === "mood");
-            const logged = mb ? Object.keys(mb.days || {}).length : 0;
-            const today = mb && mb.days && mb.days[now.getDate()];
+            const mbDays = mb ? moodMonthData(mb, now).days : {};
+            const logged = Object.keys(mbDays).length;
+            const today = mbDays[now.getDate()];
             const moodToday = today && mb.moods.find((m) => m.id === today);
             return (
               <Tile accent={PLUM} icon={HeartIcon} title="Mood" big={moodToday ? moodToday.label : (logged ? `${logged}` : "Log")} sub={moodToday ? "today" : (logged ? "days this month" : "tap to begin")} onClick={() => go("health", mb ? "block:" + mb.id : null)} />
@@ -1676,7 +1685,7 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
     const medsCount = d.meds.filter((m) => medFullyTaken((d.medChecks[k] || {})[m.id], medTimes(m))).length;
     const medsAll = d.meds.length > 0 && medsCount === d.meds.length;
     const workoutLogged = !!(d.workoutDone && d.workoutDone[k] && Object.keys(d.workoutDone[k]).length);
-    const moodId = sameMonth && moodBlock && moodBlock.days ? moodBlock.days[day] : null;
+    const moodId = moodBlock ? moodMonthData(moodBlock, dt).days[day] : null;
     const mood = moodId ? moodById(moodId) : null;
     const moodLogged = !!mood;
     const bills = billsByDay[day] || [];
@@ -1796,7 +1805,7 @@ function dayBundle(d, dt) {
     return { id: wid, n: w.n, cat: catOf(w.cat), done: doneCount, total: (w.ex || []).length };
   }).filter(Boolean);
   const moodBlock = (d.blocks || []).find((b) => b.type === "mood");
-  const moodId = sameMonth && moodBlock && moodBlock.days ? moodBlock.days[dayNum] : null;
+  const moodId = moodBlock ? moodMonthData(moodBlock, dt).days[dayNum] : null;
   const mood = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
   const bills = [];
   const monthLen2 = daysInMonth(dt);
@@ -2302,7 +2311,7 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
   const sameMonth = dt.getFullYear() === new Date().getFullYear() && dt.getMonth() === new Date().getMonth();
   const todoBlock = d.blocks.find((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
   const moodBlock = d.blocks.find((b) => b.type === "mood");
-  const moodId = sameMonth && moodBlock && moodBlock.days ? moodBlock.days[dt.getDate()] : null;
+  const moodId = moodBlock ? moodMonthData(moodBlock, dt).days[dt.getDate()] : null;
   const moodForDay = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
 
   const habitChecks = d.habitChecks[tk] || {};
@@ -4144,7 +4153,7 @@ function BlockPreview({ block, onClick, now }) {
   const meta = BLOCK_META[block.type];
   if (!meta) return null;
   let summary = "";
-  if (block.type === "mood") summary = `${Object.keys(block.days).length} of ${daysInMonth(now)} days`;
+  if (block.type === "mood") summary = `${Object.keys(moodMonthData(block, now).days).length} of ${daysInMonth(now)} days`;
   else if (block.type === "tracker") {
     const k = block.kind || "daily";
     if (k === "daily") summary = `${Object.keys(block.days || {}).length} of ${daysInMonth(now)} days`;
