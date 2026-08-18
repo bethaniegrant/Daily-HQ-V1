@@ -587,6 +587,23 @@ function App() {
     }
   }, [synced, displayName]); // eslint-disable-line
 
+  // backfill id: uid() onto checklist items missing one — runs for ALL users, not gated on onboarding
+  useEffect(() => {
+    if (!synced) return;
+    let needs = false;
+    const next = (d.blocks || []).map((b) => {
+      if (b.type !== "checklist" || !b.items || !b.items.length) return b;
+      let touched = false;
+      const items = b.items.map((it) => {
+        if (it && !it.id) { touched = true; return { ...it, id: uid() }; }
+        return it;
+      });
+      if (touched) { needs = true; return { ...b, items }; }
+      return b;
+    });
+    if (needs) setD((p) => ({ ...p, blocks: next }));
+  }, [synced]); // eslint-disable-line
+
   // monthly reset: wipe habit checks, one-offs, med checks, workout logs, mood grids
   useEffect(() => {
     if (!synced) return;
