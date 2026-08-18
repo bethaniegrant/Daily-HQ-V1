@@ -323,6 +323,14 @@ const moodMonthData = (block, dt = new Date()) => {
   if ((block.monthStamp || mk) === mk) return { days: block.days || {}, notes: block.notes || {} };
   return { days: {}, notes: {} };
 };
+const moodIdList = (v) => (v == null ? [] : Array.isArray(v) ? v : [v]);
+const moodsForVal = (block, v) => moodIdList(v).map((id) => (block && block.moods || []).find((m) => m.id === id)).filter(Boolean);
+const stripeBg = (colors, angle = 135) => {
+  if (!colors || !colors.length) return null;
+  if (colors.length === 1) return colors[0];
+  const step = 100 / colors.length;
+  return `linear-gradient(${angle}deg, ${colors.map((c, k) => `${c} ${(k * step).toFixed(2)}%, ${c} ${((k + 1) * step).toFixed(2)}%`).join(", ")})`;
+};
 const daysInMonth = (dt) => new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
 const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay();
 const medTimes = (m) => Math.max(1, Number(m && m.times) || (Array.isArray(m && m.schedule) ? m.schedule.length : 1) || 1);
