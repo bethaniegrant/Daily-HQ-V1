@@ -116,6 +116,7 @@ function useCloudSync(d, setD) {
           auth: { persistSession: false, autoRefreshToken: true },
         });
         ctx.current.client = client;
+        SUPA.client = client;
 
         const hash = new URLSearchParams(window.location.hash.slice(1));
         const at = hash.get("at"), rt = hash.get("rt");
@@ -126,6 +127,7 @@ function useCloudSync(d, setD) {
         const { data: { user } } = await client.auth.getUser();
         if (!user) { setReady(true); return; }
         ctx.current.userId = user.id;
+        SUPA.userId = user.id;
         ctx.current.lkey = "wlp_doc_" + user.id;
 
         try {
@@ -313,6 +315,17 @@ const catOf = (id) => WORKOUT_CATS.find((c) => c.id === id) || WORKOUT_CATS[WORK
 
 const money = (n) => (isNaN(n) || n === "" ? "" : Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 }));
 const uid = () => Math.random().toString(36).slice(2, 9);
+// Shared handle to the Supabase client/user, set once cloud sync boots.
+const SUPA = { client: null, userId: null };
+// Fire-and-forget deferral log. Silently skips when we lack an id or session.
+const logDeferral = (taskId) => {
+  if (!taskId || !SUPA.client || !SUPA.userId) return;
+  try {
+    SUPA.client.from("task_deferrals").insert({ user_id: SUPA.userId, task_id: taskId }).then(({ error }) => {
+      if (error) console.warn("deferral log failed", error);
+    }, (e) => console.warn("deferral log failed", e));
+  } catch (e) { console.warn("deferral log failed", e); }
+};
 const monthKey = (dt = new Date()) => `${dt.getFullYear()}-${dt.getMonth() + 1}`;
 const dayKey = (dt) => `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
 const moodMonthData = (block, dt = new Date()) => {
@@ -567,6 +580,9 @@ function App() {
         timeBlockingEnabled: p.timeBlockingEnabled === true,
         timeBlocks: p.timeBlocks || {},
         timeBlockTemplates: p.timeBlockTemplates || {},
+        blocks: (p.blocks || []).map((b) => b.type === "checklist"
+          ? { ...b, items: (b.items || []).map((it) => (it && it.id ? it : { ...it, id: uid() })) }
+          : b),
       }));
     }
   }, [synced, displayName]); // eslint-disable-line
@@ -802,7 +818,7 @@ function App() {
               const blocks = seeded.blocks || [];
               let todoIdx = blocks.findIndex((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
               const today = dayKey(new Date());
-              const newItem = { t: payload.firstTask.trim(), done: false, date: today };
+              const newItem = { id: uid(), t: payload.firstTask.trim(), done: false, date: today };
               if (todoIdx >= 0) {
                 seeded.blocks = blocks.map((b, i) => i === todoIdx ? { ...b, items: [newItem, ...(b.items || [])] } : b);
               } else {
@@ -1868,7 +1884,7 @@ function quickAddItem(d, setD, { type, title, date, time }) {
     }
     setD({
       ...d,
-      blocks: blocks.map((b) => b.id === todo.id ? { ...b, items: [...(b.items || []), { t, done: false, date: date || null }] } : b),
+      blocks: blocks.map((b) => b.id === todo.id ? { ...b, items: [...(b.items || []), { id: uid(), t, done: false, date: date || null }] } : b),
     });
   } else {
     let blocks = d.blocks || [];
@@ -2365,6 +2381,7 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
   // Not Today: bump a todo to tomorrow (keeps it un-done, doesn't delete).
   const bumpTodo = (idx) => {
     if (!todoBlock) return;
+    logDeferral(((todoBlock.items || [])[idx] || {}).id);
     const t = new Date(dt); t.setDate(t.getDate() + 1);
     const nextDate = `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
     setD({
@@ -2674,6 +2691,8 @@ function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
     blocks: d.blocks.map((b) => b.id === blockId ? { ...b, items: (b.items || []).map((it, j) => j === idx ? { ...it, done: !it.done } : it) } : b),
   });
   const bumpTodoOnDay = (blockId, idx, fromDate) => {
+    const blk = (d.blocks || []).find((b) => b.id === blockId);
+    logDeferral((((blk && blk.items) || [])[idx] || {}).id);
     const t = new Date(fromDate); t.setDate(t.getDate() + 1);
     const nextDate = `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
     setD({
@@ -4560,7 +4579,7 @@ function BlockEditor({ block, d, setD, back, openMenu, canGoBack, goHome, isHome
   const [confirmDel, setConfirmDel] = useState(false);
   const del = () => { setD({ ...d, blocks: d.blocks.filter((b) => b.id !== block.id) }); back(); };
   const setItem = (i, patch) => update({ items: block.items.map((it, j) => j === i ? { ...it, ...patch } : it) });
-  const addItem = () => update({ items: [...block.items, block.type === "schedule" ? { time: "", t: "" } : { t: "", done: false }] });
+  const addItem = () => update({ items: [...block.items, block.type === "schedule" ? { time: "", t: "" } : { id: uid(), t: "", done: false }] });
   const delItem = (i) => update({ items: block.items.filter((_, j) => j !== i) });
   return (
     <div className="fade">
@@ -4578,7 +4597,7 @@ function BlockEditor({ block, d, setD, back, openMenu, canGoBack, goHome, isHome
           <textarea value={block.items} onChange={(e) => update({ items: e.target.value })} placeholder="Start writing…" style={{ width: "100%", minHeight: 320, border: `1px solid ${LINE}`, borderRadius: 4, padding: "16px", fontSize: 16, lineHeight: 1.6, background: CARD, resize: "vertical", color: TEXT }} />
         ) : (
           <>
-            <div style={{ display: "grid", gap: 9 }}>{block.items.map((it, i) => <BlockRow key={i} type={block.type} item={it} accent={meta.color} onToggle={() => setItem(i, { done: !it.done })} onText={(v) => setItem(i, { t: v })} onTime={(v) => setItem(i, { time: v })} onDelete={() => delItem(i)} onBump={() => { const base = it.date ? new Date(it.date) : new Date(); base.setDate(base.getDate() + 1); const nd = `${base.getFullYear()}-${base.getMonth() + 1}-${base.getDate()}`; setItem(i, { date: nd, done: false }); }} />)}</div>
+            <div style={{ display: "grid", gap: 9 }}>{block.items.map((it, i) => <BlockRow key={i} type={block.type} item={it} accent={meta.color} onToggle={() => setItem(i, { done: !it.done })} onText={(v) => setItem(i, { t: v })} onTime={(v) => setItem(i, { time: v })} onDelete={() => delItem(i)} onBump={() => { logDeferral(it.id); const base = it.date ? new Date(it.date) : new Date(); base.setDate(base.getDate() + 1); const nd = `${base.getFullYear()}-${base.getMonth() + 1}-${base.getDate()}`; setItem(i, { date: nd, done: false }); }} />)}</div>
             <button onClick={addItem} style={addBtn}>+ Add {block.type === "schedule" ? "a time" : "an item"}</button>
           </>
         )}
