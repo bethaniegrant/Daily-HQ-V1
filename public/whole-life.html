@@ -323,6 +323,14 @@ const moodMonthData = (block, dt = new Date()) => {
   if ((block.monthStamp || mk) === mk) return { days: block.days || {}, notes: block.notes || {} };
   return { days: {}, notes: {} };
 };
+const moodIdList = (v) => (v == null ? [] : Array.isArray(v) ? v : [v]);
+const moodsForVal = (block, v) => moodIdList(v).map((id) => (block && block.moods || []).find((m) => m.id === id)).filter(Boolean);
+const stripeBg = (colors, angle = 135) => {
+  if (!colors || !colors.length) return null;
+  if (colors.length === 1) return colors[0];
+  const step = 100 / colors.length;
+  return `linear-gradient(${angle}deg, ${colors.map((c, k) => `${c} ${(k * step).toFixed(2)}%, ${c} ${((k + 1) * step).toFixed(2)}%`).join(", ")})`;
+};
 const daysInMonth = (dt) => new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
 const firstWeekday = (dt) => new Date(dt.getFullYear(), dt.getMonth(), 1).getDay();
 const medTimes = (m) => Math.max(1, Number(m && m.times) || (Array.isArray(m && m.schedule) ? m.schedule.length : 1) || 1);
@@ -1415,7 +1423,8 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
             const mbDays = mb ? moodMonthData(mb, now).days : {};
             const logged = Object.keys(mbDays).length;
             const today = mbDays[now.getDate()];
-            const moodToday = today && mb.moods.find((m) => m.id === today);
+            const todayMoods = moodsForVal(mb, today);
+            const moodToday = todayMoods.length ? { label: todayMoods.map((m) => m.label).join(" + ") } : null;
             return (
               <Tile accent={PLUM} icon={HeartIcon} title="Mood" big={moodToday ? moodToday.label : (logged ? `${logged}` : "Log")} sub={moodToday ? "today" : (logged ? "days this month" : "tap to begin")} onClick={() => go("health", mb ? "block:" + mb.id : null)} />
             );
@@ -1685,11 +1694,12 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
     const medsCount = d.meds.filter((m) => medFullyTaken((d.medChecks[k] || {})[m.id], medTimes(m))).length;
     const medsAll = d.meds.length > 0 && medsCount === d.meds.length;
     const workoutLogged = !!(d.workoutDone && d.workoutDone[k] && Object.keys(d.workoutDone[k]).length);
-    const moodId = moodBlock ? moodMonthData(moodBlock, dt).days[day] : null;
-    const mood = moodId ? moodById(moodId) : null;
-    const moodLogged = !!mood;
+    const moodVal = moodBlock ? moodMonthData(moodBlock, dt).days[day] : null;
+    const moods = moodsForVal(moodBlock, moodVal);
+    const mood = moods[0] || null;
+    const moodLogged = moods.length > 0;
     const bills = billsByDay[day] || [];
-    return { dt, k, habitsPct, habitsTotal: hc.total, habitsDone: hc.done, medsCount, medsAll, workoutLogged, moodLogged, mood, bills };
+    return { dt, k, habitsPct, habitsTotal: hc.total, habitsDone: hc.done, medsCount, medsAll, workoutLogged, moodLogged, mood, moods, bills };
   };
 
 
@@ -1735,7 +1745,7 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
                 position: "relative",
                 aspectRatio: "1",
                 borderRadius: 8,
-                background: isToday ? INK : info.mood ? info.mood.color + "33" : PAPER,
+                background: isToday ? INK : (stripeBg((info.moods || []).map((m) => m.color + "33")) || PAPER),
                 border: isToday ? `2px solid ${AMBER}` : isSelected ? `2px solid ${INK}` : hasBills ? `1.5px solid ${AMBER}` : `1px solid ${LINE}`,
                 boxShadow: isToday ? `0 0 0 2px ${PAPER}, 0 0 0 3px ${INK}` : isSelected ? `0 0 0 2px ${PAPER}, 0 0 0 3px ${INK}` : "none",
                 color: isToday ? PAPER : INK,
@@ -1759,7 +1769,7 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
               <div style={{ display: "flex", gap: 2, marginTop: "auto" }}>
                 {info.medsAll && <span style={{ width: 4, height: 4, borderRadius: 999, background: isToday ? PAPER : PLUM }} />}
                 {info.workoutLogged && <span style={{ width: 4, height: 4, borderRadius: 999, background: isToday ? PAPER : BLUE }} />}
-                {info.moodLogged && !isToday && <span style={{ width: 4, height: 4, borderRadius: 999, background: info.mood.color }} />}
+                {info.moodLogged && !isToday && <span style={{ width: 4, height: 4, borderRadius: 999, background: stripeBg((info.moods || []).map((m) => m.color), 90) }} />}
                 {hasBills && <span style={{ width: 4, height: 4, borderRadius: 999, background: AMBER, boxShadow: `0 0 0 1px ${isToday ? INK : PAPER}` }} />}
               </div>
             </div>
@@ -1805,8 +1815,8 @@ function dayBundle(d, dt) {
     return { id: wid, n: w.n, cat: catOf(w.cat), done: doneCount, total: (w.ex || []).length };
   }).filter(Boolean);
   const moodBlock = (d.blocks || []).find((b) => b.type === "mood");
-  const moodId = moodBlock ? moodMonthData(moodBlock, dt).days[dayNum] : null;
-  const mood = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
+  const moodList = moodsForVal(moodBlock, moodBlock ? moodMonthData(moodBlock, dt).days[dayNum] : null);
+  const mood = moodList[0] || null;
   const bills = [];
   const monthLen2 = daysInMonth(dt);
   const allBudgetSecs2 = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])]
@@ -1842,7 +1852,7 @@ function dayBundle(d, dt) {
       if (show) todos.push({ ...it, idx, blockId: todoBlock.id });
     });
   }
-  return { habits, medsList, workouts, mood, bills, meal, weekdayShort, events, todos, todoBlockId: todoBlock ? todoBlock.id : null };
+  return { habits, medsList, workouts, mood, moods: moodList, bills, meal, weekdayShort, events, todos, todoBlockId: todoBlock ? todoBlock.id : null };
 }
 
 // Quick-add helper used by the side panel: writes a To Do (with date) or an Event.
@@ -1931,8 +1941,8 @@ function DayOverviewBody({ d, setD, dt, go, onNavigate }) {
         {b.mood && (
           <OverviewBlock label="Mood" color={b.mood.color}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 22, height: 22, borderRadius: 6, background: b.mood.color }} />
-              <div style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>{b.mood.label}</div>
+              <div style={{ width: 22, height: 22, borderRadius: 6, background: stripeBg((b.moods || [b.mood]).map((m) => m.color)) }} />
+              <div style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>{(b.moods || [b.mood]).map((m) => m.label).join(" + ")}</div>
             </div>
           </OverviewBlock>
         )}
@@ -2311,8 +2321,10 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
   const sameMonth = dt.getFullYear() === new Date().getFullYear() && dt.getMonth() === new Date().getMonth();
   const todoBlock = d.blocks.find((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
   const moodBlock = d.blocks.find((b) => b.type === "mood");
-  const moodId = moodBlock ? moodMonthData(moodBlock, dt).days[dt.getDate()] : null;
-  const moodForDay = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
+  const moodsForDay = moodsForVal(moodBlock, moodBlock ? moodMonthData(moodBlock, dt).days[dt.getDate()] : null);
+  const moodForDay = moodsForDay[0] || null;
+  const moodDayBg = stripeBg(moodsForDay.map((m) => m.color));
+  const moodDayLabel = moodsForDay.map((m) => m.label).join(" + ");
 
   const habitChecks = d.habitChecks[tk] || {};
   const oneoffs = d.habitOneoffs[tk] || [];
@@ -2415,9 +2427,9 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
         className="pop"
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "none", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "left" }}
       >
-        <span style={{ width: 20, height: 20, borderRadius: 5, background: moodForDay ? moodForDay.color : "transparent", border: `1.5px solid ${moodForDay ? moodForDay.color : LINE}`, flexShrink: 0 }} />
+        <span style={{ width: 20, height: 20, borderRadius: 5, background: moodDayBg || "transparent", border: `1.5px solid ${moodForDay ? moodForDay.color : LINE}`, flexShrink: 0 }} />
         <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: TEXT, letterSpacing: "-.01em" }}>
-          {moodForDay ? `Mood — ${moodForDay.label}` : (isToday ? "Track today's mood" : "No mood logged")}
+          {moodsForDay.length ? `Mood — ${moodDayLabel}` : (isToday ? "Track today's mood" : "No mood logged")}
         </span>
         <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: AMBER }}>Open →</span>
       </button>
@@ -2686,7 +2698,7 @@ function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
               <div onClick={() => onPickDay(dt)} className="pop" style={{ display: "flex", alignItems: "baseline", gap: 10, cursor: "pointer" }}>
                 <div style={{ fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 800, color: isToday ? MIST : MUTED }}>{dt.toLocaleDateString("en-US", { weekday: "short" })}</div>
                 <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 20, fontWeight: 600, lineHeight: 1 }}>{dt.getDate()}</div>
-                {b.mood && <span title={b.mood.label} style={{ width: 12, height: 12, borderRadius: 4, background: b.mood.color, border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
+                {b.mood && <span title={(b.moods || [b.mood]).map((m) => m.label).join(" + ")} style={{ width: 12, height: 12, borderRadius: 4, background: stripeBg((b.moods || [b.mood]).map((m) => m.color)), border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", flex: 1 }}>
                 {b.events.length > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: isToday ? PAPER : INK, background: "#6E8597" + (isToday ? "33" : "18"), borderRadius: 999, padding: "3px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 5, height: 5, borderRadius: 999, background: "#6E8597" }} />{b.events.length} event{b.events.length === 1 ? "" : "s"}</span>}
@@ -2789,7 +2801,7 @@ function WeekOverview({ d, anchor, onClose, go, isDesktop, onPickDay }) {
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexShrink: 0 }}>
                   <div style={{ fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 800, color: isToday ? MIST : MUTED }}>{dt.toLocaleDateString("en-US", { weekday: "short" })}</div>
                   <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, fontWeight: 600, lineHeight: 1 }}>{dt.getDate()}</div>
-                  {b.mood && <span title={b.mood.label} style={{ width: 14, height: 14, borderRadius: 4, background: b.mood.color, border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
+                  {b.mood && <span title={(b.moods || [b.mood]).map((m) => m.label).join(" + ")} style={{ width: 14, height: 14, borderRadius: 4, background: stripeBg((b.moods || [b.mood]).map((m) => m.color)), border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
                   {chips.length > 0 ? chips.map((c, i) => (
@@ -4449,14 +4461,21 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
     setView(nv);
     setSelected(monthKey(nv) === monthKey(now) ? now.getDate() : 1);
   };
-  const setDayMood = (day, moodId) => { const nd = { ...days }; if (nd[day] === moodId) delete nd[day]; else nd[day] = moodId; writeMonth({ days: nd }); };
+  const setDayMood = (day, moodId) => {
+    const cur = moodIdList(days[day]);
+    const next = cur.includes(moodId) ? cur.filter((x) => x !== moodId) : [...cur, moodId];
+    const nd = { ...days };
+    if (!next.length) delete nd[day]; else nd[day] = next;
+    writeMonth({ days: nd });
+  };
   const moodById = (id) => block.moods.find((m) => m.id === id);
   const setMood = (i, patch) => update({ moods: block.moods.map((m, j) => j === i ? { ...m, ...patch } : m) });
   const addMood = () => update({ moods: [...block.moods, { id: uid(), label: "New", color: PALETTE[block.moods.length % PALETTE.length] }] });
   const delMood = (i) => update({ moods: block.moods.filter((_, j) => j !== i) });
   const entry = notes[selected] || { why: "", better: "" };
   const hasEntry = !!(entry.why || entry.better);
-  const selMood = days[selected] ? moodById(days[selected]) : null;
+  const selMoods = moodsForVal(block, days[selected]);
+  const selMoodLabel = selMoods.length ? selMoods.map((m) => m.label.toLowerCase()).join(" + ") : "";
   const setEntry = (day, patch) => writeMonth({ notes: { ...notes, [day]: { ...(notes[day] || { why: "", better: "" }), ...patch } } });
   const clearEntry = (day) => { const n = { ...notes }; delete n[day]; writeMonth({ notes: n }); };
   return (
@@ -4484,7 +4503,7 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
           </div>
           {!editMoods ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {block.moods.map((m) => { const active = days[selected] === m.id; return <div key={m.id} className="pop" onClick={() => setDayMood(selected, m.id)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 15px", borderRadius: 999, background: active ? m.color : m.color + "14", border: `1px solid ${active ? m.color : m.color + "55"}`, color: active ? "#fff" : INK, fontWeight: 600, fontSize: 13.5, transition: "all .15s ease" }}><div style={{ width: 11, height: 11, borderRadius: 999, background: active ? "#fff" : m.color }} />{m.label}</div>; })}
+              {block.moods.map((m) => { const active = moodIdList(days[selected]).includes(m.id); return <div key={m.id} className="pop" onClick={() => setDayMood(selected, m.id)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 15px", borderRadius: 999, background: active ? m.color : m.color + "14", border: `1px solid ${active ? m.color : m.color + "55"}`, color: active ? "#fff" : INK, fontWeight: 600, fontSize: 13.5, transition: "all .15s ease" }}><div style={{ width: 11, height: 11, borderRadius: 999, background: active ? "#fff" : m.color }} />{m.label}</div>; })}
             </div>
           ) : (
             <div style={{ display: "grid", gap: 9 }}>
@@ -4502,9 +4521,9 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
             <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${LINE}`, display: "grid", gap: 20 }}>
               <div>
                 <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 16, fontWeight: 600, color: TEXT, marginBottom: 10, letterSpacing: "-.01em", lineHeight: 1.3 }}>
-                  {selMood ? `Why was today ${selMood.label.toLowerCase()}?` : "Why was today the way it was?"}
+                  {selMoods.length ? `Why was today ${selMoodLabel}?` : "Why was today the way it was?"}
                 </div>
-                <textarea value={entry.why} onChange={(e) => setEntry(selected, { why: e.target.value })} placeholder={selMood ? "What made it feel that way…" : "Pick a mood above, then reflect…"} rows={3} style={{ width: "100%", border: "none", borderTop: `1px solid ${LINE}`, borderRadius: 0, padding: "10px 2px", fontSize: 15, fontFamily: "inherit", lineHeight: "28px", resize: "vertical", background: `repeating-linear-gradient(transparent, transparent 27px, ${LINE} 27px, ${LINE} 28px)`, backgroundSize: "100% 28px", color: TEXT, outline: "none" }} />
+                <textarea value={entry.why} onChange={(e) => setEntry(selected, { why: e.target.value })} placeholder={selMoods.length ? "What made it feel that way…" : "Pick a mood above, then reflect…"} rows={3} style={{ width: "100%", border: "none", borderTop: `1px solid ${LINE}`, borderRadius: 0, padding: "10px 2px", fontSize: 15, fontFamily: "inherit", lineHeight: "28px", resize: "vertical", background: `repeating-linear-gradient(transparent, transparent 27px, ${LINE} 27px, ${LINE} 28px)`, backgroundSize: "100% 28px", color: TEXT, outline: "none" }} />
               </div>
               <div>
                 <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 16, fontWeight: 600, color: TEXT, marginBottom: 10, letterSpacing: "-.01em", lineHeight: 1.3 }}>How can tomorrow be better?</div>
@@ -4520,11 +4539,12 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
           {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
           {Array.from({ length: dim }).map((_, i) => {
-            const day = i + 1, mood = days[day] ? moodById(days[day]) : null, isToday = day === today, isSel = day === selected;
+            const day = i + 1, dayMoods = moodsForVal(block, days[day]), isToday = day === today, isSel = day === selected;
             const noted = !!((notes[day] || {}).why || (notes[day] || {}).better);
-            return <div key={day} className="pop" onClick={() => setSelected(day)} style={{ aspectRatio: "1", borderRadius: 12, background: mood ? mood.color : CARD, border: isSel ? `2px solid ${INK}` : isToday ? `1.5px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: 5, boxShadow: mood ? "none" : "0 4px 14px -12px rgba(22,32,28,.25)" }}>
-              <span style={{ width: 5, height: 5, borderRadius: 999, background: noted ? (mood ? "#fff" : SAGE) : "transparent", marginTop: 3 }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: mood ? "#fff" : MUTED }}>{day}</span>
+            const bg = stripeBg(dayMoods.map((m) => m.color));
+            return <div key={day} className="pop" onClick={() => setSelected(day)} title={dayMoods.map((m) => m.label).join(" + ")} style={{ aspectRatio: "1", borderRadius: 12, background: bg || CARD, border: isSel ? `2px solid ${INK}` : isToday ? `1.5px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: 5, boxShadow: bg ? "none" : "0 4px 14px -12px rgba(22,32,28,.25)" }}>
+              <span style={{ width: 5, height: 5, borderRadius: 999, background: noted ? (bg ? "#fff" : SAGE) : "transparent", marginTop: 3 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: bg ? "#fff" : MUTED, textShadow: bg ? "0 1px 2px rgba(0,0,0,.35)" : "none" }}>{day}</span>
             </div>;
           })}
         </div>
