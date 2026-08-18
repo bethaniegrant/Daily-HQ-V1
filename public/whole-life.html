@@ -1423,7 +1423,8 @@ function Home({ d, setD, now, go, openMenu, back, canGoBack, goHome, isHome, isD
             const mbDays = mb ? moodMonthData(mb, now).days : {};
             const logged = Object.keys(mbDays).length;
             const today = mbDays[now.getDate()];
-            const moodToday = today && mb.moods.find((m) => m.id === today);
+            const todayMoods = moodsForVal(mb, today);
+            const moodToday = todayMoods.length ? { label: todayMoods.map((m) => m.label).join(" + ") } : null;
             return (
               <Tile accent={PLUM} icon={HeartIcon} title="Mood" big={moodToday ? moodToday.label : (logged ? `${logged}` : "Log")} sub={moodToday ? "today" : (logged ? "days this month" : "tap to begin")} onClick={() => go("health", mb ? "block:" + mb.id : null)} />
             );
@@ -1940,8 +1941,8 @@ function DayOverviewBody({ d, setD, dt, go, onNavigate }) {
         {b.mood && (
           <OverviewBlock label="Mood" color={b.mood.color}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 22, height: 22, borderRadius: 6, background: b.mood.color }} />
-              <div style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>{b.mood.label}</div>
+              <div style={{ width: 22, height: 22, borderRadius: 6, background: stripeBg((b.moods || [b.mood]).map((m) => m.color)) }} />
+              <div style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>{(b.moods || [b.mood]).map((m) => m.label).join(" + ")}</div>
             </div>
           </OverviewBlock>
         )}
@@ -2697,7 +2698,7 @@ function InlineWeekPanel({ d, setD, go, anchor, isDesktop, onPickDay }) {
               <div onClick={() => onPickDay(dt)} className="pop" style={{ display: "flex", alignItems: "baseline", gap: 10, cursor: "pointer" }}>
                 <div style={{ fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 800, color: isToday ? MIST : MUTED }}>{dt.toLocaleDateString("en-US", { weekday: "short" })}</div>
                 <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 20, fontWeight: 600, lineHeight: 1 }}>{dt.getDate()}</div>
-                {b.mood && <span title={b.mood.label} style={{ width: 12, height: 12, borderRadius: 4, background: b.mood.color, border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
+                {b.mood && <span title={(b.moods || [b.mood]).map((m) => m.label).join(" + ")} style={{ width: 12, height: 12, borderRadius: 4, background: stripeBg((b.moods || [b.mood]).map((m) => m.color)), border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", flex: 1 }}>
                 {b.events.length > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: isToday ? PAPER : INK, background: "#6E8597" + (isToday ? "33" : "18"), borderRadius: 999, padding: "3px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 5, height: 5, borderRadius: 999, background: "#6E8597" }} />{b.events.length} event{b.events.length === 1 ? "" : "s"}</span>}
@@ -2800,7 +2801,7 @@ function WeekOverview({ d, anchor, onClose, go, isDesktop, onPickDay }) {
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexShrink: 0 }}>
                   <div style={{ fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 800, color: isToday ? MIST : MUTED }}>{dt.toLocaleDateString("en-US", { weekday: "short" })}</div>
                   <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, fontWeight: 600, lineHeight: 1 }}>{dt.getDate()}</div>
-                  {b.mood && <span title={b.mood.label} style={{ width: 14, height: 14, borderRadius: 4, background: b.mood.color, border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
+                  {b.mood && <span title={(b.moods || [b.mood]).map((m) => m.label).join(" + ")} style={{ width: 14, height: 14, borderRadius: 4, background: stripeBg((b.moods || [b.mood]).map((m) => m.color)), border: isToday ? `1.5px solid ${PAPER}` : "none" }} />}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
                   {chips.length > 0 ? chips.map((c, i) => (
