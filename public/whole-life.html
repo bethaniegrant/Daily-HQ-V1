@@ -1814,8 +1814,8 @@ function dayBundle(d, dt) {
     return { id: wid, n: w.n, cat: catOf(w.cat), done: doneCount, total: (w.ex || []).length };
   }).filter(Boolean);
   const moodBlock = (d.blocks || []).find((b) => b.type === "mood");
-  const moodId = moodBlock ? moodMonthData(moodBlock, dt).days[dayNum] : null;
-  const mood = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
+  const moodList = moodsForVal(moodBlock, moodBlock ? moodMonthData(moodBlock, dt).days[dayNum] : null);
+  const mood = moodList[0] || null;
   const bills = [];
   const monthLen2 = daysInMonth(dt);
   const allBudgetSecs2 = [...BUDGET_SECTIONS, ...((d.customBudgetSections) || [])]
@@ -1851,7 +1851,7 @@ function dayBundle(d, dt) {
       if (show) todos.push({ ...it, idx, blockId: todoBlock.id });
     });
   }
-  return { habits, medsList, workouts, mood, bills, meal, weekdayShort, events, todos, todoBlockId: todoBlock ? todoBlock.id : null };
+  return { habits, medsList, workouts, mood, moods: moodList, bills, meal, weekdayShort, events, todos, todoBlockId: todoBlock ? todoBlock.id : null };
 }
 
 // Quick-add helper used by the side panel: writes a To Do (with date) or an Event.
@@ -2320,8 +2320,10 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
   const sameMonth = dt.getFullYear() === new Date().getFullYear() && dt.getMonth() === new Date().getMonth();
   const todoBlock = d.blocks.find((b) => b.type === "checklist" && /to ?do/i.test(b.title || ""));
   const moodBlock = d.blocks.find((b) => b.type === "mood");
-  const moodId = moodBlock ? moodMonthData(moodBlock, dt).days[dt.getDate()] : null;
-  const moodForDay = moodId && moodBlock ? moodBlock.moods.find((m) => m.id === moodId) : null;
+  const moodsForDay = moodsForVal(moodBlock, moodBlock ? moodMonthData(moodBlock, dt).days[dt.getDate()] : null);
+  const moodForDay = moodsForDay[0] || null;
+  const moodDayBg = stripeBg(moodsForDay.map((m) => m.color));
+  const moodDayLabel = moodsForDay.map((m) => m.label).join(" + ");
 
   const habitChecks = d.habitChecks[tk] || {};
   const oneoffs = d.habitOneoffs[tk] || [];
