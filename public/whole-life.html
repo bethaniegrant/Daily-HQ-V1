@@ -592,12 +592,14 @@ function App() {
     if (!synced) return;
     let needs = false;
     const next = (d.blocks || []).map((b) => {
-      if (b.type !== "checklist") return b;
-      const items = (b.items || []).map((it) => {
-        if (it && !it.id) { needs = true; return { ...it, id: uid() }; }
+      if (b.type !== "checklist" || !b.items || !b.items.length) return b;
+      let touched = false;
+      const items = b.items.map((it) => {
+        if (it && !it.id) { touched = true; return { ...it, id: uid() }; }
         return it;
       });
-      return needs && items !== b.items ? { ...b, items } : b;
+      if (touched) { needs = true; return { ...b, items }; }
+      return b;
     });
     if (needs) setD((p) => ({ ...p, blocks: next }));
   }, [synced]); // eslint-disable-line
