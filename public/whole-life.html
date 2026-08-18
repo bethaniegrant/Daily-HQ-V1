@@ -1693,11 +1693,12 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
     const medsCount = d.meds.filter((m) => medFullyTaken((d.medChecks[k] || {})[m.id], medTimes(m))).length;
     const medsAll = d.meds.length > 0 && medsCount === d.meds.length;
     const workoutLogged = !!(d.workoutDone && d.workoutDone[k] && Object.keys(d.workoutDone[k]).length);
-    const moodId = moodBlock ? moodMonthData(moodBlock, dt).days[day] : null;
-    const mood = moodId ? moodById(moodId) : null;
-    const moodLogged = !!mood;
+    const moodVal = moodBlock ? moodMonthData(moodBlock, dt).days[day] : null;
+    const moods = moodsForVal(moodBlock, moodVal);
+    const mood = moods[0] || null;
+    const moodLogged = moods.length > 0;
     const bills = billsByDay[day] || [];
-    return { dt, k, habitsPct, habitsTotal: hc.total, habitsDone: hc.done, medsCount, medsAll, workoutLogged, moodLogged, mood, bills };
+    return { dt, k, habitsPct, habitsTotal: hc.total, habitsDone: hc.done, medsCount, medsAll, workoutLogged, moodLogged, mood, moods, bills };
   };
 
 
