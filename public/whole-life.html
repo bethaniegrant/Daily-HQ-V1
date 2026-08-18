@@ -1744,7 +1744,7 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
                 position: "relative",
                 aspectRatio: "1",
                 borderRadius: 8,
-                background: isToday ? INK : info.mood ? info.mood.color + "33" : PAPER,
+                background: isToday ? INK : (stripeBg((info.moods || []).map((m) => m.color + "33")) || PAPER),
                 border: isToday ? `2px solid ${AMBER}` : isSelected ? `2px solid ${INK}` : hasBills ? `1.5px solid ${AMBER}` : `1px solid ${LINE}`,
                 boxShadow: isToday ? `0 0 0 2px ${PAPER}, 0 0 0 3px ${INK}` : isSelected ? `0 0 0 2px ${PAPER}, 0 0 0 3px ${INK}` : "none",
                 color: isToday ? PAPER : INK,
