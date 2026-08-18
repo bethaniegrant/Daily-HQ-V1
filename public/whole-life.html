@@ -4457,14 +4457,21 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
     setView(nv);
     setSelected(monthKey(nv) === monthKey(now) ? now.getDate() : 1);
   };
-  const setDayMood = (day, moodId) => { const nd = { ...days }; if (nd[day] === moodId) delete nd[day]; else nd[day] = moodId; writeMonth({ days: nd }); };
+  const setDayMood = (day, moodId) => {
+    const cur = moodIdList(days[day]);
+    const next = cur.includes(moodId) ? cur.filter((x) => x !== moodId) : [...cur, moodId];
+    const nd = { ...days };
+    if (!next.length) delete nd[day]; else nd[day] = next;
+    writeMonth({ days: nd });
+  };
   const moodById = (id) => block.moods.find((m) => m.id === id);
   const setMood = (i, patch) => update({ moods: block.moods.map((m, j) => j === i ? { ...m, ...patch } : m) });
   const addMood = () => update({ moods: [...block.moods, { id: uid(), label: "New", color: PALETTE[block.moods.length % PALETTE.length] }] });
   const delMood = (i) => update({ moods: block.moods.filter((_, j) => j !== i) });
   const entry = notes[selected] || { why: "", better: "" };
   const hasEntry = !!(entry.why || entry.better);
-  const selMood = days[selected] ? moodById(days[selected]) : null;
+  const selMoods = moodsForVal(block, days[selected]);
+  const selMoodLabel = selMoods.length ? selMoods.map((m) => m.label.toLowerCase()).join(" + ") : "";
   const setEntry = (day, patch) => writeMonth({ notes: { ...notes, [day]: { ...(notes[day] || { why: "", better: "" }), ...patch } } });
   const clearEntry = (day) => { const n = { ...notes }; delete n[day]; writeMonth({ notes: n }); };
   return (
