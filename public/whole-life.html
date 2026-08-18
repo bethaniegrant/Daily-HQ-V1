@@ -4535,11 +4535,12 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
           {Array.from({ length: pad }).map((_, i) => <div key={"p" + i} />)}
           {Array.from({ length: dim }).map((_, i) => {
-            const day = i + 1, mood = days[day] ? moodById(days[day]) : null, isToday = day === today, isSel = day === selected;
+            const day = i + 1, dayMoods = moodsForVal(block, days[day]), isToday = day === today, isSel = day === selected;
             const noted = !!((notes[day] || {}).why || (notes[day] || {}).better);
-            return <div key={day} className="pop" onClick={() => setSelected(day)} style={{ aspectRatio: "1", borderRadius: 12, background: mood ? mood.color : CARD, border: isSel ? `2px solid ${INK}` : isToday ? `1.5px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: 5, boxShadow: mood ? "none" : "0 4px 14px -12px rgba(22,32,28,.25)" }}>
-              <span style={{ width: 5, height: 5, borderRadius: 999, background: noted ? (mood ? "#fff" : SAGE) : "transparent", marginTop: 3 }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: mood ? "#fff" : MUTED }}>{day}</span>
+            const bg = stripeBg(dayMoods.map((m) => m.color));
+            return <div key={day} className="pop" onClick={() => setSelected(day)} title={dayMoods.map((m) => m.label).join(" + ")} style={{ aspectRatio: "1", borderRadius: 12, background: bg || CARD, border: isSel ? `2px solid ${INK}` : isToday ? `1.5px solid ${SAGEHI}` : `1px solid ${LINE}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: 5, boxShadow: bg ? "none" : "0 4px 14px -12px rgba(22,32,28,.25)" }}>
+              <span style={{ width: 5, height: 5, borderRadius: 999, background: noted ? (bg ? "#fff" : SAGE) : "transparent", marginTop: 3 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: bg ? "#fff" : MUTED, textShadow: bg ? "0 1px 2px rgba(0,0,0,.35)" : "none" }}>{day}</span>
             </div>;
           })}
         </div>
