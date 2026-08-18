@@ -2395,11 +2395,11 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
     ...d,
     blocks: d.blocks.map((b) => b.id === blockId ? { ...b, events: (b.events || []).filter((e) => e.id !== eventId) } : b),
   });
-  // Not Today: bump a todo to tomorrow (keeps it un-done, doesn't delete).
-  const bumpTodo = (idx) => {
+  // Not Today: bump a todo forward (keeps it un-done, doesn't delete).
+  const bumpTodo = (idx, days = 1) => {
     if (!todoBlock) return;
     logDeferral(((todoBlock.items || [])[idx] || {}).id);
-    const t = new Date(dt); t.setDate(t.getDate() + 1);
+    const t = new Date(dt); t.setDate(t.getDate() + days);
     const nextDate = `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
     setD({
       ...d,
@@ -2408,6 +2408,16 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
         : b),
     });
   };
+  const dropTodo = (idx) => {
+    if (!todoBlock) return;
+    setD({
+      ...d,
+      blocks: d.blocks.map((b) => b.id === todoBlock.id
+        ? { ...b, items: (b.items || []).filter((it, j) => j !== idx) }
+        : b),
+    });
+  };
+
 
   const bundle = dayBundle(d, dt);
 
