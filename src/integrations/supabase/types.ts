@@ -283,6 +283,27 @@ export type Database = {
         }
         Relationships: []
       }
+      task_deferrals: {
+        Row: {
+          deferred_at: string
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          deferred_at?: string
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          deferred_at?: string
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_data: {
         Row: {
           key: string
