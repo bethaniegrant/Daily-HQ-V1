@@ -4499,7 +4499,7 @@ function MoodEditor({ block, d, setD, now, back, openMenu, canGoBack, goHome, is
           </div>
           {!editMoods ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {block.moods.map((m) => { const active = days[selected] === m.id; return <div key={m.id} className="pop" onClick={() => setDayMood(selected, m.id)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 15px", borderRadius: 999, background: active ? m.color : m.color + "14", border: `1px solid ${active ? m.color : m.color + "55"}`, color: active ? "#fff" : INK, fontWeight: 600, fontSize: 13.5, transition: "all .15s ease" }}><div style={{ width: 11, height: 11, borderRadius: 999, background: active ? "#fff" : m.color }} />{m.label}</div>; })}
+              {block.moods.map((m) => { const active = moodIdList(days[selected]).includes(m.id); return <div key={m.id} className="pop" onClick={() => setDayMood(selected, m.id)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 15px", borderRadius: 999, background: active ? m.color : m.color + "14", border: `1px solid ${active ? m.color : m.color + "55"}`, color: active ? "#fff" : INK, fontWeight: 600, fontSize: 13.5, transition: "all .15s ease" }}><div style={{ width: 11, height: 11, borderRadius: 999, background: active ? "#fff" : m.color }} />{m.label}</div>; })}
             </div>
           ) : (
             <div style={{ display: "grid", gap: 9 }}>
