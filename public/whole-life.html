@@ -2428,7 +2428,25 @@ function TodayList({ d, setD, dt, go, isDesktop }) {
   // Split todos: timed ones merge with events; untimed ones fall into the task list.
   const timedTodos = bundle.todos.filter((it) => !!it.time);
   const untimedTodos = bundle.todos.filter((it) => !it.time);
-  const todoRows = untimedTodos.map((it) => ({ kind: "todo", id: "t" + it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx), onBump: () => bumpTodo(it.idx) }));
+  const todoRows = untimedTodos.map((it) => ({ kind: "todo", id: "t" + it.idx, taskId: it.id, idx: it.idx, label: it.t || "Untitled", done: !!it.done, color: AMBER, onToggle: () => toggleTodo(it.idx), onBump: () => bumpTodo(it.idx) }));
+  const untimedTodoIds = untimedTodos.map((it) => it.id).filter(Boolean);
+  const untimedTodoIdKey = untimedTodoIds.join(",");
+  const [deferCounts, setDeferCounts] = useState({});
+  const [expandedInsight, setExpandedInsight] = useState(null);
+  useEffect(() => {
+    const ids = untimedTodoIdKey ? untimedTodoIdKey.split(",") : [];
+    if (!ids.length || !SUPA.client || !SUPA.userId) { setDeferCounts({}); return; }
+    let alive = true;
+    SUPA.client.from("task_deferrals").select("task_id").in("task_id", ids).then(({ data, error }) => {
+      if (!alive) return;
+      if (error) { console.warn("[deferrals]", error.message); return; }
+      const counts = {};
+      (data || []).forEach((r) => { counts[r.task_id] = (counts[r.task_id] || 0) + 1; });
+      setDeferCounts(counts);
+    }, (e) => console.warn("[deferrals]", e));
+    return () => { alive = false; };
+  }, [untimedTodoIdKey]);
+
   const medRows = isToday ? d.meds.flatMap((m) => {
     const t = medTimes(m);
     const arr = medDoseArr((d.medChecks[tk] || {})[m.id], t);
