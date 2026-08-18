@@ -1768,7 +1768,7 @@ function TrackerCalendar({ d, setD, now, go, isDesktop, selectedDay, onSelectDay
               <div style={{ display: "flex", gap: 2, marginTop: "auto" }}>
                 {info.medsAll && <span style={{ width: 4, height: 4, borderRadius: 999, background: isToday ? PAPER : PLUM }} />}
                 {info.workoutLogged && <span style={{ width: 4, height: 4, borderRadius: 999, background: isToday ? PAPER : BLUE }} />}
-                {info.moodLogged && !isToday && <span style={{ width: 4, height: 4, borderRadius: 999, background: info.mood.color }} />}
+                {info.moodLogged && !isToday && <span style={{ width: 4, height: 4, borderRadius: 999, background: stripeBg((info.moods || []).map((m) => m.color), 90) }} />}
                 {hasBills && <span style={{ width: 4, height: 4, borderRadius: 999, background: AMBER, boxShadow: `0 0 0 1px ${isToday ? INK : PAPER}` }} />}
               </div>
             </div>
