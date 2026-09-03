@@ -137,7 +137,15 @@ async function handleCheckoutCompleted(session: any) {
   );
   if (purErr) console.error('[webhook] Failed to record purchase', purErr);
 
-  console.log('[webhook] Invite issued for', email, 'token', token);
+  // Email the invite link so the buyer never depends on the return page.
+  try {
+    await sendInviteEmail(email, token);
+  } catch (e) {
+    console.error('[webhook] Invite email failed (token still valid)', e);
+  }
+
+  console.log('[webhook] Invite issued for', email);
+
 }
 
 async function handleWebhook(req: Request, env: StripeEnv) {
