@@ -305,11 +305,34 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
                 status: 'failed',
                 error_message: errorMsg.slice(0, 1000),
               })
+              const attemptsSoFar = failedAttempts + 1
               if (payload?.message_id && typeof payload.message_id === 'string') {
-                failedAttemptsByMessageId.set(payload.message_id, failedAttempts + 1)
+                failedAttemptsByMessageId.set(payload.message_id, attemptsSoFar)
               }
 
-              // Non-429 errors: message stays invisible until VT expires, then retried
+              // Exponential backoff with jitter: delay the next retry by extending
+              // the message's visibility timeout instead of retrying every 30s.
+              const delaySecs = backoffSeconds(attemptsSoFar)
+              const { error: vtError } = await supabase.rpc('set_email_vt', {
+                queue_name: queue,
+                message_id: msg.msg_id,
+                vt_seconds: delaySecs,
+              })
+              if (vtError) {
+                console.error('Failed to set retry backoff', {
+                  queue,
+                  msg_id: msg.msg_id,
+                  delaySecs,
+                  error: vtError,
+                })
+              } else {
+                console.warn('Email retry scheduled with backoff', {
+                  queue,
+                  msg_id: msg.msg_id,
+                  attempt: attemptsSoFar,
+                  retry_in_seconds: delaySecs,
+                })
+              }
             }
 
             // Small delay between sends to smooth bursts
