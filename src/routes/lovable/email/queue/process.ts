@@ -35,6 +35,19 @@ function getRetryAfterSeconds(error: unknown): number {
   return 60
 }
 
+// Exponential backoff with jitter for failed sends: 30s, 60s, 2m, 4m, 8m (capped
+// at 10m so retries always finish well inside the queue TTL).
+const BASE_BACKOFF_SECONDS = 30
+const MAX_BACKOFF_SECONDS = 600
+function backoffSeconds(attempt: number): number {
+  const base = Math.min(
+    BASE_BACKOFF_SECONDS * 2 ** Math.max(0, attempt - 1),
+    MAX_BACKOFF_SECONDS
+  )
+  const jitter = Math.floor(Math.random() * Math.min(30, base * 0.25 + 1))
+  return base + jitter
+}
+
 async function moveToDlq(
   supabase: SupabaseClient<any, any>,
   queue: string,
