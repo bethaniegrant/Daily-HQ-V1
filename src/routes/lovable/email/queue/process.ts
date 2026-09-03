@@ -35,6 +35,19 @@ function getRetryAfterSeconds(error: unknown): number {
   return 60
 }
 
+// Exponential backoff with jitter for failed sends: 30s, 60s, 2m, 4m, 8m (capped
+// at 10m so retries always finish well inside the queue TTL).
+const BASE_BACKOFF_SECONDS = 30
+const MAX_BACKOFF_SECONDS = 600
+function backoffSeconds(attempt: number): number {
+  const base = Math.min(
+    BASE_BACKOFF_SECONDS * 2 ** Math.max(0, attempt - 1),
+    MAX_BACKOFF_SECONDS
+  )
+  const jitter = Math.floor(Math.random() * Math.min(30, base * 0.25 + 1))
+  return base + jitter
+}
+
 async function moveToDlq(
   supabase: SupabaseClient<any, any>,
   queue: string,
@@ -305,11 +318,34 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
                 status: 'failed',
                 error_message: errorMsg.slice(0, 1000),
               })
+              const attemptsSoFar = failedAttempts + 1
               if (payload?.message_id && typeof payload.message_id === 'string') {
-                failedAttemptsByMessageId.set(payload.message_id, failedAttempts + 1)
+                failedAttemptsByMessageId.set(payload.message_id, attemptsSoFar)
               }
 
-              // Non-429 errors: message stays invisible until VT expires, then retried
+              // Exponential backoff with jitter: delay the next retry by extending
+              // the message's visibility timeout instead of retrying every 30s.
+              const delaySecs = backoffSeconds(attemptsSoFar)
+              const { error: vtError } = await supabase.rpc('set_email_vt', {
+                queue_name: queue,
+                message_id: msg.msg_id,
+                vt_seconds: delaySecs,
+              })
+              if (vtError) {
+                console.error('Failed to set retry backoff', {
+                  queue,
+                  msg_id: msg.msg_id,
+                  delaySecs,
+                  error: vtError,
+                })
+              } else {
+                console.warn('Email retry scheduled with backoff', {
+                  queue,
+                  msg_id: msg.msg_id,
+                  attempt: attemptsSoFar,
+                  retry_in_seconds: delaySecs,
+                })
+              }
             }
 
             // Small delay between sends to smooth bursts
