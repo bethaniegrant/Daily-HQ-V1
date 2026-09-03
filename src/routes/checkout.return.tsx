@@ -42,7 +42,7 @@ function CheckoutReturn() {
         if (attempts > 30) {
           setState({
             kind: 'error',
-            message: "We received your payment but haven't issued your invite yet. Please contact support.",
+            message: "Your payment went through. We're emailing your invite link to the address you used at checkout — check your inbox (and spam) in a few minutes, or contact support if it doesn't arrive.",
           });
           return;
         }

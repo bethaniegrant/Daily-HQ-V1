@@ -1,7 +1,15 @@
+import * as React from 'react';
+import { render } from '@react-email/components';
 import { createFileRoute } from '@tanstack/react-router';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
+import { InviteEmail } from '@/lib/email-templates/invite';
 import { type StripeEnv, verifyWebhook } from '@/lib/stripe.server';
+
+const SITE_NAME = 'Daily HQ';
+const ROOT_DOMAIN = 'daily-hq.com';
+const SENDER_DOMAIN = 'notify.daily-hq.com';
+const FROM_DOMAIN = 'notify.daily-hq.com';
 
 let _supabase: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
@@ -19,6 +27,56 @@ function randomToken() {
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+// Delivers the invite link by email so a paid customer can always get back in,
+// even if they close the checkout return page.
+async function sendInviteEmail(email: string, token: string) {
+  const sb = getSupabase();
+  const confirmationUrl = `https://${ROOT_DOMAIN}/auth?token=${encodeURIComponent(token)}`;
+  const element = React.createElement(InviteEmail, {
+    siteName: SITE_NAME,
+    siteUrl: `https://${ROOT_DOMAIN}`,
+    confirmationUrl,
+  });
+  const html = await render(element);
+  const text = await render(element, { plainText: true });
+  const messageId = crypto.randomUUID();
+
+  await sb.from('email_send_log').insert({
+    message_id: messageId,
+    template_name: 'purchase_invite',
+    recipient_email: email,
+    status: 'pending',
+  });
+
+  const { error } = await sb.rpc('enqueue_email', {
+    queue_name: 'transactional_emails',
+    payload: {
+      message_id: messageId,
+      to: email,
+      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      sender_domain: SENDER_DOMAIN,
+      subject: 'Your Daily HQ invite link',
+      html,
+      text,
+      purpose: 'transactional',
+      label: 'purchase_invite',
+      queued_at: new Date().toISOString(),
+    },
+  });
+
+  if (error) {
+    console.error('[webhook] Failed to enqueue invite email', error);
+    await sb.from('email_send_log').insert({
+      message_id: messageId,
+      template_name: 'purchase_invite',
+      recipient_email: email,
+      status: 'failed',
+      error_message: 'Failed to enqueue invite email',
+    });
+  }
+}
+
 
 async function handleCheckoutCompleted(session: any) {
   const sb = getSupabase();
@@ -79,7 +137,15 @@ async function handleCheckoutCompleted(session: any) {
   );
   if (purErr) console.error('[webhook] Failed to record purchase', purErr);
 
-  console.log('[webhook] Invite issued for', email, 'token', token);
+  // Email the invite link so the buyer never depends on the return page.
+  try {
+    await sendInviteEmail(email, token);
+  } catch (e) {
+    console.error('[webhook] Invite email failed (token still valid)', e);
+  }
+
+  console.log('[webhook] Invite issued for', email);
+
 }
 
 async function handleWebhook(req: Request, env: StripeEnv) {
